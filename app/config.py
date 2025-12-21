@@ -5,7 +5,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parents[1] 
 
 class DBConfig(BaseModel):
-    db_url: str 
+    url: str 
     echo: bool = False
 
 

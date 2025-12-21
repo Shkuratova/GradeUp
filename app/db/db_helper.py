@@ -9,7 +9,7 @@ from app.config import settings
 
 class DataBaseHelper:
     def __init__(self):
-        self.engine = create_async_engine(url=settings.DB.url, echo=settings.DB.echo)
+        self.engine = create_async_engine(url=settings.db.url, echo=settings.db.echo)
         self.session_maker = async_sessionmaker(
             bind=self.engine,
             autoflush=False,
