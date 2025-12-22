@@ -40,5 +40,5 @@ class DataBaseHelper:
             finally:
                 session.close()
 
-
+db_helper = DataBaseHelper()
 
