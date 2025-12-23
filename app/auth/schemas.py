@@ -16,3 +16,9 @@ class UserAuth(EmailModel):
 class UserSchema(EmailModel):
     id: int 
     role_id: int 
+
+class UserInfo(EmailModel):
+    first_name: str
+    last_name: str 
+    patronymic: str 
+    role_id: int 

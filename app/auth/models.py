@@ -22,11 +22,11 @@ class Role(Base):
 class User(Base):
     email: Mapped[str] = mapped_column(unique=True)
     password: Mapped[str]
-    first_name: Mapped[str] 
-    last_name: Mapped[str] 
-    patronymic: Mapped[str] 
-    position_id: Mapped[int] = mapped_column(ForeignKey("positions.id"), nullable=False)
-    department_id: Mapped[int] = mapped_column(ForeignKey("departments.id"), nullable=False)
+    first_name: Mapped[str | None] 
+    last_name: Mapped[str | None] 
+    patronymic: Mapped[str | None] 
+    position_id: Mapped[int] = mapped_column(ForeignKey("positions.id"), nullable=True)
+    department_id: Mapped[int] = mapped_column(ForeignKey("departments.id"), nullable=True)
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), default=1, server_default=text("1"))
     
     position: Mapped["Position"] = relationship( back_populates="users")

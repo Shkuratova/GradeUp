@@ -10,6 +10,16 @@ class BaseDAO:
     def __init__(self, session: AsyncSession):
         self._session: AsyncSession = session
 
+    async def get_one_or_none_by_id(self, data_id: int):
+        try:
+            stmt = select(self.model).filter_by(id=data_id)
+            res = await self._session.execute(stmt)
+            row = res.scalar_one_or_none()
+            return row
+        except SQLAlchemyError as e:
+            print(e)
+            raise
+
     async def get_one_or_none(self, filter_by: BaseModel):
         filter_dict = filter_by.model_dump(exclude_unset=True)
         try:
