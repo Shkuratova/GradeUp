@@ -1,11 +1,21 @@
-from fastapi import APIRouter, Depends, Response
+from typing import Annotated
+from fastapi import APIRouter, Depends, Response, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import db_helper
-from .schemas import EmailModel, UserAuth, UserInfo, SUserRegistration, SUserAdd, SUserRole, SUserFullInfo
+from .schemas import (
+    EmailModel, 
+    UserAuth, 
+    UserInfo, 
+    SUserRegistration, 
+    SUserAdd, 
+    SUserRole, 
+    SUserFullInfo,
+    SUserFilter
+    )
 import app.auth.utils as auth_utils
 from app.auth.tokens import set_token
 from .dao import UserDAO
-from app.exceptions import InvalidLogin, UserAlreadyExistsException, UserNotFoundException
+from app.exceptions import InvalidLogin, UserAlreadyExistsException, UserNotFoundException, ForbiddenException
 from app.auth.dependencies import get_current_user, check_refresh_token, check_role_id
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -68,22 +78,32 @@ def get_current_user(user: UserInfo = Depends(get_current_user)):
 
 @router.get("/users", response_model=list[SUserFullInfo], response_model_exclude_none=True)
 async def get_all_users(
-    admin: UserInfo = Depends(check_role_id([2, 3, 4])),
+    user_filters: Annotated[SUserFilter, Query()],
+    user_data: UserInfo = Depends(check_role_id([2, 3, 4])),
     session: AsyncSession = Depends(db_helper.session_without_commit),
 ) -> list[SUserFullInfo]:
-    res = await UserDAO(session=session).get_user_list_by_role(admin)
+    
+    if user_data.role_id == 2:
+        if user_data.department_id is None:
+            raise ForbiddenException
+        user_filters.department_id = user_data.department_id
+        
+    res = await UserDAO(session=session).get_user_list(user_filters)
     return list(res)
 
 
-@router.post("/set-role/{user_id}")
+@router.post("/set-role")
 async def set_user_role(
-    user_id: int, 
-    user_role_id: SUserRole, 
+    user_data: SUserRole, 
     admin: UserInfo = Depends(check_role_id([4])),
     session: AsyncSession = Depends(db_helper.session_with_commit),
 ) -> dict:
     user_dao = UserDAO(session=session)
-    if not (existing_user := await user_dao.get_one_or_none_by_id(data_id=user_id)):
+    if not (existing_user := await user_dao.get_one_or_none_by_id(data_id=user_data.id)):
         raise UserNotFoundException
-    await user_dao.update_by_id(data_id=user_id, values=user_role_id.model_dump())
+    
+    user_dict = user_data.model_dump()
+    user_dict.drop("id")
+
+    await user_dao.update_by_id(data_id=user_data.id, values=user_dict)
     return {"msg": f"Роль пользователя успешно обновлена"}
