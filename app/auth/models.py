@@ -12,7 +12,7 @@ class Position(Base):
     position: Mapped[str]
     
     users: Mapped[list["User"]] = relationship(back_populates="position")
-
+    profiles: Mapped[list["Profile"]] = relationship(back_populates="position")
 
 class Role(Base):
     role_name: Mapped[str]
@@ -32,3 +32,5 @@ class User(Base):
     position: Mapped["Position"] = relationship( back_populates="users")
     department: Mapped["Department"] = relationship( back_populates="users")
     role: Mapped["Role"] = relationship( back_populates="users")
+
+    skills_created: Mapped[list["Skill"]] = relationship(back_populates="creator")
