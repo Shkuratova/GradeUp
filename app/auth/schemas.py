@@ -1,4 +1,11 @@
-from pydantic import BaseModel, EmailStr, ConfigDict, model_validator, Field, computed_field
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    ConfigDict,
+    model_validator,
+    Field,
+    computed_field,
+)
 from app.auth.utils import hash_password
 from app.exceptions import PasswordDontMatchException
 
@@ -17,9 +24,9 @@ class UserSchema(EmailModel):
     role_id: int
 
 
-
 class SUserRole(BaseModel):
-    role_id: int 
+    id: int
+    role_id: int
 
 
 class UserInfo(EmailModel):
@@ -33,11 +40,11 @@ class UserInfo(EmailModel):
 class SUserAdd(BaseModel):
     email: EmailStr
     password: str
-    first_name: str | None  = Field(default=None)
-    last_name: str | None = Field(default=None)
-    patronymic: str | None = Field(default=None)
-    position_id: int | None = Field(default=None)
-    department_id: int | None = Field(default=None)
+    first_name: str | None = None
+    last_name: str | None = None
+    patronymic: str | None = None
+    position_id: int | None = None
+    department_id: int | None = None
     role_id: int = Field(default=1)
 
 
@@ -57,27 +64,29 @@ class SUserRegistration(BaseModel):
         if self.password != self.confirm_password:
             raise PasswordDontMatchException
         self.password = hash_password(self.password)
-        return self 
-    
+        return self
+
 
 class SPosition(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: int 
-    position: str 
+    id: int
+    position: str
+
 
 class SRole(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: int 
-    role_name: str 
+    id: int
+    role_name: str
+
 
 class SDepartment(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: int 
+    id: int
     department_name: str
 
 
 class SUserFullInfo(BaseModel):
-    id: int 
+    id: int
     email: EmailStr
     first_name: str | None = Field(exclude=True)
     last_name: str | None = Field(exclude=True)
@@ -89,20 +98,28 @@ class SUserFullInfo(BaseModel):
     @computed_field
     def position_name(self) -> str | None:
         return self.position.position if self.position else None
-    
+
     @computed_field
     def position_name(self) -> str | None:
         return self.position and self.position.position
-    
+
     @computed_field
     def department_name(self) -> str | None:
         return self.department and self.department.department_name
-    
+
     @computed_field
     def role_name(self) -> str | None:
         return self.role and self.role.role_name
-    
+
     @computed_field
     def full_name(self) -> str:
         fio = [self.last_name, self.first_name, self.patronymic]
         return " ".join(filter(None, fio))
+
+
+class SUserFilter(BaseModel):
+    id: int | None = None
+    email: EmailStr | None = None
+    department_id: int | None = None
+    role_id: int | None = None
+    position_id: int | None = None
