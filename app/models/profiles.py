@@ -4,6 +4,14 @@ from sqlalchemy import ForeignKey, Text, text
 from enum import Enum
 
 
+class Position(Base):
+    position: Mapped[str]
+
+    users: Mapped[list["User"]] = relationship(back_populates="position")
+    profiles: Mapped[list["Profile"]] = relationship(back_populates="position")
+
+
+
 class Profile(Base):
     position_level: Mapped[str]  # or Enum in class Position
     position_id: Mapped[int] = mapped_column(ForeignKey("positions.id"))
@@ -19,7 +27,7 @@ class Category(Base):
 
 class Skill(Base):
     title: Mapped[str]
-    literature: Mapped[str | None] = mapped_column(Text) 
+    literature: Mapped[str | None] = mapped_column(Text)
     creator_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
     creator: Mapped["User"] = relationship(back_populates="skills_created")
@@ -47,7 +55,7 @@ class Certification(Base):
 class CertificationQuestion(Base):
     num: Mapped[int]
     certification_id: Mapped[int] = mapped_column(ForeignKey("certifications.id"))
-    question: Mapped[str] = mapped_column(Text)  
-    answer: Mapped[str] = mapped_column(Text)  
+    question: Mapped[str] = mapped_column(Text)
+    answer: Mapped[str] = mapped_column(Text)
     certification_version: Mapped[int] = mapped_column(server_default=text("1"))
     creator_id: Mapped[int] = ForeignKey("users.id")

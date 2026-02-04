@@ -1,7 +1,7 @@
 from fastapi import Response
-from app.auth.utils import encode_jwt, decode_jwt
-from app.auth.schemas import UserSchema
-from datetime import datetime, timezone, timedelta
+import app.api.auth.utils as auth_utils
+from app.api.auth.schemas import UserSchema
+from datetime import  timedelta
 from app.config import settings
 
 def create_access_token(
@@ -15,7 +15,7 @@ def create_access_token(
         "role_id": user.role_id,
         "token_type": "access",
     }
-    return encode_jwt(
+    return auth_utils.encode_jwt(
         payload=token_data,
         expire_minutes=expire_minutes,
         expire_timedelta=expire_timedelta,
@@ -24,7 +24,7 @@ def create_access_token(
 
 def create_refresh_token(user: UserSchema) -> str:
     token_data = {"sub": str(user.id), "token_type": "refresh"}
-    return encode_jwt(
+    return auth_utils.encode_jwt(
         payload=token_data,
         expire_timedelta=timedelta(days=settings.jwt.expire_refresh_token_days),
     )

@@ -1,4 +1,4 @@
-from app.profiles.models import (
+from app.models import (
     Category,
     Profile,
     ProfileSkill,
@@ -11,7 +11,7 @@ from app.db import BaseDAO
 from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
-from app.auth import User 
+from app.models import User
 
 class ProfileDAO(BaseDAO):
     model = Profile
@@ -39,13 +39,13 @@ class SkillDAO(BaseDAO):
         filter_dict = filters.model_dump(exclude_none=True) if filters else {}
         subq = (
             select(
-                Certification.skill_id, 
+                Certification.skill_id,
                 func.count(Certification.skill_id).label("num_stages"))
             .group_by(Certification.skill_id)
         ).subquery()
         stmt = (
         select(
-            Skill.title, 
+            Skill.title,
             func.concat(User.last_name, " ", User.first_name, " ", User.patronymic).label("creator"),
             Skill.created_at,
             func.coalesce(subq.c.num_stages, 0).label("num_stages")

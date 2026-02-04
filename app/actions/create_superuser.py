@@ -1,8 +1,15 @@
+import sys
+from pathlib import Path
+
+current_dir = Path(__file__).parent
+root_dir = current_dir.parent.parent
+sys.path.insert(0, str(root_dir))
+
 from sqlalchemy import insert
 import asyncio
 from os import getenv
-from app.auth import User
-import app.auth.utils as auth_utils
+from app.models import User
+import app.api.auth.utils as auth_utils
 from app.db import db_helper
 
 

@@ -1,8 +1,10 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.auth.dependencies import get_current_user, check_role_id
+
 from app.db import db_helper
+from app.dependencies.auth_dependencies import check_role_id
+
 from app.profiles.schemas import SProfile, SProfileFilter, SSkillInfo
 from app.profiles.dao import ProfileDAO, SkillDAO
 
@@ -25,9 +27,8 @@ async def get_all_profiles(
 
 @router.get("/skills")
 async def get_all_skills(
-    session: AsyncSession = Depends(db_helper.session_without_commit)
+    session: AsyncSession = Depends(db_helper.session_without_commit),
 ) -> list[SSkillInfo]:
     res = await SkillDAO(session=session).get_skills_with_full_info()
-    print('\n\n fdghsrthr ',list(res))
+    print("\n\n fdghsrthr ", list(res))
     return list(res)
-    

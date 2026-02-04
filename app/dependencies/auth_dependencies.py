@@ -1,9 +1,11 @@
 from fastapi import Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from jwt.exceptions import PyJWTError, ExpiredSignatureError
-from app.exceptions import TokenNotFound, InvalidToken, TokenExpired, ForbiddenException
 from app.db import db_helper
-from app.auth import UserDAO, User, auth_utils
+from app.models import User
+from app.exceptions import TokenNotFound, InvalidTokenException, TokenExpired, ForbiddenException
+from app.api.users import UserDAO
+import app.api.auth.utils as auth_utils
 
 
 def get_access_token(request: Request) -> str:
@@ -24,17 +26,17 @@ async def get_user_from_token(token: str, session: AsyncSession) -> User:
     try:
         payload = auth_utils.decode_jwt(token=token)
         if not (user_id := payload.get("sub")):
-            raise InvalidToken
+            raise InvalidTokenException
         user = await UserDAO(session=session).get_one_or_none_by_id(
             data_id=int(user_id)
         )
         if not user:
-            raise InvalidToken
+            raise InvalidTokenException
         return user
     except ExpiredSignatureError as e:
         raise TokenExpired
     except PyJWTError as e:
-        raise InvalidToken
+        raise InvalidTokenException
 
 
 async def check_refresh_token(

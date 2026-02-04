@@ -1,10 +1,9 @@
-from app.db import BaseDAO
 from pydantic import BaseModel
-from app.auth.schemas import UserInfo
-from .models import User, Role, Department, Position
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError
+from app.db import BaseDAO
+from app.models import User, Role, Department, Position
 
 
 class UserDAO(BaseDAO):
