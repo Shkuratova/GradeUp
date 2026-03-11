@@ -1,0 +1,20 @@
+//Admin
+{
+    "email": "admin@example.com",
+    "password": "admin"
+}
+// SPO
+{
+    "email": "spo@example.com",
+    "password": "123"
+}
+// Employee 
+{
+    "email": "morozov.av@example.com",
+    "password": "qwerty"
+}
+// Supervisor
+{
+    "email": "morozov.av@example.com",
+    "password": "qwerty"
+}

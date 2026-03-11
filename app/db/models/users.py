@@ -20,11 +20,11 @@ class User(Base):
     first_name: Mapped[str | None]
     last_name: Mapped[str | None]
     patronymic: Mapped[str | None]
-    position_id: Mapped[int] = mapped_column(ForeignKey("positions.id"), nullable=True)
+    profile_level_id: Mapped[int] = mapped_column(ForeignKey("profile_levels.id"), nullable=True)
     department_id: Mapped[int] = mapped_column(ForeignKey("departments.id", ondelete='SET NULL'), nullable=True)
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), default=1, server_default=text("1"))
 
-    position: Mapped["Position"] = relationship(back_populates="users")
+
     department: Mapped["Department"] = relationship(back_populates="users")
     role: Mapped["Role"] = relationship(back_populates="users")
 
