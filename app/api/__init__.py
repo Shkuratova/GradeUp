@@ -1,2 +1,3 @@
-from app.api.auth.router import router as auth_router
-from app.api.users.router import router as user_router
+from api.auth import auth_router
+from api.user import router as user_router
+from api.department import department_router

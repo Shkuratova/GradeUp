@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import BaseModel
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parents[1] 
+BASE_DIR = Path(__file__).parent
 
 class DBConfig(BaseModel):
     url: str 

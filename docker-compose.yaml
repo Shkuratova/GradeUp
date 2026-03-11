@@ -1,5 +1,18 @@
 services:
-  postgres:
+  backend:
+    container_name: gradeup_backend
+    build:
+      context: .
+    command: uvicorn main:app --host 0.0.0.0 --reload
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/backend
+
+
+  db:
     image: postgres:17
     container_name: db_gradeup
     environment:
@@ -9,5 +22,14 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
-   
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+
+    environment:
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+    ports:
+      - "5050:80"
+    depends_on:
+      - db

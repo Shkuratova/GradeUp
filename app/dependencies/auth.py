@@ -1,0 +1,54 @@
+from fastapi import Request, Depends, HTTPException, status
+from jwt.exceptions import PyJWTError, ExpiredSignatureError
+from schemas.users import UserBase, UserRole
+from exceptions.user import (
+    InvalidTokenException,
+)
+from utils import AuthUtils
+from services.user import user_service
+
+
+def get_token_by_type(token_type: str):
+    def get_token(request: Request) -> str:
+        token = request.cookies.get(token_type)
+        if not token:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Токен отсутствует.")
+        return token
+
+    return get_token
+
+
+async def get_user_from_token(token: str):
+    try:
+        payload = AuthUtils.decode_jwt(token=token)
+        if not (user_id := payload.get("sub")) or not (role := payload.get("role")):
+            raise InvalidTokenException("Некорректный токен.")
+        user = await user_service.get_user_role(UserBase(id=user_id))
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден.")
+        return user
+    except ExpiredSignatureError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Токен истек.")
+    except PyJWTError as error:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+
+async def check_refresh_token(
+    token: str = Depends(get_token_by_type("refresh_token")),
+) -> UserRole:
+    return await get_user_from_token(token=token)
+
+
+async def get_current_user(
+    token: str = Depends(get_token_by_type("access_token")),
+) -> UserRole:
+    return await get_user_from_token(token=token)
+
+
+def check_role(roles: list[str]):
+    async def get_current_user_role(user: UserRole = Depends(get_current_user)):
+        if user.role_name not in roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Отказано в доступе.")
+        return user
+
+    return get_current_user_role

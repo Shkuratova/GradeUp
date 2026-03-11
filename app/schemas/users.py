@@ -1,0 +1,123 @@
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, computed_field
+
+
+class UserBase(BaseModel):
+    id:int 
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EmailModel(BaseModel):
+    email: EmailStr
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserAuth(EmailModel):
+    password: str
+
+
+class UserRole(UserBase):
+    role_name: str
+
+
+class UserInfo(EmailModel, UserRole):
+    first_name: str | None
+    last_name: str | None
+    patronymic: str | None
+    department_id: int | None = None
+
+class SUser(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    email: EmailStr
+    first_name: str
+    last_name: str
+    patronymic: str | None
+    role_id: int
+    position_id: int  | None
+    department_id: int | None = None
+
+
+class UserFullInfo(EmailModel, UserRole):
+    first_name: str
+    last_name: str
+    patronymic: str | None
+    department_name: str
+
+class UserFilter(BaseModel):
+    email: EmailStr | None
+    department_id: int | None
+    role_id: int | None
+    position_id: int | None
+
+class SetUserRole(BaseModel):
+    id: int = Field(exclude=True)
+    role_id: int
+
+class UserAdd(BaseModel):
+    email: EmailStr
+    password: str
+    first_name: str
+    last_name: str
+    patronymic: str | None = None
+    position_id: int | None = None
+    department_id: int | None = None
+    role_id: int = Field(default=1)
+
+
+class UserRegistration(BaseModel):
+    email: EmailStr
+    first_name: str
+    last_name: str
+    patronymic: str | None = None
+    department_id: int | None = None
+    position_id: int | None = None
+
+    password: str
+    confirm_password: str = Field(exclude=True)
+class SRole(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    role_name: str
+
+
+class SDepartment(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    department_name: str
+
+
+class SPosition(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    position: str
+
+
+class SUserFullInfo(BaseModel):
+    id: int
+    email: EmailStr
+    first_name: str | None
+    last_name: str | None
+    patronymic: str | None
+    # department: SDepartment | None = Field(None, exclude=True)
+    # position: SPosition | None = Field(None, exclude=True)
+    role: SRole | None = Field(default=None, exclude=True)
+
+    # @computed_field
+    # def position_name(self) -> str | None:
+    #     return self.position and self.position.position
+    #
+    # @computed_field
+    # def department_name(self) -> str | None:
+    #     return self.department and self.department.department_name
+
+    @computed_field
+    def role_name(self) -> str | None:
+        return self.role and self.role.role_name
+
+
+class SUserFilter(BaseModel):
+    id: int | None = None
+    email: EmailStr | None = None
+    department_id: int | None = None
+    role_id: int | None = None
+    position_id: int | None = None

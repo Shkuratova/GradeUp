@@ -1,0 +1,31 @@
+from db import Base
+from sqlalchemy.orm import mapped_column, Mapped, relationship
+from sqlalchemy import ForeignKey, text
+
+
+class Role(Base):
+    role_name: Mapped[str]
+
+    users: Mapped[list["User"]] = relationship(back_populates="role")
+
+
+class Department(Base):
+    department_name: Mapped[str] = mapped_column(unique=True, nullable=False)
+    users: Mapped[list["User"]] = relationship(back_populates="department")
+
+
+class User(Base):
+    email: Mapped[str] = mapped_column(unique=True)
+    password: Mapped[str]
+    first_name: Mapped[str | None]
+    last_name: Mapped[str | None]
+    patronymic: Mapped[str | None]
+    position_id: Mapped[int] = mapped_column(ForeignKey("positions.id"), nullable=True)
+    department_id: Mapped[int] = mapped_column(ForeignKey("departments.id", ondelete='SET NULL'), nullable=True)
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), default=1, server_default=text("1"))
+
+    position: Mapped["Position"] = relationship(back_populates="users")
+    department: Mapped["Department"] = relationship(back_populates="users")
+    role: Mapped["Role"] = relationship(back_populates="users")
+
+    skills_created: Mapped[list["Skill"]] = relationship(back_populates="creator")
