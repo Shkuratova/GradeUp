@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field, EmailStr, ConfigDict, computed_field
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, computed_field, model_validator
+from exceptions.user import  UserException
 
 
 class UserBase(BaseModel):
@@ -19,11 +20,31 @@ class UserRole(UserBase):
     role_name: str
 
 
-class UserInfo(EmailModel, UserRole):
-    first_name: str | None
-    last_name: str | None
+class UserUpdateBase(BaseModel):
+    first_name: str | None = None
+    last_name: str | None = None
+    patronymic: str | None = None
+    email: EmailStr | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+class UserUpdateSupervisor(UserUpdateBase):
+    profile_level_id: int | None = None
+
+class UserUpdateAdmin(UserUpdateSupervisor):
+    role_id: int | None = None
+    department_id: int | None  = None
+
+
+class UserInfo(UserBase, EmailModel):
+    role: SRole = Field(exclude=True)
+    first_name: str
+    last_name: str
     patronymic: str | None
-    department_id: int | None = None
+    @computed_field
+    def role_name(self) -> str:
+        return self.role.role_name
+
 
 class SUser(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -41,6 +62,7 @@ class UserFullInfo(EmailModel, UserRole):
     first_name: str
     last_name: str
     patronymic: str | None
+    department_id: int
     department_name: str
 
 class UserFilter(BaseModel):
@@ -74,6 +96,7 @@ class UserRegistration(BaseModel):
 
     password: str
     confirm_password: str = Field(exclude=True)
+
 class SRole(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -98,8 +121,8 @@ class SUserFullInfo(BaseModel):
     first_name: str | None
     last_name: str | None
     patronymic: str | None
-    # department: SDepartment | None = Field(None, exclude=True)
-    # position: SPosition | None = Field(None, exclude=True)
+    department_id: int | None
+    department: SDepartment | None = Field(None,)
     role: SRole | None = Field(default=None, exclude=True)
 
     # @computed_field

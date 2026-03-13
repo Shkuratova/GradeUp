@@ -1,15 +1,18 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 from functools import wraps
+from typing import Dict, Type
+
+from pydantic import BaseModel
+from dependencies.auth import get_current_user
 from exceptions.user import (
     UnauthorizedException,
     UserException,
-    UserAlreadyExistException,
-    UserNotFoundException,
     ForbiddenException,
 )
+from exceptions.common import AlreadyExistException, NotFoundException
+from schemas.users import UserInfo, UserRole
 
-
-def auth_exception_handler(func):
+def exception_handler(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         try:
@@ -18,15 +21,12 @@ def auth_exception_handler(func):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error)
             )
-        except UserNotFoundException as error:
+        except NotFoundException as error:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail=str(error)
             )
-        except ForbiddenException as error:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail=str(error)
-            )
-        except UserAlreadyExistException as error:
+
+        except AlreadyExistException as error:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
         except UserException as error:
             raise HTTPException(
@@ -34,3 +34,14 @@ def auth_exception_handler(func):
             )
 
     return wrapper
+
+
+def check_role(required_roles: list[str]):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, current_user: UserRole = Depends(get_current_user), **kwargs):
+            if not current_user.role_name in required_roles:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Отказано в доступе.")
+            return await func(*args, current_user=current_user, **kwargs)
+        return wrapper
+    return decorator

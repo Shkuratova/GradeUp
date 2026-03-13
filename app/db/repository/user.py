@@ -18,7 +18,7 @@ class UserRepository(BaseRepository):
             .options(joinedload(User.role), joinedload(User.department))
         )
         res = await self._session.execute(stmt)
-        return res.scalars()
+        return res.scalars().all()
 
     @db_exception_handler
     async def get_user_role(self, user_filter: dict):
@@ -37,8 +37,8 @@ class UserRepository(BaseRepository):
             .join(Role, Role.id == User.role_id)
         )
         res = await self._session.execute(stmt)
-        row = res.fetchone()
-        return row
+        user = res.mappings().first()
+        return user
 
     @db_exception_handler
     async def get_user_info(self, user_id: int):
@@ -46,7 +46,6 @@ class UserRepository(BaseRepository):
             select(User)
             .where(User.id == user_id)
             .options(
-                joinedload(User.position),
                 joinedload(User.department),
                 joinedload(User.role),
             )

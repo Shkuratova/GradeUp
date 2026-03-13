@@ -12,6 +12,9 @@ from db.models import (
     Role,
     Department,
     User,
+    Profile,
+    Level,
+    ProfileLevel
 )
 
 

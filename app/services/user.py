@@ -5,16 +5,12 @@ from db.uow import unit_of_work
 from db.repository.user import user_repository_factory, UserRepository
 import bcrypt
 from schemas.users import UserAuth, UserRole, EmailModel, SUser
-from exceptions.user import (
-    UserNotFoundException,
-    UserAlreadyExistException,
-    InvalidLoginException,
-)
+from exceptions.user import InvalidLoginException
+from exceptions.common import NotFoundException, AlreadyExistException
+from services.base import BaseService
 
-class UserService:
 
-    def __init__(self, repository_factory):
-        self.repository_factory = repository_factory
+class UserService(BaseService):
 
     @staticmethod
     def hash_password(password: str) -> str:
@@ -31,7 +27,7 @@ class UserService:
             repository = self.repository_factory(uow.session)
             user_exist = await repository.get_one_by_filter({"email": user.email})
         if user_exist is not None:
-            raise UserAlreadyExistException(
+            raise AlreadyExistException(
                 f"Пользователь с почтой {user.email} уже существует."
             )
         user.password = self.hash_password(user.password)
@@ -39,36 +35,22 @@ class UserService:
             repository = self.repository_factory(uow.session)
             return await repository.add(user.model_dump(exclude_none=True))
 
-    async def get_all(self, filter_model: BaseModel):
-        filter_dict = filter_model.model_dump(exclude_none=True)
-        async with unit_of_work() as uow:
-            repository = self.repository_factory(uow.session)
-            users =  await repository.get_all(filter_dict)
-            print(users)
-            return users
+    # async def get_by_id(self, user_id: int) -> SUser:
+    #     async with unit_of_work() as uow:
+    #         repository = self.repository_factory(uow.session)
+    #         user = await repository.get_by_id(user_id)
+    #         if user is None:
+    #             raise UserNotFoundException("Пользователь не найден")
+    #         return SUser.model_validate(user)
 
-    async def get_by_id(self, user_id: int) -> SUser:
+    async def get_user_role(self, filters: BaseModel) -> UserInfo:
+        filter_dict = filters.model_dump(exclude_none=True)
         async with unit_of_work() as uow:
-            repository = self.repository_factory(uow.session)
-            user = await repository.get_by_id(user_id)
-            if user is None:
-                raise UserNotFoundException("Пользователь не найден")
-            return SUser.model_validate(user)
-
-    async def get_user_role(self, user_filter: BaseModel) -> UserRole:
-        filter_dict = user_filter.model_dump(exclude_none=True)
-        async with unit_of_work() as uow:
-            user_repository = self.repository_factory(uow.session)
+            user_repository: UserRepository = self.repository_factory(uow.session)
             user = await user_repository.get_user_role(filter_dict)
+            if user is None:
+                raise NotFoundException("Пользователь не найден")
             return user
-
-    async def update_by_id(self, user_id: int, user: BaseModel):
-        async with unit_of_work() as uow:
-            repository: UserRepository = self.repository_factory(uow.session)
-            user_dict = user.model_dump(exclude_none=True)
-            res = await repository.update_by_id(user_id, user_dict)
-            if not res:
-                raise UserNotFoundException("Пользователь не найден.")
 
 
     async def authenticate_user(self, user_data: UserAuth):

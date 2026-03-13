@@ -8,7 +8,7 @@ class DepartmentService:
     def __init__(self, repository_factory):
         self.repository_factory = repository_factory
 
-    async def add(self, department: SDepartment):
+    async def add(self, department: SDepartment) -> SDepartment:
         department_dict = department.model_dump()
         async with unit_of_work() as uow:
             repository: DepartmentRepository = self.repository_factory(uow.session)
@@ -36,6 +36,7 @@ class DepartmentService:
         return department
 
     async def update(self, department_id: int, instance: DepartmentUpdate):
+        print(instance)
         department_dict = instance.model_dump()
         async with unit_of_work() as uow:
             repository: DepartmentRepository = self.repository_factory(uow.session)

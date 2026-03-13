@@ -19,11 +19,5 @@ class ForbiddenException(Exception):
 class UserException(Exception):
     pass
 
-class UserAlreadyExistException(UserException):
-    pass
-
-class UserNotFoundException(UserException):
-    pass
-
 class PasswordDontMatchException(UserException):
     pass

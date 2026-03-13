@@ -30,7 +30,7 @@ async def get_user_from_token(token: str):
     except ExpiredSignatureError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Токен истек.")
     except PyJWTError as error:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error))
 
 
 async def check_refresh_token(
@@ -43,12 +43,3 @@ async def get_current_user(
     token: str = Depends(get_token_by_type("access_token")),
 ) -> UserRole:
     return await get_user_from_token(token=token)
-
-
-def check_role(roles: list[str]):
-    async def get_current_user_role(user: UserRole = Depends(get_current_user)):
-        if user.role_name not in roles:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Отказано в доступе.")
-        return user
-
-    return get_current_user_role

@@ -34,7 +34,7 @@ class Base(DeclarativeBase, AsyncAttrs):
 
         return result
 
-engine = create_async_engine(settings.db.url)
+engine = create_async_engine(settings.db.url, echo=settings.db.echo)
 async_session = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
 
