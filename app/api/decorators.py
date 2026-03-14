@@ -1,15 +1,12 @@
 from fastapi import HTTPException, status, Depends
 from functools import wraps
-from typing import Dict, Type
 
-from pydantic import BaseModel
 from dependencies.auth import get_current_user
 from exceptions.user import (
     UnauthorizedException,
     UserException,
-    ForbiddenException,
 )
-from exceptions.common import AlreadyExistException, NotFoundException
+from exceptions.common import AlreadyExistException, NotFoundException, ValidationError
 from schemas.users import UserInfo, UserRole
 
 def exception_handler(func):
@@ -28,7 +25,7 @@ def exception_handler(func):
 
         except AlreadyExistException as error:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
-        except UserException as error:
+        except (UserException, ValidationError) as error:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)
             )

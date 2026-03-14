@@ -19,7 +19,7 @@ async def get_all():
 @check_role(["Admin"])
 @exception_handler
 async def add(profile: ProfileAdd, current_user=Depends(get_current_user)):
-    return await service.add_profile(profile)
+    return await service.add(profile)
 
 
 @profile_router.get("/{profile_id}")

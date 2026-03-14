@@ -12,6 +12,7 @@ from services.base import BaseService
 
 class UserService(BaseService):
     entity_name = "Пользователь"
+    unique_field = "email"
 
     @staticmethod
     def hash_password(password: str) -> str:
@@ -23,18 +24,7 @@ class UserService(BaseService):
             plain_password.encode("utf-8"), hashed_password.encode("utf-8")
         )
 
-    async def add(self, user: UserAdd):
-        async with unit_of_work() as uow:
-            repository = self.repository_factory(uow.session)
-            user_exist = await repository.get_one_by_filter({"email": user.email})
-        if user_exist is not None:
-            raise AlreadyExistException(
-                f"Пользователь с почтой {user.email} уже существует."
-            )
-        user.password = self.hash_password(user.password)
-        async with unit_of_work() as uow:
-            repository = self.repository_factory(uow.session)
-            return await repository.add(user.model_dump(exclude_none=True))
+
 
     # async def get_by_id(self, user_id: int) -> SUser:
     #     async with unit_of_work() as uow:

@@ -39,7 +39,7 @@ async def update_by_id(
     department: DepartmentUpdate,
     current_user=Depends(get_current_user),
 ):
-    await service.update(department_id, department)
+    await service.update_by_id(department_id, department)
     return {"detail": "Департамент успешно обновлен"}
 
 
