@@ -4,7 +4,7 @@ from db.database import Base
 
 
 class Profile(Base):
-    position: Mapped[str]
+    position: Mapped[str] = mapped_column(unique=True)
     levels: Mapped[list["Level"]] = relationship(secondary="profile_levels", back_populates="profiles")
 
 

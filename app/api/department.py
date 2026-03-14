@@ -3,7 +3,6 @@ from services.department import department_service as service
 from schemas.departments import SDepartment, DepartmentAdd, DepartmentUpdate
 from api.decorators import check_role, exception_handler
 from dependencies.auth import get_current_user
-from exceptions.common import AlreadyExistException, NotFoundException
 
 department_router = APIRouter(prefix="/departments", tags=["Departments"])
 
@@ -48,5 +47,5 @@ async def update_by_id(
 @check_role(["Admin"])
 @exception_handler
 async def delete_by_id(department_id: int, current_user=Depends(get_current_user)):
-    await service.delete(department_id)
+    await service.delete_by_id(department_id)
     return {"detail": f"Департамент с id = {department_id} удален"}

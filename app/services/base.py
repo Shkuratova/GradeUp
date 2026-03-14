@@ -20,6 +20,7 @@ class BaseService:
         return instance
 
     async def get_all(self, filter_model: BaseModel | None = None):
+        print("ENTITY:", self.entity_name)
         filter_dict = {} if filter_model is None else filter_model.model_dump(exclude_none=True)
         async with unit_of_work() as uow:
             repository: BaseRepository = self.repository_factory(uow.session)
@@ -43,3 +44,4 @@ class BaseService:
             res = await repository.delete_by_id(object_id)
         if not res:
             raise NotFoundException(f"{self.entity_name} c id = {object_id} не найден.")
+

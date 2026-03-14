@@ -11,6 +11,7 @@ from services.base import BaseService
 
 
 class UserService(BaseService):
+    entity_name = "Пользователь"
 
     @staticmethod
     def hash_password(password: str) -> str:
@@ -51,7 +52,6 @@ class UserService(BaseService):
             if user is None:
                 raise NotFoundException("Пользователь не найден")
             return user
-
 
     async def authenticate_user(self, user_data: UserAuth):
         user = await self.get_user_role(EmailModel(email=user_data.email))
