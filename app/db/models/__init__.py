@@ -7,5 +7,5 @@ from db.models.skills import (
     Category,
     Skill
 )
-from db.models.profiles import Profile, Level, ProfileLevel
+from db.models.profiles import Profile,  ProfileLevel
 from db.models.user_profiles import UserCertification, UserAnswer

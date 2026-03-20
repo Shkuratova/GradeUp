@@ -2,19 +2,25 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class ProfileBase(BaseModel):
     id: int
-    position: str
+    title: str
     model_config = ConfigDict(from_attributes=True)
 
+class SProfile(ProfileBase):
+    description: str | None = None
+
 class ProfileAdd(BaseModel):
-    position: str
+    title: str
+    description: str
 
 class LevelBase(BaseModel):
     id: int
-    name: str
+    level: str
     model_config = ConfigDict(from_attributes=True)
 
-class LevelAdd(BaseModel):
-    name: str
-
-class ProfileLevels(ProfileBase):
+class ProfileLevels(SProfile):
     levels: list[LevelBase]
+
+class LevelAdd(BaseModel):
+    profile_id: int
+    level: str
+

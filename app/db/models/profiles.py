@@ -1,24 +1,21 @@
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy import ForeignKey, Text
 from db.database import Base
 
 
 class Profile(Base):
-    position: Mapped[str] = mapped_column(unique=True)
-    levels: Mapped[list["Level"]] = relationship(secondary="profile_levels", back_populates="profiles")
+    title: Mapped[str] = mapped_column(unique=True)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
 
+    levels: Mapped[list["ProfileLevel"]] = relationship(back_populates="profile")
+    users: Mapped[list["User"]] = relationship(back_populates="profile")
 
-class Level(Base):
-    name: Mapped[str] = mapped_column(unique=True, nullable=False)
-
-    profiles: Mapped[list["Profile"]] = relationship(secondary="profile_levels", back_populates="levels")
 
 class ProfileLevel(Base):
     profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"))
-    level_id: Mapped[int] = mapped_column(ForeignKey("levels.id", ondelete="CASCADE"))
+    level: Mapped[str] = mapped_column(nullable=False)
+
+    profile: Mapped["Profile"] = relationship(back_populates="levels")
 
 
-    __table_args__ = (
-        UniqueConstraint("profile_id", "level_id", name="unq_profile_level"),
-    )
 

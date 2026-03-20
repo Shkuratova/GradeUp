@@ -13,7 +13,6 @@ from db.models import (
     Department,
     User,
     Profile,
-    Level,
     ProfileLevel
 )
 

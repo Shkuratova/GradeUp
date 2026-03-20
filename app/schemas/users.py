@@ -29,7 +29,7 @@ class UserUpdateBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 class UserUpdateSupervisor(UserUpdateBase):
-    profile_level_id: int | None = None
+    profile_id: int | None = None
 
 class UserUpdateAdmin(UserUpdateSupervisor):
     role_id: int | None = None
@@ -54,7 +54,8 @@ class SUser(BaseModel):
     last_name: str
     patronymic: str | None
     role_id: int
-    position_id: int  | None
+    position: str  | None
+    profile_id: int | None = None
     department_id: int | None = None
 
 
@@ -69,7 +70,7 @@ class UserFilter(BaseModel):
     email: EmailStr | None
     department_id: int | None
     role_id: int | None
-    position_id: int | None
+    position: str | None
 
 class SetUserRole(BaseModel):
     id: int = Field(exclude=True)
@@ -81,8 +82,9 @@ class UserAdd(BaseModel):
     first_name: str
     last_name: str
     patronymic: str | None = None
-    position_id: int | None = None
+    position: str | None = None
     department_id: int | None = None
+    profile_id: int | None = None
     role_id: int = Field(default=1)
 
 
@@ -92,8 +94,8 @@ class UserRegistration(BaseModel):
     last_name: str
     patronymic: str | None = None
     department_id: int | None = None
-    position_id: int | None = None
-
+    position: str | None = None
+    profile_id: int| None = None
     password: str
     confirm_password: str = Field(exclude=True)
 
@@ -109,10 +111,7 @@ class SDepartment(BaseModel):
     department_name: str
 
 
-class SPosition(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    position: str
+
 
 
 class SUserFullInfo(BaseModel):
@@ -123,12 +122,9 @@ class SUserFullInfo(BaseModel):
     patronymic: str | None
     department_id: int | None
     department: SDepartment | None = Field(None,)
+    profile_id: int | None = None
     role: SRole | None = Field(default=None, exclude=True)
 
-    # @computed_field
-    # def position_name(self) -> str | None:
-    #     return self.position and self.position.position
-    #
     # @computed_field
     # def department_name(self) -> str | None:
     #     return self.department and self.department.department_name
@@ -143,4 +139,4 @@ class SUserFilter(BaseModel):
     email: EmailStr | None = None
     department_id: int | None = None
     role_id: int | None = None
-    position_id: int | None = None
+    position: str | None = None
