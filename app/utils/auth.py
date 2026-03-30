@@ -2,8 +2,7 @@ from fastapi import Response
 import jwt
 from datetime import datetime, timedelta, timezone
 from config import settings
-from schemas.users import UserRole
-
+from schemas.users import UserRole, UserInfo
 
 class AuthUtils:
     @staticmethod
@@ -36,7 +35,7 @@ class AuthUtils:
     @classmethod
     def create_access_token(
         cls,
-        user: UserRole,
+        user: UserInfo,
         expire_minutes: int = settings.jwt.expire_access_token_minutes,
         expire_timedelta: timedelta | None = None,
     ) -> str:
@@ -52,7 +51,7 @@ class AuthUtils:
         )
 
     @classmethod
-    def create_refresh_token(cls, user: UserRole) -> str:
+    def create_refresh_token(cls, user: UserInfo) -> str:
         token_data = {"sub": str(user.id), "token_type": "refresh"}
         return cls.encode_jwt(
             payload=token_data,
@@ -61,7 +60,7 @@ class AuthUtils:
 
     @classmethod
     def set_token(
-        cls, response: Response, user: UserRole, token_type: str = "access_token"
+        cls, response: Response, user: UserInfo, token_type: str = "access_token"
     ):
         if token_type == "access_token":
             token = cls.create_access_token(user)
@@ -70,6 +69,3 @@ class AuthUtils:
         response.set_cookie(
             key=token_type, value=token, httponly=True, secure=True, samesite="lax"
         )
-
-
-

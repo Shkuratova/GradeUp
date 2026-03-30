@@ -14,12 +14,13 @@ from dependencies.auth import (
     get_current_user,
     check_refresh_token,
 )
+from api.roles import UserRole
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @auth_router.post("/registration")
-@check_role(["Admin", "Specialist"])
+@check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def registration(
     user_data: UserRegistration,
@@ -27,7 +28,7 @@ async def registration(
 ) -> dict:
     if user_data.password != user_data.confirm_password:
         raise PasswordDontMatchException
-    await user_service.add(user=user_data)
+    await user_service.add(user_data)
 
     return {"detail": "Пользователь успешно добавлен"}
 
@@ -65,10 +66,10 @@ async def get_current_user(user: UserInfo = Depends(get_current_user)):
 
 
 @auth_router.post("/set-role")
-@check_role(["Admin"])
+@check_role([UserRole.ADMIN])
 @exception_handler
 async def set_user_role(
-    user_data: SetUserRole, current_user: UserRole = Depends(get_current_user)
+    user_data: SetUserRole, current_user: UserInfo = Depends(get_current_user)
 ) -> dict:
     await user_service.update_by_id(user_data.id, user_data)
     return {"detail": f"Роль пользователя успешно обновлена"}

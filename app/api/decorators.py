@@ -7,7 +7,7 @@ from exceptions.user import (
     UserException,
 )
 from exceptions.common import AlreadyExistException, NotFoundException, ValidationError
-from schemas.users import UserInfo, UserRole
+from schemas.users import UserInfo
 
 def exception_handler(func):
     @wraps(func)
@@ -36,7 +36,8 @@ def exception_handler(func):
 def check_role(required_roles: list[str]):
     def decorator(func):
         @wraps(func)
-        async def wrapper(*args, current_user: UserRole = Depends(get_current_user), **kwargs):
+        async def wrapper(*args, current_user: UserInfo = Depends(get_current_user), **kwargs):
+            print(current_user.model_dump())
             if not current_user.role_name in required_roles:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Отказано в доступе.")
             return await func(*args, current_user=current_user, **kwargs)

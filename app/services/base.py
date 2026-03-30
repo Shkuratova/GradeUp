@@ -33,7 +33,7 @@ class BaseService:
             raise ValidationError("Хотя бы одно поле для обновления должно быть передано.")
         async with unit_of_work() as uow:
             repository: BaseRepository = self.repository_factory(uow.session)
-            if self.unique_field is not None:
+            if self.unique_field is not None and object_dict.get(self.unique_field, None) is not  None:
                 filters = {self.unique_field: object_dict[self.unique_field]}
                 object_exist = await repository.get_one_by_filter(filters)
                 if object_exist is not None:

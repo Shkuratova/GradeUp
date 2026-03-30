@@ -11,6 +11,16 @@ class EmailModel(BaseModel):
     email: EmailStr
     model_config = ConfigDict(from_attributes=True)
 
+class UserInfo(UserBase, EmailModel):
+    role: SRole = Field(exclude=True)
+    first_name: str
+    last_name: str
+    patronymic: str | None
+    department_id: int | None
+    @computed_field
+    def role_name(self) -> str:
+        return self.role.role_name
+
 
 class UserAuth(EmailModel):
     password: str
@@ -36,14 +46,6 @@ class UserUpdateAdmin(UserUpdateSupervisor):
     department_id: int | None  = None
 
 
-class UserInfo(UserBase, EmailModel):
-    role: SRole = Field(exclude=True)
-    first_name: str
-    last_name: str
-    patronymic: str | None
-    @computed_field
-    def role_name(self) -> str:
-        return self.role.role_name
 
 
 class SUser(BaseModel):

@@ -13,7 +13,12 @@ from db.models import (
     Department,
     User,
     Profile,
-    ProfileLevel
+    ProfileLevel,
+    Skill,
+    SkillStage,
+    StageQuestion,
+    UserStage,
+    UserAnswer
 )
 
 

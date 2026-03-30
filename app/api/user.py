@@ -27,7 +27,7 @@ async def get_all_users(
 ) -> list[SUserFullInfo]:
     if current_user.role_name == "Supervisor":
         if current_user.department_id is None:
-            raise ForbiddenException
+            raise ForbiddenException("Руководитель не привязан к отделу.")
         user_filters.department_id = current_user.department_id
     res = await user_service.get_all(user_filters)
     return list(res)
