@@ -1,11 +1,10 @@
 from db.models.users import User, Department, Role
 from db.models.skills import (
-    ProfileSkill,
-    Certification,
-    CertificationQuestion,
+    SkillStage,
+    StageQuestion,
+    LevelSkill,
     ConfirmationTypes,
-    Category,
     Skill
 )
 from db.models.profiles import Profile,  ProfileLevel
-from db.models.user_profiles import UserCertification, UserAnswer
+from db.models.user_profiles import UserStage, UserAnswer

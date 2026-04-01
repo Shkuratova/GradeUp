@@ -5,11 +5,12 @@ from datetime import datetime
 from enum import Enum
 
 
-class UserCertification(Base):
+class UserStage(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    certification_id: Mapped[int] = mapped_column(ForeignKey("certifications.id")) #FK1
+    stage_id: Mapped[int] = mapped_column(ForeignKey("skill_stages.id")) #FK1
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
     status: Mapped[str]
+    location: Mapped[str | None]
     is_accepted: Mapped[bool] = mapped_column(server_default=text('false'))
     date_started: Mapped[datetime]
 

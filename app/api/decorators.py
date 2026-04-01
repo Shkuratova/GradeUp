@@ -1,12 +1,12 @@
 from fastapi import HTTPException, status, Depends
 from functools import wraps
-
+from pydantic import ValidationError
 from dependencies.auth import get_current_user
 from exceptions.user import (
     UnauthorizedException,
     UserException,
 )
-from exceptions.common import AlreadyExistException, NotFoundException, ValidationError
+from exceptions.common import AlreadyExistException, NotFoundException, DataValidationError
 from schemas.users import UserInfo
 
 def exception_handler(func):
@@ -25,10 +25,16 @@ def exception_handler(func):
 
         except AlreadyExistException as error:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
-        except (UserException, ValidationError) as error:
+        except (UserException, DataValidationError) as error:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)
             )
+        except ValidationError as error:
+            if any(err["type"] == "extra_forbidden" for err in error.errors()):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="Выбраны поля, недоступные для обновления."
+                )
+            raise error
 
     return wrapper
 

@@ -23,6 +23,12 @@ class ProfileService(BaseService):
                 raise NotFoundException(f"Профиль с id = {profile_id} не найден.")
         return profile
 
+    async def get_all_by_department_id(self, department_id: int):
+        async with unit_of_work() as uow:
+            repository: ProfileRepository = self.repository_factory(uow.session)
+            profiles = await repository.get_profiles_by_department(department_id)
+        return profiles
+
 
 profile_service = ProfileService(profile_repository_factory)
 

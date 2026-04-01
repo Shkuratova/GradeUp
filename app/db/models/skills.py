@@ -4,46 +4,38 @@ from sqlalchemy import ForeignKey, Text, text
 from enum import Enum
 
 
-
-## MtM?
-class Category(Base):
-    __tablename__ = "categories"
-
-    category_name: Mapped[str]
-
-
-class Skill(Base):
-    title: Mapped[str]
-    literature: Mapped[str | None] = mapped_column(Text)
-    creator_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-
-    creator: Mapped["User"] = relationship(back_populates="skills_created")
-    stages: Mapped[list["Certification"]] = relationship(back_populates="skill")
-
-
-class ProfileSkill(Base):
-    profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id"))
-    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"))
-
-
 class ConfirmationTypes(str, Enum):
     certification = "Аттестация"
     performance_review = "Performance review"
     practice = "Практическое задание"
 
 
-class Certification(Base):
-    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"))
-    certification_type: Mapped[ConfirmationTypes]
+
+class Skill(Base):
+    title: Mapped[str]
+    literature: Mapped[str | None] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
     creator_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    version: Mapped[int] = mapped_column(server_default=text("1"))
 
-    skill: Mapped["Skill"] = relationship(back_populates="stages")
+    creator: Mapped["User"] = relationship(back_populates="skills_created")
+    stages: Mapped[list["SkillStage"]] = relationship(back_populates="skill")
 
-class CertificationQuestion(Base):
+
+class SkillStage(Base):
+    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id", ondelete="CASCADE"))
+    confirmation_type: Mapped[ConfirmationTypes]
+    creator_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+
+    skill: Mapped[Skill] = relationship(back_populates="stages")
+
+class LevelSkill(Base):
+    profile_level_id: Mapped[int] = mapped_column(ForeignKey("profile_levels.id", ondelete="CASCADE"))
+    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id", ondelete="CASCADE"))
+
+
+class StageQuestion(Base):
     num: Mapped[int]
-    certification_id: Mapped[int] = mapped_column(ForeignKey("certifications.id"))
+    stage_id: Mapped[int] = mapped_column(ForeignKey("skill_stages.id"))
     question: Mapped[str] = mapped_column(Text)
     answer: Mapped[str] = mapped_column(Text)
-    certification_version: Mapped[int] = mapped_column(server_default=text("1"))
     creator_id: Mapped[int] = ForeignKey("users.id")

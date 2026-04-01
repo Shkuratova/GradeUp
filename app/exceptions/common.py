@@ -4,5 +4,5 @@ class NotFoundException(Exception):
 class AlreadyExistException(Exception):
     pass
 
-class ValidationError(Exception):
+class DataValidationError(Exception):
     pass

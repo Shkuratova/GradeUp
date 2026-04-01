@@ -23,21 +23,12 @@ class UserRepository(BaseRepository):
     @db_exception_handler
     async def get_user_role(self, user_filter: dict):
         stmt = (
-            select(
-                User.id,
-                User.password,
-                User.email,
-                User.first_name,
-                User.last_name,
-                User.patronymic,
-                User.department_id,
-                Role.role_name,
-            )
+            select(User)
             .filter_by(**user_filter)
-            .join(Role, Role.id == User.role_id)
+            .options(joinedload(User.role))
         )
         res = await self._session.execute(stmt)
-        user = res.mappings().first()
+        user = res.scalar_one_or_none()
         return user
 
     @db_exception_handler

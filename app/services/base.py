@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from db.repository import BaseRepository
 from db.uow import unit_of_work
-from exceptions.common import NotFoundException, AlreadyExistException, ValidationError
+from exceptions.common import NotFoundException, AlreadyExistException, DataValidationError
 
 
 class BaseService:
@@ -30,7 +30,7 @@ class BaseService:
     async def update_by_id(self, object_id: int, object_model: BaseModel):
         object_dict = object_model.model_dump(exclude_none=True)
         if not object_dict:
-            raise ValidationError("Хотя бы одно поле для обновления должно быть передано.")
+            raise DataValidationError("Хотя бы одно поле для обновления должно быть передано.")
         async with unit_of_work() as uow:
             repository: BaseRepository = self.repository_factory(uow.session)
             if self.unique_field is not None and object_dict.get(self.unique_field, None) is not  None:

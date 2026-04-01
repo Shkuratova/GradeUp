@@ -1,5 +1,4 @@
 from pydantic import BaseModel, Field, EmailStr, ConfigDict, computed_field, model_validator
-from exceptions.user import  UserException
 
 
 class UserBase(BaseModel):

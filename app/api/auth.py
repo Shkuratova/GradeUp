@@ -3,8 +3,6 @@ from schemas.users import (
     UserAuth,
     UserInfo,
     UserRegistration,
-    SetUserRole,
-    UserRole,
 )
 from utils.auth import AuthUtils
 from services import user_service
@@ -63,13 +61,3 @@ def logout(response: Response):
 @auth_router.get("/me", response_model=UserInfo)
 async def get_current_user(user: UserInfo = Depends(get_current_user)):
     return user
-
-
-@auth_router.post("/set-role")
-@check_role([UserRole.ADMIN])
-@exception_handler
-async def set_user_role(
-    user_data: SetUserRole, current_user: UserInfo = Depends(get_current_user)
-) -> dict:
-    await user_service.update_by_id(user_data.id, user_data)
-    return {"detail": f"Роль пользователя успешно обновлена"}

@@ -1,6 +1,6 @@
 from fastapi import Request, Depends, HTTPException, status
 from jwt.exceptions import PyJWTError, ExpiredSignatureError
-from schemas.users import UserBase, UserRole
+from schemas.users import UserBase, UserRole, UserInfo
 from exceptions.user import (
     InvalidTokenException,
 )
@@ -18,7 +18,7 @@ def get_token_by_type(token_type: str):
     return get_token
 
 
-async def get_user_from_token(token: str):
+async def get_user_from_token(token: str)-> UserInfo:
     try:
         payload = AuthUtils.decode_jwt(token=token)
         if not (user_id := payload.get("sub")) or not (role := payload.get("role")):
@@ -26,7 +26,7 @@ async def get_user_from_token(token: str):
         user = await user_service.get_user_role(UserBase(id=user_id))
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден.")
-        return user
+        return UserInfo.model_validate(user)
     except ExpiredSignatureError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Токен истек.")
     except PyJWTError as error:
@@ -35,11 +35,11 @@ async def get_user_from_token(token: str):
 
 async def check_refresh_token(
     token: str = Depends(get_token_by_type("refresh_token")),
-) -> UserRole:
+) -> UserInfo:
     return await get_user_from_token(token=token)
 
 
 async def get_current_user(
     token: str = Depends(get_token_by_type("access_token")),
-) -> UserRole:
+) -> UserInfo:
     return await get_user_from_token(token=token)
