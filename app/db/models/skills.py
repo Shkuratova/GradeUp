@@ -1,6 +1,6 @@
 from db import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey, Text, text
+from sqlalchemy import ForeignKey, Text, text, UniqueConstraint
 from enum import Enum
 
 
@@ -26,6 +26,7 @@ class SkillStage(Base):
     confirmation_type: Mapped[ConfirmationTypes]
     creator_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 
+    __table_args__ = (UniqueConstraint('skill_id', 'confirmation_type', name='stage_unq_constraint'), )
     skill: Mapped[Skill] = relationship(back_populates="stages")
 
 class LevelSkill(Base):
@@ -35,7 +36,7 @@ class LevelSkill(Base):
 
 class StageQuestion(Base):
     num: Mapped[int]
-    stage_id: Mapped[int] = mapped_column(ForeignKey("skill_stages.id"))
+    stage_id: Mapped[int] = mapped_column(ForeignKey("skill_stages.id", ondelete="CASCADE"))
     question: Mapped[str] = mapped_column(Text)
     answer: Mapped[str] = mapped_column(Text)
     creator_id: Mapped[int] = ForeignKey("users.id")

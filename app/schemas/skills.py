@@ -31,20 +31,31 @@ class StageBase(BaseModel):
     id: int
     skill_id: int
     confirmation_type: ConfirmationTypes
+    model_config = ConfigDict(from_attributes=True)
 
 
-class StageAdd(StageBase):
-    creator_id: int
+class StageAdd(BaseModel):
+    skill_id: int = Field(default=1)
+    confirmation_type: ConfirmationTypes
+    creator_id: int = Field(default=1)
 
+class StageItem(BaseModel):
+    id: int
+    confirmation_type: ConfirmationTypes
 
 class SkillStages(SkillInfo):
-    creator: UserInfo = Field(exclude=True)
-    skills: list[StageBase]
+    # creator: UserInfo = Field(exclude=True)
+    stages: list[StageItem]
 
-    @computed_field
-    def created_by(self) -> str:
-        return f"{self.creator.last_name} {self.creator.first_name} {self.creator.patronymic if self.creator.patronymic else ''}"
+    # @computed_field
+    # def created_by(self) -> str:
+    #     return f"{self.creator.last_name} {self.creator.first_name} {self.creator.patronymic if self.creator.patronymic else ''}"
 
 
 class SkillFilter(BaseModel):
     creator_id: int | None = None
+
+
+class SkillStageFilter(BaseModel):
+    creator_id: int | None = None
+    confirmation_type: ConfirmationTypes | None = None
