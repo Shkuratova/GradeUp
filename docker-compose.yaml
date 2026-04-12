@@ -7,7 +7,7 @@ services:
     depends_on:
       - db
     ports:
-      - "8000:8000"
+      - "5442:8000"
     volumes:
       - ./app:/backend
 
@@ -20,6 +20,8 @@ services:
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: db_gradeup
       PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
