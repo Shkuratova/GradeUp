@@ -1,17 +1,15 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query
 from typing import Annotated
 
-from fastapi.exceptions import ValidationException
 from schemas.users import (
     SUserFullInfo,
     SUserFilter,
     UserInfo,
     UserBase,
     UserUpdateBase,
-    UserUpdateSupervisor,
     UserUpdateAdmin,
 )
-from dependencies.auth import get_current_user
+from dependencies import get_current_user, get_uow
 from exceptions.user import ForbiddenException
 from services.user import user_service
 from api.decorators import exception_handler, check_role
@@ -41,7 +39,7 @@ async def get_user(
     user_id: int,
     current_user: UserInfo = Depends(get_current_user),
 ) -> UserInfo:
-    return await user_service.get_user_role(user_id)
+    return await user_service.get_user_role(UserBase(id=user_id))
 
 
 @router.patch("/{user_id}")

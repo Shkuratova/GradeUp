@@ -12,13 +12,23 @@ class EmailModel(BaseModel):
 
 class UserInfo(UserBase, EmailModel):
     role: SRole = Field(exclude=True)
+    department: SDepartment | None = Field(None, exclude=True)
     first_name: str
     last_name: str
+    position: str | None
     patronymic: str | None
-    department_id: int | None
+
     @computed_field
     def role_name(self) -> str:
         return self.role.role_name
+
+    @computed_field
+    def department_name(self)-> str | None:
+        return self.department.department_name if self.department else None
+
+    @computed_field
+    def department_id(self) -> int | None:
+        return self.department.id if self.department else None
 
 
 class UserAuth(EmailModel):

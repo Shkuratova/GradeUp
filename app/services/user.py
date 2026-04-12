@@ -46,7 +46,7 @@ class UserService(BaseService):
             user = await user_repository.get_user_role(filter_dict)
             if user is None:
                 raise NotFoundException("Пользователь не найден")
-            return user
+            return UserInfo.model_validate(user)
 
     async def authenticate_user(self, user_data: UserAuth):
         user = await self.get_user_role(EmailModel(email=user_data.email))

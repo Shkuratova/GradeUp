@@ -25,7 +25,7 @@ class UserRepository(BaseRepository):
         stmt = (
             select(User)
             .filter_by(**user_filter)
-            .options(joinedload(User.role))
+            .options(joinedload(User.role), joinedload(User.department))
         )
         res = await self._session.execute(stmt)
         user = res.scalar_one_or_none()
