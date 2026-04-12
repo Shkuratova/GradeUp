@@ -1,10 +1,8 @@
 from services.base import BaseService
 from db.repository.skill import (
-    skill_repository_factory,
-    stage_repository_factory,
     SkillRepository,
     StageRepository,
-    level_skill_repository_factory,
+
     LevelSkillRepository,
 )
 from pydantic import BaseModel
