@@ -5,14 +5,25 @@ class QuestionBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class SQuestion(QuestionBase):
+    num: int
     question: str
     answer: str
 
 
 class QuestionAdd(BaseModel):
-    num: int
+    num: int = Field(..., gt=0)
+    stage_id: int
     question: str
     answer: str
-    stage_id: int
-    creator_id: int
 
+
+class QuestionUpdate(BaseModel):
+    id: int | None = Field(default=None, exclude=True)
+    num: int
+    stage_id: int
+    question: str
+    answer: str
+
+class QuestionFilter(BaseModel):
+    stage_id: int
+    num: int  | None = None

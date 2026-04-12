@@ -47,5 +47,3 @@ class UserRepository(BaseRepository):
 
 
 
-def user_repository_factory(session):
-    return UserRepository(session)

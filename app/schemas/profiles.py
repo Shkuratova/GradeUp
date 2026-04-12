@@ -24,3 +24,24 @@ class LevelAdd(BaseModel):
     profile_id: int
     level: str
 
+
+class LevelSkill(BaseModel):
+    id: int
+    skill_id: int
+    profile_level_id: int
+    model_config = ConfigDict(from_attributes=True)
+
+class LevelSkillAdd(BaseModel):
+    skill_id: int
+    profile_level_id: int = Field(default=1)
+
+
+class LevelUpdate(BaseModel):
+    id: int | None = None
+    level: str
+
+class ProfileUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    levels: list[LevelUpdate]
+

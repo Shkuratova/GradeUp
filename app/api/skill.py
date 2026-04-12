@@ -71,3 +71,11 @@ async def add_stage(skill_id: int, stage: StageAdd, current_user=Depends(get_cur
     stage.skill_id = skill_id
     new_stage = await stage_service.add(stage)
     return new_stage
+
+@skill_router.delete("/{skill_id}")
+@check_role([UserRole.ADMIN, UserRole.SPO])
+@exception_handler
+async def delete_skill(skill_id:int, current_user = Depends(get_current_user)):
+    await skill_service.delete_by_id(skill_id)
+    return {"detail": f"Навык с id = {skill_id} был удален."}
+

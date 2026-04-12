@@ -59,3 +59,4 @@ class SkillFilter(BaseModel):
 class SkillStageFilter(BaseModel):
     creator_id: int | None = None
     confirmation_type: ConfirmationTypes | None = None
+

@@ -1,12 +1,20 @@
 from services.base import BaseService
-from db.repository.skill import skill_repository_factory, stage_repository_factory, SkillRepository, StageRepository
+from db.repository.skill import (
+    skill_repository_factory,
+    stage_repository_factory,
+    SkillRepository,
+    StageRepository,
+    level_skill_repository_factory,
+    LevelSkillRepository,
+)
 from pydantic import BaseModel
 from db.uow import unit_of_work
 
 class SkillService(BaseService):
 
     entity_name = "Навык"
-    unique_field = "title"
+    unique_fields = ["title"]
+    repository_factory = SkillRepository
 
     async def get_skills_stages(self, filters: BaseModel):
         filter_dict = filters.model_dump(exclude_none=True)
@@ -17,8 +25,15 @@ class SkillService(BaseService):
 
 class StageService(BaseService):
     entity_name = "Этап подтверждения"
+    repository_factory = StageRepository
     #unique_fields = []
 
-skill_service = SkillService(repository_factory=skill_repository_factory)
-stage_service = StageService(repository_factory=stage_repository_factory)
 
+class LevelSkillService(BaseService):
+    unique_fields = ["skill_id", "profile_level_id"]
+    repository_factory = LevelSkillRepository
+
+
+skill_service = SkillService()
+stage_service = StageService()
+level_skill_service = LevelSkillService()

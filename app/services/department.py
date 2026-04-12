@@ -1,4 +1,4 @@
-from db.repository.department import department_repository_factory, DepartmentRepository
+from db.repository.department import DepartmentRepository
 from db.uow import unit_of_work
 from exceptions.common import AlreadyExistException
 from schemas.departments import SDepartment, DepartmentUpdate
@@ -7,7 +7,8 @@ from services.base import BaseService
 
 class DepartmentService(BaseService):
     entity_name = "Отдел"
-    unique_field = "department_name"
+    unique_fields = ["department_name"]
+    repository_factory = DepartmentRepository
 
 
-department_service = DepartmentService(department_repository_factory)
+department_service = DepartmentService()

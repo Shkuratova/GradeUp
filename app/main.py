@@ -5,6 +5,7 @@ from api import (
     department_router,
     profile_router,
     skill_router,
+    question_router
 )
 
 app = FastAPI()
@@ -14,6 +15,7 @@ app.include_router(user_router)
 app.include_router(department_router)
 app.include_router(profile_router)
 app.include_router(skill_router)
+app.include_router(question_router)
 
 @app.get("/")
 def check():

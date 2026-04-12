@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 from schemas.users import UserAdd, UserInfo
 from db.uow import unit_of_work
-from db.repository.user import user_repository_factory, UserRepository
+from db.repository.user import UserRepository
 import bcrypt
 from schemas.users import UserAuth, UserRole, EmailModel, SUser
 from exceptions.user import InvalidLoginException
@@ -12,7 +12,8 @@ from services.base import BaseService
 
 class UserService(BaseService):
     entity_name = "Пользователь"
-    unique_field = "email"
+    unique_fields = ["email"]
+    repository_factory = UserRepository
 
     @staticmethod
     def hash_password(password: str) -> str:
@@ -54,4 +55,4 @@ class UserService(BaseService):
         return UserInfo.model_validate(user)
 
 
-user_service = UserService(repository_factory=user_repository_factory)
+user_service = UserService()

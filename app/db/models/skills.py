@@ -28,6 +28,7 @@ class SkillStage(Base):
 
     __table_args__ = (UniqueConstraint('skill_id', 'confirmation_type', name='stage_unq_constraint'), )
     skill: Mapped[Skill] = relationship(back_populates="stages")
+    questions: Mapped[list[StageQuestion]] = relationship(back_populates="stage")
 
 class LevelSkill(Base):
     profile_level_id: Mapped[int] = mapped_column(ForeignKey("profile_levels.id", ondelete="CASCADE"))
@@ -39,4 +40,6 @@ class StageQuestion(Base):
     stage_id: Mapped[int] = mapped_column(ForeignKey("skill_stages.id", ondelete="CASCADE"))
     question: Mapped[str] = mapped_column(Text)
     answer: Mapped[str] = mapped_column(Text)
-    creator_id: Mapped[int] = ForeignKey("users.id")
+
+    __table_args__ = (UniqueConstraint("stage_id", "num", name="question_unq_constraint"), )
+    stage: Mapped[SkillStage] =relationship(back_populates="questions")

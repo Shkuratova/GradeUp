@@ -1,7 +1,7 @@
 from sqlalchemy.orm import joinedload, contains_eager
 from sqlalchemy import select
 from db.repository.base import BaseRepository
-from db.models import Skill, SkillStage
+from db.models import Skill, SkillStage, LevelSkill
 
 class SkillRepository(BaseRepository):
     model = Skill
@@ -23,8 +23,6 @@ class SkillRepository(BaseRepository):
 class StageRepository(BaseRepository):
     model = SkillStage
 
-def skill_repository_factory(session):
-    return SkillRepository(session)
+class LevelSkillRepository(BaseRepository):
+    model = LevelSkill
 
-def stage_repository_factory(session):
-    return StageRepository(session)
