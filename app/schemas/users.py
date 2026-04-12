@@ -15,9 +15,10 @@ class UserInfo(UserBase, EmailModel):
     department: SDepartment | None = Field(None, exclude=True)
     first_name: str
     last_name: str
-    position: str | None
     patronymic: str | None
+    position: str | None
 
+    password: str = Field(exclude=True)
     @computed_field
     def role_name(self) -> str:
         return self.role.role_name
@@ -53,8 +54,6 @@ class UserUpdateSupervisor(UserUpdateBase):
 class UserUpdateAdmin(UserUpdateSupervisor):
     role_id: int | None = None
     department_id: int | None  = None
-
-
 
 
 class SUser(BaseModel):
@@ -120,9 +119,6 @@ class SDepartment(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     department_name: str
-
-
-
 
 
 class SUserFullInfo(BaseModel):
