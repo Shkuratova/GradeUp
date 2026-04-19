@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from services.department import department_service as service
+from services.department import DepartmentService
+from db.uow import unit_of_work
 from schemas.departments import SDepartment, DepartmentAdd, DepartmentUpdate
 from api.decorators import check_role, exception_handler
 from dependencies.auth import get_current_user
@@ -11,7 +12,8 @@ department_router = APIRouter(prefix="/departments", tags=["Departments"])
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def add(department: DepartmentAdd, current_user=Depends(get_current_user)):
-    instance = await service.add(department)
+    async with unit_of_work() as uow:
+        instance = await DepartmentService(uow.session).add(department)
     return instance
 
 
@@ -19,7 +21,8 @@ async def add(department: DepartmentAdd, current_user=Depends(get_current_user))
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def get_all(current_user=Depends(get_current_user)) -> list[SDepartment]:
-    return await service.get_all()
+    async with unit_of_work() as uow:
+        return await DepartmentService(uow.session).get_all()
 
 
 @department_router.get("/{department_id}")
@@ -28,7 +31,8 @@ async def get_all(current_user=Depends(get_current_user)) -> list[SDepartment]:
 async def get_by_id(
     department_id: int, current_user=Depends(get_current_user)
 ) -> SDepartment:
-    return await service.get_by_id(department_id)
+    async with unit_of_work() as uow:
+        return await DepartmentService(uow.session).get_by_id(department_id)
 
 
 @department_router.post("/{department_id}")
@@ -39,7 +43,8 @@ async def update_by_id(
     department: DepartmentUpdate,
     current_user=Depends(get_current_user),
 ):
-    await service.update_by_id(department_id, department)
+    async with unit_of_work() as uow:
+        await DepartmentService(uow.session).update_by_id(department_id, department)
     return {"detail": "Департамент успешно обновлен"}
 
 
@@ -47,5 +52,6 @@ async def update_by_id(
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def delete_by_id(department_id: int, current_user=Depends(get_current_user)):
-    await service.delete_by_id(department_id)
+    async with unit_of_work() as uow:
+        await DepartmentService(uow.session).delete_by_id(department_id)
     return {"detail": f"Департамент с id = {department_id} удален"}

@@ -12,10 +12,12 @@ class Profile(Base):
 
 
 class ProfileLevel(Base):
-    profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"))
+    profile_id: Mapped[int] = mapped_column(
+        ForeignKey("profiles.id", ondelete="CASCADE")
+    )
     level: Mapped[str] = mapped_column(nullable=False)
 
     profile: Mapped["Profile"] = relationship(back_populates="levels")
-
-
-
+    skills: Mapped[list["LevelSkill"]] = relationship(
+        back_populates="profile_level", cascade="all, delete-orphan"
+    )

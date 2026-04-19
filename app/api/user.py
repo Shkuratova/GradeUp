@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import Annotated
-
 from schemas.users import (
     SUserFullInfo,
     SUserFilter,
@@ -11,7 +10,8 @@ from schemas.users import (
 )
 from dependencies import get_current_user, get_uow
 from exceptions.user import ForbiddenException
-from services.user import user_service
+from services.user import UserService
+from db.uow import unit_of_work
 from api.decorators import exception_handler, check_role
 from api.roles import UserRole
 
@@ -29,8 +29,9 @@ async def get_all_users(
         if current_user.department_id is None:
             raise ForbiddenException("Руководитель не привязан к отделу.")
         user_filters.department_id = current_user.department_id
-    res = await user_service.get_all(user_filters)
-    return list(res)
+    async with unit_of_work() as uow:
+        res = await UserService(uow.session).get_all(user_filters)
+        return list(res)
 
 
 @router.get("/{user_id}", response_model=UserInfo)
@@ -39,7 +40,8 @@ async def get_user(
     user_id: int,
     current_user: UserInfo = Depends(get_current_user),
 ) -> UserInfo:
-    return await user_service.get_user_role(UserBase(id=user_id))
+    async with unit_of_work() as uow:
+        return await UserService(uow.session).get_user_role(UserBase(id=user_id))
 
 
 @router.patch("/{user_id}")
@@ -50,9 +52,11 @@ async def update_user(
     user_data: UserUpdateAdmin,
     current_user: UserInfo = Depends(get_current_user),
 ):
-    if current_user.role_name == UserRole.ADMIN:
-        await user_service.update_by_id(user_id, user_data)
-    else:
-        user_data = UserUpdateBase.model_validate(user_data.model_dump())
-        await user_service.update_by_id(user_id, user_data)
-    return {"detail": "Пользователь успешно обновлен"}
+    async with unit_of_work() as uow:
+        user_service = UserService(uow.session)
+        if current_user.role_name == UserRole.ADMIN:
+            await user_service.update_by_id(user_id, user_data)
+        else:
+            user_data = UserUpdateBase.model_validate(user_data.model_dump())
+            await user_service.update_by_id(user_id, user_data)
+        return {"detail": "Пользователь успешно обновлен"}

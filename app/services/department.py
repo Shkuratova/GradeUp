@@ -11,4 +11,3 @@ class DepartmentService(BaseService):
     repository_factory = DepartmentRepository
 
 
-department_service = DepartmentService()

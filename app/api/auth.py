@@ -5,7 +5,8 @@ from schemas.users import (
     UserRegistration,
 )
 from utils.auth import AuthUtils
-from services import user_service
+from services import UserService
+from db.uow import unit_of_work
 from exceptions.user import PasswordDontMatchException
 from api.decorators import exception_handler, check_role
 from dependencies.auth import (
@@ -26,7 +27,8 @@ async def registration(
 ) -> dict:
     if user_data.password != user_data.confirm_password:
         raise PasswordDontMatchException
-    await user_service.add(user_data)
+    async with unit_of_work() as uow:
+        await UserService(uow.session).add(user_data)
 
     return {"detail": "Пользователь успешно добавлен"}
 
@@ -37,21 +39,20 @@ async def login(
     response: Response,
     user_data: UserAuth,
 ) -> dict:
-    user_role = await user_service.authenticate_user(user_data)
+    async with unit_of_work() as uow:
+        user_role = await UserService(uow.session).authenticate_user(user_data)
     AuthUtils.set_token(response=response, user=user_role, token_type="access_token")
     AuthUtils.set_token(response=response, user=user_role, token_type="refresh_token")
     return {"detail": "Аутентификация прошла успешно"}
 
 
 @auth_router.post("/refresh")
-@exception_handler
 def refresh_token(response: Response, user: UserInfo = Depends(check_refresh_token)):
     AuthUtils.set_token(response=response, user=user, token_type="access_token")
     return {"detail": "Токен успешно обновлен"}
 
 
 @auth_router.post("/logout")
-@exception_handler
 def logout(response: Response):
     response.delete_cookie("access_token")
     response.delete_cookie("refresh_token")
@@ -59,5 +60,6 @@ def logout(response: Response):
 
 
 @auth_router.get("/me", response_model=UserInfo)
+@exception_handler
 async def get_current_user(user: UserInfo = Depends(get_current_user)):
     return user

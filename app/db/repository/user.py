@@ -1,7 +1,7 @@
 from sqlalchemy.orm import joinedload
 from sqlalchemy import select
 from db.repository.decorators import db_exception_handler
-from db.repository.base import BaseRepository
+from db.repository import BaseRepository
 from db.models import User, Role
 from pydantic import BaseModel
 

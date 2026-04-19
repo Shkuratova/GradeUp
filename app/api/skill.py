@@ -4,7 +4,8 @@ from api.decorators import check_role
 from dependencies.auth import get_current_user
 from api.roles import UserRole
 from schemas.users import UserInfo
-from services.skill import skill_service, stage_service
+from services.skill import SkillService, StageService
+from db.uow import unit_of_work
 from schemas.skills import (
     SkillAdd,
     SkillInfo,
@@ -26,7 +27,8 @@ async def get_all(
     skill_filter: Annotated[SkillFilter, Query()],
     current_user=Depends(get_current_user),
 ):
-    return await skill_service.get_all(filter_model=skill_filter)
+    async with unit_of_work() as uow:
+        return await SkillService(uow.session).get_all(filter_model=skill_filter)
 
 @skill_router.get("/stages", response_model=list[SkillStages])
 @check_role([UserRole.ADMIN, UserRole.SPO])
@@ -34,23 +36,26 @@ async def get_all(
 async def get_all_with_stages(
         skill_filter: Annotated[SkillStageFilter, Query()],
         current_user = Depends(get_current_user)):
-    return await skill_service.get_skills_stages(skill_filter)
+    async with unit_of_work() as uow:
+        return await SkillService(uow.session).get_skills_stages(skill_filter)
 
 @skill_router.post("/")
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def add(skill: SkillAdd, current_user: UserInfo = Depends(get_current_user)):
     skill.creator_id = current_user.id
-    new_skill = await skill_service.add(skill)
-    return new_skill
+    async with unit_of_work() as uow:
+        new_skill = await SkillService(uow.session).add(skill)
+        return new_skill
 
 
 @skill_router.get("/{skill_id}", response_model=SkillInfo)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def get_by_id(skill_id: int, current_user=Depends(get_current_user)):
-    skill = await skill_service.get_by_id(skill_id)
-    return skill
+    async with unit_of_work() as uow:
+        skill = await SkillService(uow.session).get_by_id(skill_id)
+        return skill
 
 
 @skill_router.patch("/{skill_id}")
@@ -59,8 +64,9 @@ async def get_by_id(skill_id: int, current_user=Depends(get_current_user)):
 async def update(
     skill_id: int, skill: SkillUpdate, current_user=Depends(get_current_user)
 ):
-    new_skill = await skill_service.update_by_id(skill_id, skill)
-    return new_skill
+    async with unit_of_work() as uow:
+        new_skill = await SkillService(uow.session).update_by_id(skill_id, skill)
+        return new_skill
 
 
 @skill_router.post("/{skill_id}")
@@ -69,13 +75,15 @@ async def update(
 async def add_stage(skill_id: int, stage: StageAdd, current_user=Depends(get_current_user)):
     stage.creator_id = current_user.id
     stage.skill_id = skill_id
-    new_stage = await stage_service.add(stage)
-    return new_stage
+    async with unit_of_work() as uow:
+        new_stage = await StageService(uow.session).add(stage)
+        return new_stage
 
 @skill_router.delete("/{skill_id}")
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def delete_skill(skill_id:int, current_user = Depends(get_current_user)):
-    await skill_service.delete_by_id(skill_id)
-    return {"detail": f"Навык с id = {skill_id} был удален."}
+    async with unit_of_work() as uow:
+        await SkillService(uow.session).delete_by_id(skill_id)
+        return {"detail": f"Навык с id = {skill_id} был удален."}
 

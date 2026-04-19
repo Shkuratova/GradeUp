@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+
 
 class ProfileBase(BaseModel):
     id: int
@@ -45,3 +46,35 @@ class ProfileUpdate(BaseModel):
     description: str | None = None
     levels: list[LevelUpdate]
 
+class SLevelAdd(BaseModel):
+    level: str
+    skills: list[int]  = []
+
+class SProfileAdd(BaseModel):
+    profile: ProfileAdd
+    levels: list[SLevelAdd] | None = None
+
+
+class SSkill(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
+
+class SLevel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    level: str
+    skills: list[SSkill]
+
+    @field_validator("skills", mode="before")
+    @classmethod
+    def extract_skills(cls, values):
+        return [v.skill for v in values if v.skill]
+
+
+class SProfile(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
+    description: str | None = None
+    levels: list[SLevel]

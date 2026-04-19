@@ -45,4 +45,3 @@ class QuestionService(BaseService):
                 )
             return len(q_upd), len(q_add)
 
-question_service = QuestionService()

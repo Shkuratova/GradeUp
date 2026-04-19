@@ -30,6 +30,7 @@ class BaseRepository:
     async def add(self, value_dict: dict):
         new_instance = self.model(**value_dict)
         self._session.add(new_instance)
+        await self._session.flush()
         return new_instance
 
     @db_exception_handler

@@ -4,8 +4,9 @@ from schemas.users import UserBase, UserRole, UserInfo
 from exceptions.user import (
     InvalidTokenException,
 )
+from db.uow import unit_of_work
 from utils import AuthUtils
-from services.user import user_service
+from services.user import UserService
 
 
 def get_token_by_type(token_type: str):
@@ -23,7 +24,8 @@ async def get_user_from_token(token: str)-> UserInfo:
         payload = AuthUtils.decode_jwt(token=token)
         if not (user_id := payload.get("sub")) or not (role := payload.get("role")):
             raise InvalidTokenException("Некорректный токен.")
-        user = await user_service.get_user_role(UserBase(id=user_id))
+        async with unit_of_work() as uow:
+            user = await UserService(uow.session).get_user_role(UserBase(id=user_id))
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден.")
         return UserInfo.model_validate(user)

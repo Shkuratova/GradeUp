@@ -31,7 +31,3 @@ class LevelSkillService(BaseService):
     unique_fields = ["skill_id", "profile_level_id"]
     repository_factory = LevelSkillRepository
 
-
-skill_service = SkillService()
-stage_service = StageService()
-level_skill_service = LevelSkillService()

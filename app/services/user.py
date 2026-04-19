@@ -2,9 +2,11 @@ from pydantic import BaseModel
 
 from schemas.users import UserAdd, UserInfo
 from db.uow import unit_of_work
-from db.repository.user import UserRepository
+from db.repository import UserRepository
+from services.department import DepartmentService
+from services.profile import ProfileService
 import bcrypt
-from schemas.users import UserAuth, UserRole, EmailModel, SUser
+from schemas.users import UserAuth, UserRole, EmailModel, SUser, UserRegistration
 from exceptions.user import InvalidLoginException
 from exceptions.common import NotFoundException, AlreadyExistException
 from services.base import BaseService
@@ -25,10 +27,13 @@ class UserService(BaseService):
             plain_password.encode("utf-8"), hashed_password.encode("utf-8")
         )
 
-    async def add(self, user_model: UserAdd):
-        print(user_model.model_dump())
+    async def add(self, user_model: UserRegistration):
+        if user_model.department_id is not None:
+            await DepartmentService(self.session).get_by_id(user_model.department_id)
+        if user_model.profile_id is not None:
+            await ProfileService(self.session).get_by_id(user_model.profile_id)
         user_model.password = self.hash_password(user_model.password)
-        print(user_model.model_dump())
+
         await super().add(user_model)
 
     # async def get_by_id(self, user_id: int) -> SUser:
@@ -55,4 +60,3 @@ class UserService(BaseService):
         return UserInfo.model_validate(user)
 
 
-user_service = UserService()

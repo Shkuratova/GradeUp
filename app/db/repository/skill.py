@@ -7,8 +7,6 @@ class SkillRepository(BaseRepository):
     model = Skill
 
     async def get_stages(self, filter_dict: dict):
-
-
         stmt = (
             select(Skill)
             .join(Skill.stages, isouter=True)
@@ -19,6 +17,11 @@ class SkillRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
         return res.unique().scalars().all()
+
+    async def check_list(self, skill_ids: list[int]) -> list[int]:
+        stmt = select(Skill.id).where(Skill.id.in_(skill_ids))
+        res = await self._session.execute(stmt)
+        return list(res.scalars().all())
 
 class StageRepository(BaseRepository):
     model = SkillStage
