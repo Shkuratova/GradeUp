@@ -24,8 +24,7 @@ class ProfileRepository(BaseRepository):
 
     async def get_profiles_by_department(self, department_id: int):
         stmt = (
-            select(Profile)
-            .distinct()
+            select(Profile).distinct()
             .join(Profile.users)
             .where(User.department_id == department_id)
         )
@@ -37,14 +36,11 @@ class ProfileRepository(BaseRepository):
             select(Profile)
             .where(Profile.id == profile_id)
             .options(
-                selectinload(Profile.levels)
-                .selectinload(ProfileLevel.skills)
-                .selectinload(LevelSkill.skill)
+                selectinload(Profile.levels).selectinload(ProfileLevel.skills).selectinload(LevelSkill.skill)
             )
         )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
-
 
 class ProfileLevelRepository(BaseRepository):
     model = ProfileLevel
@@ -57,3 +53,7 @@ class ProfileLevelRepository(BaseRepository):
                 level_skill = LevelSkill(skill_id=skill_id)
                 level.skills.append(level_skill)
             self._session.add(level)
+
+
+
+

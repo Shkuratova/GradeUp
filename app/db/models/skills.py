@@ -30,7 +30,6 @@ class LevelSkill(Base):
 class SkillStage(Base):
     skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id", ondelete="CASCADE"))
     confirmation_type: Mapped[ConfirmationTypes]
-    creator_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 
     __table_args__ = (UniqueConstraint('skill_id', 'confirmation_type', name='stage_unq_constraint'), )
     skill: Mapped[Skill] = relationship(back_populates="stages")

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict, computed_field
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from schemas.users import UserInfo
 from db.models.skills import ConfirmationTypes
 
@@ -37,7 +37,7 @@ class StageBase(BaseModel):
 class StageAdd(BaseModel):
     skill_id: int = Field(default=1)
     confirmation_type: ConfirmationTypes
-    creator_id: int = Field(default=1)
+
 
 class StageItem(BaseModel):
     id: int
@@ -57,6 +57,16 @@ class SkillFilter(BaseModel):
 
 
 class SkillStageFilter(BaseModel):
-    creator_id: int | None = None
     confirmation_type: ConfirmationTypes | None = None
 
+
+class SSkillAdd(BaseModel):
+    skill: SkillAdd
+    stages: list[ConfirmationTypes] = []
+    creator_id: int = Field(default=1)
+    @field_validator('stages', mode='after')
+    @classmethod
+    def check_stages(cls, v):
+        if len(v) != len(set(v)):
+            raise ValueError('Каждый тип подтверждения может входить в навык только один раз')
+        return v

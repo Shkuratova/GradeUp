@@ -4,9 +4,8 @@ from db.uow import unit_of_work
 from db.repository.profiles import (
     ProfileRepository,
     ProfileLevelRepository,
-    LevelSkillRepository,
 )
-from db.repository.skill import SkillRepository
+from db.repository.skill import SkillRepository, LevelSkillRepository
 from db.uow import unit_of_work
 from services.skill import SkillService
 from services.skill import LevelSkillService

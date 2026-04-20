@@ -14,6 +14,7 @@ from schemas.skills import (
     SkillFilter,
     SkillStageFilter,
     StageAdd,
+    SSkillAdd,
 )
 from api.decorators import exception_handler
 
@@ -42,10 +43,10 @@ async def get_all_with_stages(
 @skill_router.post("/")
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
-async def add(skill: SkillAdd, current_user: UserInfo = Depends(get_current_user)):
+async def add(skill: SSkillAdd, current_user: UserInfo = Depends(get_current_user)):
     skill.creator_id = current_user.id
     async with unit_of_work() as uow:
-        new_skill = await SkillService(uow.session).add(skill)
+        new_skill = await SkillService(uow.session).add_skill(skill)
         return new_skill
 
 
@@ -73,7 +74,6 @@ async def update(
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def add_stage(skill_id: int, stage: StageAdd, current_user=Depends(get_current_user)):
-    stage.creator_id = current_user.id
     stage.skill_id = skill_id
     async with unit_of_work() as uow:
         new_stage = await StageService(uow.session).add(stage)
@@ -86,4 +86,3 @@ async def delete_skill(skill_id:int, current_user = Depends(get_current_user)):
     async with unit_of_work() as uow:
         await SkillService(uow.session).delete_by_id(skill_id)
         return {"detail": f"Навык с id = {skill_id} был удален."}
-

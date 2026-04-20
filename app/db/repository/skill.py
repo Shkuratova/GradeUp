@@ -1,4 +1,4 @@
-from sqlalchemy.orm import joinedload, contains_eager
+from sqlalchemy.orm import contains_eager
 from sqlalchemy import select
 from db.repository.base import BaseRepository
 from db.models import Skill, SkillStage, LevelSkill

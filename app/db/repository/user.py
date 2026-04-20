@@ -3,7 +3,6 @@ from sqlalchemy import select
 from db.repository.decorators import db_exception_handler
 from db.repository import BaseRepository
 from db.models import User, Role
-from pydantic import BaseModel
 
 
 class UserRepository(BaseRepository):
