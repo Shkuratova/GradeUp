@@ -37,23 +37,27 @@ class LevelSkillAdd(BaseModel):
     profile_level_id: int = Field(default=1)
 
 
-class LevelUpdate(BaseModel):
-    id: int | None = None
-    level: str
-
-class ProfileUpdate(BaseModel):
-    title: str | None = None
+class ProfileList(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
     description: str | None = None
-    levels: list[LevelUpdate]
+
+
 
 class SLevelAdd(BaseModel):
     level: str
     skills: list[int]  = []
 
+class SLevelUpdate(SLevelAdd):
+    id: int | None = None
+
 class SProfileAdd(BaseModel):
     profile: ProfileAdd
     levels: list[SLevelAdd] | None = None
 
+class SProfileUpdate(SProfileAdd):
+    levels: list[SLevelUpdate] | None = None
 
 class SSkill(BaseModel):
     model_config = ConfigDict(from_attributes=True)
