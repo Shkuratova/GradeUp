@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 
 
 class ProfileBase(BaseModel):
@@ -15,7 +15,8 @@ class ProfileAdd(BaseModel):
 
 class LevelBase(BaseModel):
     id: int
-    level: str
+    num: int
+    level_name: str
     model_config = ConfigDict(from_attributes=True)
 
 class ProfileLevels(SProfile):
@@ -23,7 +24,8 @@ class ProfileLevels(SProfile):
 
 class LevelAdd(BaseModel):
     profile_id: int
-    level: str
+    num: int = Field(..., gt=0)
+    level_name: str
 
 
 class LevelSkill(BaseModel):
@@ -44,9 +46,9 @@ class ProfileList(BaseModel):
     description: str | None = None
 
 
-
 class SLevelAdd(BaseModel):
-    level: str
+    level_name: str
+    num: int = Field(..., gt=0)
     skills: list[int]  = []
 
 class SLevelUpdate(SLevelAdd):
@@ -56,6 +58,20 @@ class SProfileAdd(BaseModel):
     profile: ProfileAdd
     levels: list[SLevelAdd] | None = None
 
+    @model_validator(mode="after")
+    def check_skills(self):
+        if not self.levels:
+            return self
+        all_skills = []
+        for lvl in self.levels:
+            for skill in lvl.skills:
+                if skill in all_skills:
+                    raise ValueError(
+                        f"Навык с id = {skill} встречается в нескольких уровнях."
+                    )
+                all_skills += lvl.skills
+        return self
+
 class SProfileUpdate(SProfileAdd):
     levels: list[SLevelUpdate] | None = None
 
@@ -64,17 +80,17 @@ class SSkill(BaseModel):
     id: int
     title: str
 
+class SLevelSkill(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    skill: SSkill
+
 class SLevel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    level: str
+    num: int
+    level_name: str
+    last_version: int | None = None
     skills: list[SSkill]
-
-    @field_validator("skills", mode="before")
-    @classmethod
-    def extract_skills(cls, values):
-        return [v.skill for v in values if v.skill]
-
 
 class SProfile(BaseModel):
     model_config = ConfigDict(from_attributes=True)

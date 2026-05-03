@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from schemas.users import UserAdd, UserInfo
 from db.uow import unit_of_work
@@ -15,7 +16,11 @@ from services.base import BaseService
 class UserService(BaseService):
     entity_name = "Пользователь"
     unique_fields = ["email"]
-    repository_factory = UserRepository
+
+    def __init__(self, session: AsyncSession):
+        super().__init__(session)
+        self.repository = UserRepository(self.session)
+
 
     @staticmethod
     def hash_password(password: str) -> str:
@@ -27,7 +32,7 @@ class UserService(BaseService):
             plain_password.encode("utf-8"), hashed_password.encode("utf-8")
         )
 
-    async def add(self, user_model: UserRegistration):
+    async def add(self, user_model: BaseModel):
         if user_model.department_id is not None:
             await DepartmentService(self.session).get_by_id(user_model.department_id)
         if user_model.profile_id is not None:
@@ -46,12 +51,10 @@ class UserService(BaseService):
 
     async def get_user_role(self, filters: BaseModel) -> UserInfo:
         filter_dict = filters.model_dump(exclude_none=True)
-        async with unit_of_work() as uow:
-            user_repository: UserRepository = self.repository_factory(uow.session)
-            user = await user_repository.get_user_role(filter_dict)
-            if user is None:
-                raise NotFoundException("Пользователь не найден")
-            return UserInfo.model_validate(user)
+        user = await self.repository.get_user_role(filter_dict)
+        if user is None:
+            raise NotFoundException("Пользователь не найден")
+        return UserInfo.model_validate(user)
 
     async def authenticate_user(self, user_data: UserAuth):
         user = await self.get_user_role(EmailModel(email=user_data.email))

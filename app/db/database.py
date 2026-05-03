@@ -9,7 +9,7 @@ from sqlalchemy.orm import (
     DeclarativeBase,
     declared_attr,
 )
-from config import  settings
+from config import settings
 
 
 class Base(DeclarativeBase, AsyncAttrs):
@@ -33,6 +33,7 @@ class Base(DeclarativeBase, AsyncAttrs):
                 result[column.key] = value
 
         return result
+
 
 engine = create_async_engine(settings.db.url, echo=settings.db.echo)
 async_session = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)

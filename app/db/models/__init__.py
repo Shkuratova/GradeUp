@@ -1,6 +1,6 @@
 from db.models.users import User, Department, Role
 from db.models.skills import (
-    SkillStage,
+    Stage,
     StageQuestion,
     LevelSkill,
     ConfirmationTypes,

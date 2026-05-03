@@ -59,21 +59,6 @@ async def update_by_id(profile_id: int, profile: SProfileUpdate, current_user = 
         await ProfileService(uow.session).update_by_id(profile_id, profile)
     return {"detail": "Профиль успешно обновлен."}
 
-@profile_router.post("/{profile_id}/levels")
-@exception_handler
-async def add_level(
-    profile_id: int, level: LevelAdd, current_user=Depends(get_current_user)
-):
-    level.profile_id = profile_id
-    with unit_of_work() as uow:
-        return await LevelService(uow.session).add(level)
-
-
-@profile_router.get("/{profile_id}/levels", response_model=ProfileLevels)
-@exception_handler
-async def get_levels(profile_id: int, current_user=Depends(get_current_user)):
-    async with unit_of_work() as uow:
-        return await ProfileService(uow.session).get_profile_levels(profile_id)
 
 
 @profile_router.get("/{profile_id}/levels", response_model=ProfileLevels)
@@ -83,14 +68,3 @@ async def get_levels(profile_id: int, current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
         return await ProfileService(uow.session).get_profile_levels(profile_id)
 
-
-@profile_router.post("/levels")
-@check_role([UserRole.ADMIN, UserRole.SPO])
-@exception_handler
-async def add_skill(
-    level_skill: LevelSkillAdd,
-    current_user=Depends(get_current_user),
-):
-    async with unit_of_work() as uow:
-        await LevelSkillService(uow.session).add(level_skill)
-        return {"detail": "Навык добавлен к уровню."}

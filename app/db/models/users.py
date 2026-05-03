@@ -23,9 +23,10 @@ class User(Base):
     department_id: Mapped[int] = mapped_column(ForeignKey("departments.id", ondelete='SET NULL'), nullable=True)
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), default=1, server_default=text("1"))
     position: Mapped[str] = mapped_column(nullable=True)
-    profile_id: Mapped[str] = mapped_column(ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
+    profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id", ondelete="SET NULL"), nullable=True)
 
     department: Mapped["Department"] = relationship(back_populates="users")
     role: Mapped["Role"] = relationship(back_populates="users")
     profile: Mapped["Profile"] = relationship(back_populates="users")
-    skills_created: Mapped[list["Skill"]] = relationship(back_populates="creator")
+    levels: Mapped[list["UserLevel"]] = relationship(back_populates="user")
+    # skills_created: Mapped[list["Skill"]] = relationship(back_populates="creator")

@@ -29,7 +29,7 @@ async def get_all(
     current_user=Depends(get_current_user),
 ):
     async with unit_of_work() as uow:
-        return await SkillService(uow.session).get_all(filter_model=skill_filter)
+        return await SkillService(uow.session).get_all_by_categories(skill_filter)
 
 @skill_router.get("/stages", response_model=list[SkillStages])
 @check_role([UserRole.ADMIN, UserRole.SPO])

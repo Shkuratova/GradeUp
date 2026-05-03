@@ -1,21 +1,10 @@
 from fastapi import FastAPI
-from api import (
-    auth_router,
-    user_router,
-    department_router,
-    profile_router,
-    skill_router,
-    question_router
-)
+from api import routers
 
 app = FastAPI()
 
-app.include_router(auth_router)
-app.include_router(user_router)
-app.include_router(department_router)
-app.include_router(profile_router)
-app.include_router(skill_router)
-app.include_router(question_router)
+for router in routers:
+    app.include_router(router)
 
 @app.get("/")
 def check():

@@ -5,6 +5,7 @@ from schemas.departments import SDepartment, DepartmentAdd, DepartmentUpdate
 from api.decorators import check_role, exception_handler
 from dependencies.auth import get_current_user
 from api.roles import UserRole
+
 department_router = APIRouter(prefix="/departments", tags=["Departments"])
 
 

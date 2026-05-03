@@ -8,7 +8,7 @@ from schemas.users import (
     UserUpdateBase,
     UserUpdateAdmin,
 )
-from dependencies import get_current_user, get_uow
+from dependencies import get_current_user
 from exceptions.user import ForbiddenException
 from services.user import UserService
 from db.uow import unit_of_work

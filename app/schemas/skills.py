@@ -15,6 +15,9 @@ class SkillAdd(BaseModel):
     description: str | None = None
     literature: str | None = None
 
+class SkillFilter(BaseModel):
+    categories: list[int] = []
+
 
 class SkillUpdate(BaseModel):
     title: str | None = None
@@ -50,10 +53,6 @@ class SkillStages(SkillInfo):
     # @computed_field
     # def created_by(self) -> str:
     #     return f"{self.creator.last_name} {self.creator.first_name} {self.creator.patronymic if self.creator.patronymic else ''}"
-
-
-class SkillFilter(BaseModel):
-    creator_id: int | None = None
 
 
 class SkillStageFilter(BaseModel):
