@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, Query
-from services.skill import CategoryService, SkillCategoryService
-from db.uow import unit_of_work
-from schemas.categories import CategoryBase, CategoryAdd, SkillCategory
-from api.decorators import check_role, exception_handler
 from dependencies.auth import get_current_user
+from api.decorators import check_role, exception_handler
 from api.roles import UserRole
-
+from db.uow import unit_of_work
+from services.skill import CategoryService, SkillCategoryService
+from schemas.categories import CategoryBase, CategoryAdd, SkillCategory
 
 category_router = APIRouter(prefix="/category",  tags=["Categories"])
 

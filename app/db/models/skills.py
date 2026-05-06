@@ -56,7 +56,7 @@ class StageVersion(Base):
     __table_args__ = (UniqueConstraint("stage_id", "version"),)
 
     stage_id: Mapped[int] = mapped_column(ForeignKey("stages.id", ondelete="CASCADE"))
-    version: Mapped[int]
+    version: Mapped[int] = mapped_column(default=1, server_default=text('1'))
 
     stage: Mapped[Stage] = relationship(back_populates="stage_versions")
     questions: Mapped[list["StageQuestion"]] = relationship(back_populates="stage_version")

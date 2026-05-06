@@ -5,6 +5,14 @@ from datetime import datetime
 from db.models.types import CertificationRole
 
 
+class UserProfile(Base):
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id"))
+    current_level_id: Mapped[int] = mapped_column(ForeignKey("profile_levels.id"))
+
+    user: Mapped["User"] = relationship(back_populates="profile")
+    profile: Mapped["Profile"] = relationship(back_populates="user_profiles")
+
 class UserLevel(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     profile_level_version_id: Mapped[int] = mapped_column(ForeignKey("profile_level_versions.id"))

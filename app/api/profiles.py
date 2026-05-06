@@ -1,40 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from services.profile import ProfileService, LevelService
-from services.skill import LevelSkillService
+from fastapi import APIRouter, Depends
+from dependencies.auth import get_current_user
+from api.decorators import check_role, exception_handler
+from api.roles import UserRole
 from db.uow import unit_of_work
+from services.profile import ProfileService
+from schemas.users import UserInfo
 from schemas.profiles import (
-    ProfileAdd,
-    SProfile,
-    LevelAdd,
-    ProfileLevels,
-    LevelSkillAdd,
-    LevelSkill,
     SProfileAdd,
     SProfileUpdate,
     ProfileList,
 )
-from api.decorators import check_role, exception_handler
-from dependencies.auth import get_current_user
-from api.roles import UserRole
-from schemas.users import UserInfo
 
 profile_router = APIRouter(prefix="/profile", tags=["Profiles"])
 
 
 @profile_router.get("", response_model=list[ProfileList])
-@check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
+@check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def get_all(current_user: UserInfo = Depends(get_current_user)):
     async with unit_of_work() as uow:
-        service = ProfileService(uow.session)
-        if current_user.role_name == UserRole.SUPERVISOR:
-            if current_user.department_id is None:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Руководитель не привязан к отделу.",
-                )
-            return await service.get_all_by_department_id(current_user.department_id)
-        return await service.get_all()
+        return await ProfileService(uow.session).get_all()
 
 
 @profile_router.post("")
@@ -61,10 +46,10 @@ async def update_by_id(profile_id: int, profile: SProfileUpdate, current_user = 
 
 
 
-@profile_router.get("/{profile_id}/levels", response_model=ProfileLevels)
-@check_role([UserRole.ADMIN, UserRole.SPO])
-@exception_handler
-async def get_levels(profile_id: int, current_user=Depends(get_current_user)):
-    async with unit_of_work() as uow:
-        return await ProfileService(uow.session).get_profile_levels(profile_id)
+# @profile_router.get("/{profile_id}/levels", response_model=ProfileLevels)
+# @check_role([UserRole.ADMIN, UserRole.SPO])
+# @exception_handler
+# async def get_levels(profile_id: int, current_user=Depends(get_current_user)):
+#     async with unit_of_work() as uow:
+#         return await ProfileService(uow.session).get_profile_levels(profile_id)
 

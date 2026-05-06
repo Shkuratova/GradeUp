@@ -1,19 +1,19 @@
 from fastapi import APIRouter, Depends, Response
+from dependencies.auth import (
+    get_current_user,
+    check_refresh_token,
+)
+from exceptions.user import PasswordDontMatchException
+from utils.auth import AuthUtils
+from api.roles import UserRole
+from api.decorators import exception_handler, check_role
+from db.uow import unit_of_work
+from services import UserService
 from schemas.users import (
     UserAuth,
     UserInfo,
     UserRegistration,
 )
-from utils.auth import AuthUtils
-from services import UserService
-from db.uow import unit_of_work
-from exceptions.user import PasswordDontMatchException
-from api.decorators import exception_handler, check_role
-from dependencies.auth import (
-    get_current_user,
-    check_refresh_token,
-)
-from api.roles import UserRole
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 

@@ -1,5 +1,5 @@
-from sqlalchemy.orm import contains_eager
-from sqlalchemy import select, delete
+from sqlalchemy.orm import contains_eager, selectinload, with_loader_criteria, aliased
+from sqlalchemy import select, delete, func
 from db.repository.base import BaseRepository
 from db.models.skills import (
     Skill,
@@ -20,6 +20,7 @@ class SkillRepository(BaseRepository):
     async def get_all_by_categories(self, categories: list[int]):
         stmt = (
             select(Skill)
+            .where(Skill.is_active == True)
             .join(Skill.categories)
             .where(Category.id.in_(categories))
             .options(contains_eager(Skill.categories).load_only(Category.id))
@@ -27,16 +28,84 @@ class SkillRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.unique().scalars().all()
 
+    @classmethod
+    def get_last_version(cls):
+        last_versions = (
+            select(
+                StageVersion.stage_id,
+                func.max(StageVersion.version).label("version"),
+            )
+            .group_by(StageVersion.stage_id)
+            .subquery()
+        )
+
+        return (
+            select(StageVersion)
+            .join(
+                last_versions,
+                (StageVersion.stage_id == last_versions.c.stage_id)
+                & (StageVersion.version == last_versions.c.version),
+            )
+            .subquery()
+        )
+
     @db_exception_handler
-    async def get_stages(self, filter_dict: dict):
+    async def get_stages(self, filter_dict: dict, skill_id: int | None = None):
+        category_ids = filter_dict.pop("categories", None)
+
+        last_version = self.get_last_version()
+
+        stmt = select(Skill)
+
+        if skill_id:
+            stmt = stmt.where(Skill.id == skill_id)
+
+        if category_ids:
+            stmt = stmt.join(Skill.categories).where(Category.id.in_(category_ids))
+
         stmt = (
-            select(Skill)
-            .join(Skill.stages, isouter=True)
-            .options(contains_eager(Skill.stages))
-            .filter_by(**filter_dict)
+            stmt.outerjoin(Skill.stages)
+            .where(func.coalesce(Stage.is_active, True) == True)
+            .outerjoin(last_version, last_version.c.stage_id == Stage.id)
+            .outerjoin(
+                StageVersion,
+                (StageVersion.stage_id == Stage.id)
+                & (StageVersion.version == last_version.c.version),
+            )
+            .options(
+                contains_eager(Skill.stages)
+                .contains_eager(Stage.stage_versions)
+            )
+        )
+
+        res = await self._session.execute(stmt)
+
+        if skill_id:
+            return res.unique().scalar_one_or_none()
+        return res.unique().scalars().all()
+
+    @db_exception_handler
+    async def get_last_skill_with_questions(self, skill_id: int):
+        last_version = self.get_last_version()
+        stmt = (
+                select(Skill).where(Skill.id == skill_id)
+                .join(Skill.stages)
+                .where(Stage.is_active == True)
+                .join(last_version, last_version.c.stage_id == Stage.id)
+            .join(
+                    StageVersion,
+                    (StageVersion.stage_id == Stage.id)
+                    & (StageVersion.version == last_version.c.version)
+                )
+            .join(StageQuestion, StageQuestion.stage_version_id == StageVersion.id)
+            .options(
+                    contains_eager(Skill.stages)
+                    .contains_eager(Stage.stage_versions)
+                    .joinedload(StageVersion.questions)
+                )
         )
         res = await self._session.execute(stmt)
-        return res.unique().scalars().all()
+        return res.unique().scalar_one_or_none()
 
     @db_exception_handler
     async def check_list(self, skill_ids: list[int]) -> list[int]:
@@ -84,9 +153,4 @@ class SkillCategoryRepository(BaseRepository):
     model = SkillCategory
 
 
-class StageRepository(BaseRepository):
-    model = Stage
 
-
-class StageVersionRepository(BaseRepository):
-    model = StageVersion

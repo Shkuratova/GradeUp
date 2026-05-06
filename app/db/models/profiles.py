@@ -1,6 +1,7 @@
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import ForeignKey, Text, text, UniqueConstraint
 from db.database import Base
+from db.models.user_profiles import UserProfile
 
 
 class Profile(Base):
@@ -8,7 +9,7 @@ class Profile(Base):
     description: Mapped[str] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True, server_default=text("true"))
     levels: Mapped[list["ProfileLevel"]] = relationship(back_populates="profile", order_by="ProfileLevel.num")
-    users: Mapped[list["User"]] = relationship(back_populates="profile")
+    user_profiles: Mapped[list["UserProfile"]] = relationship(back_populates="profile")
 
 
 class ProfileLevel(Base):

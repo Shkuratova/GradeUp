@@ -17,7 +17,6 @@ class BaseRepository:
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
-
     @db_exception_handler
     async def get_all(self, filter_dict: dict | None =None):
         if filter_dict is None:
@@ -38,6 +37,7 @@ class BaseRepository:
         await self._session.execute(
             insert(self.model), values,
         )
+
     @db_exception_handler
     async def get_one_by_filter(self, filter_dict: dict):
         stmt = select(self.model).filter_by(**filter_dict)
@@ -57,7 +57,24 @@ class BaseRepository:
         return res.rowcount
 
     @db_exception_handler
+    async def soft_delete_by_id(self, data_id: int):
+        stmt = update(self.model).where(self.model.id == data_id).values({"is_active": False})
+        res = await self._session.execute(stmt)
+        return res.rowcount
+
+    @db_exception_handler
     async def delete_list(self, data_ids: list[int]):
         stmt = delete(self.model).where(self.model.id.in_(data_ids))
         res = await self._session.execute(stmt)
         return res.rowcount
+
+    @db_exception_handler
+    async def soft_delete_list(self, data_ids: list[int]):
+        stmt = (
+            update(self.model)
+            .where(self.model.id.in_(data_ids))
+            .values({"is_active": False})
+        )
+        res = await self._session.execute(stmt)
+        return res.rowcount
+

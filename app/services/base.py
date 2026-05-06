@@ -64,6 +64,11 @@ class BaseService:
         if not res:
             raise NotFoundException(f"{self.entity_name} c id = {object_id} не найден.")
 
+    async def soft_delete_by_id(self, object_id: int):
+        res = await self.repository.soft_delete_by_id(object_id)
+        if not res:
+            raise NotFoundException(f"{self.entity_name} c id = {object_id} не найден.")
+
     async def add(self, object_model: BaseModel):
         object_dict = object_model.model_dump(exclude_none=True)
 

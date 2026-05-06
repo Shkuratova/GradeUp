@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from services.department import DepartmentService
-from db.uow import unit_of_work
-from schemas.departments import SDepartment, DepartmentAdd, DepartmentUpdate
-from api.decorators import check_role, exception_handler
 from dependencies.auth import get_current_user
 from api.roles import UserRole
+from api.decorators import check_role, exception_handler
+from db.uow import unit_of_work
+from services.department import DepartmentService
+from schemas.departments import SDepartment, DepartmentAdd, DepartmentUpdate
 
 department_router = APIRouter(prefix="/departments", tags=["Departments"])
 

@@ -12,9 +12,8 @@ from exceptions.common import (
     DataValidationError,
 )
 from schemas.profiles import (
-    ProfileLevels,
     SProfileAdd,
-    SProfile,
+    ProfileDetail,
     SProfileUpdate,
     SLevelAdd,
     SLevelUpdate,
@@ -53,23 +52,7 @@ class ProfileService(BaseService):
             raise NotFoundException(
                 f"{self.entity_name} c id = {profile_id} не найден."
             )
-
-        profile_dict = {
-            "id": profile.id,
-            "title": profile.title,
-            "description": profile.description,
-            "levels": [
-                {
-                    "id": level.id,
-                    "num": level.num,
-                    "level_name": level.level_name,
-                    "last_version": level.versions[0].version,
-                    "skills": [ls.skill for ls in level.versions[0].skills if ls.skill],
-                }
-                for level in profile.levels
-            ],
-        }
-        return SProfile.model_validate(profile_dict)
+        return ProfileDetail.model_validate(profile)
 
     async def _validate_skills(self, levels: list[SLevelAdd]):
         skill_ids = set()
@@ -111,7 +94,7 @@ class ProfileService(BaseService):
         return profile
 
     async def update_by_id(self, profile_id: int, profile: SProfileUpdate):
-        profile_old: SProfile = await self.get_with_details(profile_id)
+        profile_old: ProfileDetail = await self.get_with_details(profile_id)
 
 
         res = await super().update_by_id(profile_id, profile.profile)
@@ -136,7 +119,7 @@ class ProfileService(BaseService):
             lvl_id for lvl_id in exist_level_dict.keys() if lvl_id not in new_levels_ids
         ]
         if lvl_del:
-            await self.level_repository.delete_list(lvl_del)
+            await self.level_repository.soft_delete_list(lvl_del)
 
         if lvl_add:
             await self.add_levels(profile_id, lvl_add)

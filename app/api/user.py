@@ -1,5 +1,11 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import Annotated
+from fastapi import APIRouter, Depends, Query, HTTPException
+from dependencies import get_current_user
+from exceptions.user import ForbiddenException
+from api.decorators import exception_handler, check_role
+from api.roles import UserRole
+from db.uow import unit_of_work
+from services.user import UserService
 from schemas.users import (
     SUserFullInfo,
     SUserFilter,
@@ -8,12 +14,6 @@ from schemas.users import (
     UserUpdateBase,
     UserUpdateAdmin,
 )
-from dependencies import get_current_user
-from exceptions.user import ForbiddenException
-from services.user import UserService
-from db.uow import unit_of_work
-from api.decorators import exception_handler, check_role
-from api.roles import UserRole
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
