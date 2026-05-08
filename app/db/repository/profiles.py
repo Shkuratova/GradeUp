@@ -33,7 +33,7 @@ class ProfileRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalars().unique().all()
 
-    async def get_profile_with_latest_levels(self, profile_id: int):
+    async def get_profiles_with_latest_levels(self, profile_id: int | None = None):
         last_versions = (
             select(
                 ProfileLevelVersion.profile_level_id,
@@ -42,10 +42,14 @@ class ProfileRepository(BaseRepository):
             .group_by(ProfileLevelVersion.profile_level_id)
             .subquery()
         )
+        stmt = select(Profile)
+
+        if profile_id is not None:
+            stmt = stmt.where(Profile.id == profile_id)
+
 
         stmt = (
-            select(Profile)
-            .where(Profile.id == profile_id)
+            stmt
             .outerjoin(Profile.levels)
             .where(func.coalesce(ProfileLevel.is_active, True) == True)
             .outerjoin(
@@ -65,10 +69,14 @@ class ProfileRepository(BaseRepository):
                 .contains_eager(LevelSkill.skill)
                 .load_only(Skill.id, Skill.title)
             )
+            .order_by(ProfileLevel.num)
         )
 
         res = await self._session.execute(stmt)
-        return res.scalars().unique().first()
+        if profile_id is not None:
+            return res.scalars().unique().first()
+        return res.unique().scalars().all()
+
 
 
 class LevelRepository(BaseRepository):

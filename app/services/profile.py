@@ -35,18 +35,17 @@ class ProfileService(BaseService):
         self.level_skill_repository = LevelSkillRepository(session)
         self.skill_repository = SkillRepository(session)
 
-    async def get_profile_levels(self, profile_id: int):
-        profile = await self.repository.get_profile_levels(profile_id)
-        if profile is None:
-            raise NotFoundException(f"Профиль с id = {profile_id} не найден.")
-        return profile
+    async def get_profile_levels(self):
+        profiles = await self.repository.get_profiles_with_latest_levels()
+        print(profiles[0].__dict__)
+        return [ProfileDetail.model_validate(profile) for profile in profiles]
 
     async def get_all_by_department_id(self, department_id: int):
         profiles = await self.repository.get_profiles_by_department(department_id)
         return profiles
 
     async def get_with_details(self, profile_id: int):
-        profile = await self.repository.get_profile_with_latest_levels(profile_id)
+        profile = await self.repository.get_profiles_with_latest_levels(profile_id)
 
         if profile is None:
             raise NotFoundException(

@@ -136,18 +136,3 @@ class ProfileDetail(ProfileBase):
     description: str | None = None
     levels: list[LevelDetail]
 
-    @computed_field
-    @property
-    def levels_dict(self) -> dict[int, LevelDetail]:
-        return {level.num: level for level in self.levels}
-
-    @computed_field
-    @property
-    def skill_count(self) -> int:
-        return sum(len(lvl.skills) for lvl in self.levels)
-
-
-    def model_dump(self, **kwargs):
-        data = super().model_dump(**kwargs)
-        data["levels"] = data.pop("levels_dict")
-        return data

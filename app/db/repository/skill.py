@@ -57,7 +57,7 @@ class SkillRepository(BaseRepository):
 
         stmt = select(Skill)
 
-        if skill_id:
+        if skill_id is not None:
             stmt = stmt.where(Skill.id == skill_id)
 
         if category_ids:
@@ -80,7 +80,7 @@ class SkillRepository(BaseRepository):
 
         res = await self._session.execute(stmt)
 
-        if skill_id:
+        if skill_id is not None:
             return res.unique().scalar_one_or_none()
         return res.unique().scalars().all()
 
