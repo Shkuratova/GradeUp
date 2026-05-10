@@ -1,4 +1,11 @@
-from pydantic import BaseModel, Field, ConfigDict, field_validator, computed_field
+from pydantic import (
+    BaseModel,
+    Field,
+    ConfigDict,
+    field_validator,
+    computed_field,
+    model_validator,
+)
 from db.models.types import ConfirmationTypes
 
 
@@ -19,7 +26,6 @@ class SkillUpdate(BaseModel):
 
 class SkillAdd(BaseModel):
     title: str
-    creator_id: int = Field(default=1)
     description: str | None = None
     literature: str | None = None
 
@@ -28,12 +34,30 @@ class QuestionAdd(BaseModel):
     num: int = Field(..., gt=0)
     question: str
     answer: str
-    stage_version_id: int = Field(default=1)
+
+
+class StageAddDB(BaseModel):
+    skill_id: int
+    confirmation_type: ConfirmationTypes
 
 
 class StageAdd(BaseModel):
     confirmation_type: ConfirmationTypes
     questions: list[QuestionAdd]
+
+    @model_validator(mode="after")
+    def check_questions_num(self):
+        if not self.questions:
+            return self
+
+        questions_nums = [q.num for q in self.questions]
+        expected_nums = list(range(1, len(questions_nums) + 1))
+
+        if sorted(questions_nums) != expected_nums:
+            raise ValueError(
+                f"Номера вопросов должны быть уникальными и идти последовательно от 1 до {len(questions_nums)}. "
+            )
+        return self
 
 
 class StageUpdate(StageAdd):
@@ -42,6 +66,7 @@ class StageUpdate(StageAdd):
 
 class SkillAddForm(BaseModel):
     skill: SkillAdd
+    categories: list[int] = []
     stages: list[StageAdd]
 
     @field_validator("stages", mode="after")
@@ -95,12 +120,15 @@ class StageSchema(StageBase):
             return self.stage_versions[0].version
         return None
 
+
 class StageVersionBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     version: int
 
+
 class SStageSchema(StageSchema):
     stage_versions: list[StageVersionBase] | None = Field(None, exclude=True)
+
 
 class SkillStages(SkillSchema):
     stages: list[SStageSchema] | None = None

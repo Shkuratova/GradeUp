@@ -8,11 +8,13 @@ from pydantic import (
 )
 from schemas.departments import SDepartment
 
+
 class ProfileBase(BaseModel):
     id: int
     title: str
     department_id: int | None = None
     model_config = ConfigDict(from_attributes=True)
+
 
 class ProfileFilter(BaseModel):
     id: int | None = None
@@ -68,9 +70,13 @@ class SProfileAdd(BaseModel):
         if not self.levels:
             return self
 
-        lvl_set = set(lvl.num for lvl in self.levels)
-        if len(lvl_set) != len(self.levels):
-            raise ValueError("Номера уровней должны быть уникальными.")
+        level_nums = [lvl.num for lvl in self.levels]
+        expected_nums = list(range(1, len(level_nums) + 1))
+
+        if sorted(level_nums) != expected_nums:
+            raise ValueError(
+                f"Номера уровней должны быть уникальными и идти последовательно от 1 до {len(level_nums)}. "
+            )
 
         all_skills = []
         for lvl in self.levels:
@@ -146,8 +152,6 @@ class ProfileDetail(ProfileBase):
     @model_validator(mode="after")
     def set_department_name(self):
         self.department_name = (
-            self.department.department_name
-            if self.department
-            else None
+            self.department.department_name if self.department else None
         )
         return self

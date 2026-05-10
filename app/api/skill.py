@@ -1,19 +1,17 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 from typing import Annotated
 
 from fastapi.params import Depends
 from dependencies.auth import get_current_user
-from api.roles import UserRole
+from utils.roles import UserRole
 from api.decorators import exception_handler, check_role
 from db.uow import unit_of_work
 from services.skill import SkillService, StageService
 from schemas.users import UserInfo
 from schemas.skills import (
-    SkillAdd,
     SkillSchema,
     SkillFilter,
     StageAdd,
-    SkillBase,
     SkillDetail,
     SkillStages,
     SkillAddForm,
@@ -49,14 +47,13 @@ async def get_all_with_stages(
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def add(skill: SkillAddForm, current_user: UserInfo = Depends(get_current_user)):
-    skill.skill.creator_id = current_user.id
     async with unit_of_work() as uow:
         new_skill = await SkillService(uow.session).add_skill(skill)
         return new_skill
 
 
 @skill_router.get("/{skill_id}", response_model=SkillDetail)
-@check_role([UserRole.ADMIN, UserRole.SPO])
+@check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_by_id(skill_id: int, current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
@@ -73,16 +70,6 @@ async def update(
     async with unit_of_work() as uow:
         new_skill = await SkillService(uow.session).update_by_id(skill_id, skill)
         return new_skill
-
-
-@skill_router.patch("/{skill_id}")
-@check_role([UserRole.ADMIN, UserRole.SPO])
-@exception_handler
-async def partial_update(
-    skill_id: int, skill: SkillUpdateForm, current_user=Depends(get_current_user)
-):
-    async with unit_of_work() as uow:
-        await SkillService(uow.session).partial_update(skill_id, skill)
 
 
 @skill_router.post("/{skill_id}")

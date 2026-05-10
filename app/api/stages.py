@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
 from dependencies.auth import get_current_user
 from api.decorators import check_role, exception_handler
-from api.roles import UserRole
+from utils.roles import UserRole
 from db.uow import unit_of_work
 from services.skill import StageService
 from schemas.users import UserInfo
-from schemas.skills import StageAdd, StageQuestionsSchema, StageSchema
+from schemas.skills import StageAdd, StageQuestionsSchema
 
 stage_router = APIRouter(prefix="/stages", tags=["Skill"])
 

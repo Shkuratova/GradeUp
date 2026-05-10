@@ -45,6 +45,13 @@ class BaseRepository:
         return res.scalar_one_or_none()
 
     @db_exception_handler
+    async def exists(self, filter_dict: dict) -> bool:
+        stmt = select(self.model.id).filter_by(**filter_dict).limit(1)
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none() is not None
+
+
+    @db_exception_handler
     async def update_by_id(self, data_id: int, value_dict: dict) -> int:
         stmt = update(self.model).where(self.model.id == data_id).values(**value_dict)
         res = await self._session.execute(stmt)
@@ -77,4 +84,3 @@ class BaseRepository:
         )
         res = await self._session.execute(stmt)
         return res.rowcount
-

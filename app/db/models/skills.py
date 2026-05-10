@@ -14,14 +14,13 @@ class Category(Base):
 
 
 class Skill(Base):
-    title: Mapped[str]
+    title: Mapped[str] = mapped_column(unique=True)
     literature: Mapped[str | None] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text)
-    creator_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     is_active: Mapped[bool] =  mapped_column(default=True, server_default=text('true'))
 
     stages: Mapped[list["Stage"]] = relationship(back_populates="skill")
-    # creator: Mapped["User"] = relationship(back_populates="skills_created")
+
     categories: Mapped[list[Category]] = relationship(back_populates="skills", secondary="skill_categories")
 
     profile_levels: Mapped[list["LevelSkill"]] = relationship(back_populates="skill")

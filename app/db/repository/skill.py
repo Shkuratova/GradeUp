@@ -103,6 +103,7 @@ class SkillRepository(BaseRepository):
                     .contains_eager(Stage.stage_versions)
                     .joinedload(StageVersion.questions)
                 )
+            .order_by(StageQuestion.num)
         )
         res = await self._session.execute(stmt)
         return res.unique().scalar_one_or_none()
