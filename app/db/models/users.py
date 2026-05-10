@@ -11,7 +11,9 @@ class Role(Base):
 
 class Department(Base):
     department_name: Mapped[str] = mapped_column(unique=True, nullable=False)
+
     users: Mapped[list["User"]] = relationship(back_populates="department")
+    profiles: Mapped[list["Profile"]] = relationship(back_populates="department")
 
 
 class User(Base):

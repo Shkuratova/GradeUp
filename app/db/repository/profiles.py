@@ -1,8 +1,10 @@
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update, func, or_, and_, outerjoin
 from sqlalchemy.orm import selectinload, joinedload, contains_eager
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.models import Department
 from db.repository.base import BaseRepository
-from db.models.users import  User
+from db.models.users import User
 from db.models.profiles import Profile, ProfileLevel, ProfileLevelVersion
 from db.models.skills import LevelSkill, Skill
 
@@ -15,6 +17,25 @@ class ProfileRepository(BaseRepository):
         self.level_skill_repository = None
         super().__init__(session)
 
+    async def get_list(self, filter_dict: dict, department_id: int | None):
+        stmt = select(Profile)
+
+        stmt = stmt.filter_by(**filter_dict)
+
+        if department_id is not None:
+            stmt = stmt.where(
+                and_(
+                    Profile.is_active == True,
+                    or_(
+                        Profile.department_id.is_(None),
+                        Profile.department_id == department_id,
+                    ),
+                )
+            )
+
+        res = await self._session.execute(stmt)
+        return res.scalars().all()
+
     async def get_profile_levels(self, profile_id: int):
         stmt = (
             select(Profile)
@@ -26,34 +47,47 @@ class ProfileRepository(BaseRepository):
 
     async def get_profiles_by_department(self, department_id: int):
         stmt = (
-            select(Profile).distinct()
+            select(Profile)
+            .distinct()
             .join(Profile.users)
             .where(User.department_id == department_id)
         )
         res = await self._session.execute(stmt)
         return res.scalars().unique().all()
 
-    async def get_profiles_with_latest_levels(self, profile_id: int | None = None):
+    async def get_profiles_with_latest_levels(
+        self,
+        profile_id: int | None = None,
+        department_id: int | None = None,
+    ):
         last_versions = (
-            select(
-                ProfileLevelVersion.profile_level_id,
-                func.max(ProfileLevelVersion.version).label("last_version"),
-            )
-            .group_by(ProfileLevelVersion.profile_level_id)
-            .subquery()
+        select(
+            ProfileLevelVersion.profile_level_id,
+            func.max(ProfileLevelVersion.version).label("last_version"),
         )
-        stmt = select(Profile)
-
-        if profile_id is not None:
-            stmt = stmt.where(Profile.id == profile_id)
-
+        .group_by(ProfileLevelVersion.profile_level_id)
+        .subquery()
+        )
 
         stmt = (
-            stmt
-            .outerjoin(Profile.levels)
-            .where(func.coalesce(ProfileLevel.is_active, True) == True)
+            select(Profile)
+            .where(Profile.id == profile_id)
+        )
+
+        if department_id is not None:
+            stmt = stmt.where(
+                or_(
+                    Profile.department_id == department_id,
+                    Profile.department_id.is_(None),
+                )
+            )
+
+        stmt = (
+            stmt.outerjoin(Profile.levels)
+            .where(func.coalesce(ProfileLevel.is_active, True).is_(True))
             .outerjoin(
-                last_versions, last_versions.c.profile_level_id == ProfileLevel.id
+                last_versions,
+                last_versions.c.profile_level_id == ProfileLevel.id,
             )
             .outerjoin(
                 ProfileLevelVersion,
@@ -67,31 +101,34 @@ class ProfileRepository(BaseRepository):
                 .contains_eager(ProfileLevel.versions)
                 .contains_eager(ProfileLevelVersion.skills)
                 .contains_eager(LevelSkill.skill)
-                .load_only(Skill.id, Skill.title)
+                .load_only(Skill.id, Skill.title),
+                joinedload(Profile.department).load_only(
+                    Department.id,
+                    Department.department_name,
+                ),
             )
             .order_by(ProfileLevel.num)
         )
 
         res = await self._session.execute(stmt)
-        if profile_id is not None:
-            return res.scalars().unique().first()
-        return res.unique().scalars().all()
-
-
+        return res.unique().scalar_one_or_none()
 
 class LevelRepository(BaseRepository):
     model = ProfileLevel
 
+    async def get_last_level_by_num(self, profile_id: int, level_num: int):
 
 
-    async def add_level_with_skills(self, level_dict: dict):
-        for lvl in level_dict["levels"]:
-            level = ProfileLevel(level=lvl["level"])
-            skill_ids = lvl["skills"]
-            for skill_id in skill_ids:
-                level_skill = LevelSkill(skill_id=skill_id)
-                level.skills.append(level_skill)
-            self._session.add(level)
+        stmt = (
+            select(ProfileLevel.id)
+            .where(
+                ProfileLevel.profile_id == profile_id,
+                ProfileLevel.is_active.is_(True),
+                ProfileLevel.num == level_num
+            )
+        )
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
 
 class LevelVersionRepository(BaseRepository):
     model = ProfileLevelVersion

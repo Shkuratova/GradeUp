@@ -1,5 +1,5 @@
 from db.repository.base import BaseRepository
-from db.repository.user import UserRepository
+from db.repository.user import UserRepository, RoleRepository
 from db.repository.department import DepartmentRepository
 from db.repository.profiles import ProfileRepository, LevelRepository
 from db.repository.skill import (
@@ -10,3 +10,4 @@ from db.repository.skill import (
     CategoryRepository,
 )
 from db.repository.stage import StageRepository, StageVersionRepository
+from db.repository.user_profiles import UserProfileRepository

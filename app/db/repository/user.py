@@ -45,4 +45,6 @@ class UserRepository(BaseRepository):
         return user
 
 
+class RoleRepository(BaseRepository):
+    model = Role
 

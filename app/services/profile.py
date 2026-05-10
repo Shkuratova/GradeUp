@@ -16,11 +16,11 @@ from schemas.profiles import (
     ProfileDetail,
     SProfileUpdate,
     SLevelAdd,
-    SLevelUpdate,
+    SLevelUpdate, LevelDetail, ProfileFilter, ProfileList,
 )
+from schemas.users import UserInfo
 from services.base import BaseService
-from services.level import LevelService
-
+from utils.roles import UserRole
 
 class ProfileService(BaseService):
 
@@ -35,6 +35,21 @@ class ProfileService(BaseService):
         self.level_skill_repository = LevelSkillRepository(session)
         self.skill_repository = SkillRepository(session)
 
+    async def get_profile_list(self, filters: ProfileFilter, current_user: UserInfo):
+        department_id = None
+
+        if current_user.role_name == UserRole.SUPERVISOR:
+            department_id = current_user.department_id
+            if filters.department_id:
+                filters.department_id = department_id
+
+        filter_dict = filters.model_dump(exclude_none=True)
+        profiles =  await self.repository.get_list(
+            filter_dict=filter_dict,
+            department_id=department_id,
+        )
+        return profiles
+
     async def get_profile_levels(self):
         profiles = await self.repository.get_profiles_with_latest_levels()
         print(profiles[0].__dict__)
@@ -44,8 +59,13 @@ class ProfileService(BaseService):
         profiles = await self.repository.get_profiles_by_department(department_id)
         return profiles
 
-    async def get_with_details(self, profile_id: int):
-        profile = await self.repository.get_profiles_with_latest_levels(profile_id)
+    async def get_with_details(self, profile_id: int, current_user: UserInfo):
+
+        department_id  = None
+        if current_user.role_name == UserRole.SUPERVISOR:
+            department_id = current_user.department_id
+
+        profile = await self.repository.get_profiles_with_latest_levels(profile_id, department_id)
 
         if profile is None:
             raise NotFoundException(
@@ -92,41 +112,33 @@ class ProfileService(BaseService):
 
         return profile
 
+    @staticmethod
+    def _level_skills_equal(new_level: SLevelUpdate, old_level: LevelDetail):
+        old_skills = set(s.id for s in old_level.skills)
+        return set(new_level.skills) == old_skills
+
     async def update_by_id(self, profile_id: int, profile: SProfileUpdate):
         profile_old: ProfileDetail = await self.get_with_details(profile_id)
-
-
         res = await super().update_by_id(profile_id, profile.profile)
 
         if not profile.levels:
             return
 
         await self._validate_skills(profile.levels)
-        exist_level_dict = {lvl.id: lvl for lvl in profile_old.levels}
-        new_levels_ids = set()
-        lvl_add = []
-        lvl_upd = []
-        for lvl in profile.levels:
-            if lvl.id is None:
-                lvl_add.append(lvl)
-            else:
-                new_levels_ids.add(lvl.id)
-                if lvl.id in exist_level_dict:
-                    lvl_upd.append(lvl)
 
-        lvl_del = [
-            lvl_id for lvl_id in exist_level_dict.keys() if lvl_id not in new_levels_ids
-        ]
-        if lvl_del:
-            await self.level_repository.soft_delete_list(lvl_del)
+        old_levels = {lvl.id: lvl for lvl in profile_old.levels}
+        upd_levels = {lvl.id: lvl for lvl in profile.levels if lvl.id in old_levels}
 
-        if lvl_add:
-            await self.add_levels(profile_id, lvl_add)
+        if del_levels := set(old_levels.keys()) - set(upd_levels.keys()):
+            await self.level_repository.soft_delete_list(list(del_levels))
 
-        if lvl_upd:
+        if add_levels := [lvl for lvl in profile.levels if lvl.id is None]:
+            await self.add_levels(profile_id, add_levels)
+
+        if upd_levels:
             level_skills = []
-            for lvl in lvl_upd:
-                old_level = exist_level_dict[lvl.id]
+            for lvl in upd_levels.values():
+                old_level = old_levels[lvl.id]
                 if old_level.level_name != lvl.level_name:
                     await self.level_repository.update_by_id(lvl.id, {"level_name": lvl.level_name})
                 old_skills = set(s.id for s in old_level.skills)
@@ -142,5 +154,3 @@ class ProfileService(BaseService):
                     ]
             if level_skills:
                 await self.level_skill_repository.add_list(level_skills)
-
-

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from dependencies.auth import get_current_user
-from api.roles import UserRole
+from utils.roles import UserRole
 from api.decorators import check_role, exception_handler
 from db.uow import unit_of_work
 from services.department import DepartmentService

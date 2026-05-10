@@ -1,16 +1,15 @@
+import bcrypt
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from schemas.users import UserAdd, UserInfo
-from db.uow import unit_of_work
 from db.repository import UserRepository
+from exceptions.common import NotFoundException
+from exceptions.user import InvalidLoginException
+from schemas.users import UserAuth, EmailModel
+from schemas.users import UserInfo
+from services.base import BaseService
 from services.department import DepartmentService
 from services.profile import ProfileService
-import bcrypt
-from schemas.users import UserAuth, UserRole, EmailModel, SUser, UserRegistration
-from exceptions.user import InvalidLoginException
-from exceptions.common import NotFoundException, AlreadyExistException
-from services.base import BaseService
 
 
 class UserService(BaseService):
@@ -20,7 +19,6 @@ class UserService(BaseService):
     def __init__(self, session: AsyncSession):
         super().__init__(session)
         self.repository = UserRepository(self.session)
-
 
     @staticmethod
     def hash_password(password: str) -> str:
@@ -39,7 +37,8 @@ class UserService(BaseService):
             await ProfileService(self.session).get_by_id(user_model.profile_id)
         user_model.password = self.hash_password(user_model.password)
 
-        await super().add(user_model)
+        new_user = await super().add(user_model)
+        return new_user
 
     # async def get_by_id(self, user_id: int) -> SUser:
     #     async with unit_of_work() as uow:
@@ -58,8 +57,8 @@ class UserService(BaseService):
 
     async def authenticate_user(self, user_data: UserAuth):
         user = await self.get_user_role(EmailModel(email=user_data.email))
-        if user is None or not self.validate_password(user_data.password, user.password):
+        if user is None or not self.validate_password(
+            user_data.password, user.password
+        ):
             raise InvalidLoginException(f"Неверный логин или пароль.")
         return UserInfo.model_validate(user)
-
-

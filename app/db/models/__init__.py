@@ -6,5 +6,5 @@ from db.models.skills import (
     ConfirmationTypes,
     Skill
 )
-from db.models.profiles import Profile,  ProfileLevel
-from db.models.user_profiles import UserStage, UserAnswer
+from db.models.profiles import Profile,  ProfileLevel, ProfileLevelVersion
+from db.models.user_profiles import UserProfile, UserLevel, UserStage, UserAnswer

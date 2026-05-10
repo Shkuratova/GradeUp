@@ -6,17 +6,23 @@ from pydantic import (
     model_validator,
     computed_field,
 )
-
+from schemas.departments import SDepartment
 
 class ProfileBase(BaseModel):
     id: int
     title: str
+    department_id: int | None = None
     model_config = ConfigDict(from_attributes=True)
+
+class ProfileFilter(BaseModel):
+    id: int | None = None
+    department_id: int | None = None
 
 
 class ProfileAdd(BaseModel):
     title: str
-    description: str
+    description: str | None = None
+    department_id: int | None = None
 
 
 class LevelBase(BaseModel):
@@ -41,7 +47,6 @@ class ProfileList(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     title: str
-    description: str | None = None
 
 
 class SLevelAdd(BaseModel):
@@ -134,5 +139,15 @@ class LevelDetail(BaseModel):
 
 class ProfileDetail(ProfileBase):
     description: str | None = None
+    department: SDepartment | None = Field(None, exclude=True)
+    department_name: str | None = None
     levels: list[LevelDetail]
 
+    @model_validator(mode="after")
+    def set_department_name(self):
+        self.department_name = (
+            self.department.department_name
+            if self.department
+            else None
+        )
+        return self

@@ -5,7 +5,7 @@ from dependencies.auth import (
 )
 from exceptions.user import PasswordDontMatchException
 from utils.auth import AuthUtils
-from api.roles import UserRole
+from utils.roles import UserRole
 from api.decorators import exception_handler, check_role
 from db.uow import unit_of_work
 from services import UserService
@@ -13,12 +13,13 @@ from schemas.users import (
     UserAuth,
     UserInfo,
     UserRegistration,
+    SUser,
 )
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@auth_router.post("/registration")
+@auth_router.post("/registration", response_model=SUser)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def registration(
@@ -28,10 +29,8 @@ async def registration(
     if user_data.password != user_data.confirm_password:
         raise PasswordDontMatchException
     async with unit_of_work() as uow:
-        await UserService(uow.session).add(user_data)
-
-    return {"detail": "Пользователь успешно добавлен"}
-
+        new_user = await UserService(uow.session).add(user_data)
+        return new_user
 
 @auth_router.post("/login")
 @exception_handler

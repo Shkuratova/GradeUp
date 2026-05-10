@@ -128,13 +128,14 @@ class SUserFullInfo(BaseModel):
     last_name: str | None
     patronymic: str | None
     department_id: int | None
-    department: SDepartment | None = Field(None,)
     profile_id: int | None = None
+
+    department: SDepartment | None = Field(None, exclude=True)
     role: SRole | None = Field(default=None, exclude=True)
 
-    # @computed_field
-    # def department_name(self) -> str | None:
-    #     return self.department and self.department.department_name
+    @computed_field
+    def department_name(self) -> str | None:
+        return self.department and self.department.department_name
 
     @computed_field
     def role_name(self) -> str | None:

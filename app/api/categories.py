@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from dependencies.auth import get_current_user
 from api.decorators import check_role, exception_handler
-from api.roles import UserRole
+from utils.roles import UserRole
 from db.uow import unit_of_work
 from services.skill import CategoryService, SkillCategoryService
 from schemas.categories import CategoryBase, CategoryAdd, SkillCategory

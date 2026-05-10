@@ -1,9 +1,9 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query
 from dependencies import get_current_user
 from exceptions.user import ForbiddenException
 from api.decorators import exception_handler, check_role
-from api.roles import UserRole
+from utils.roles import UserRole
 from db.uow import unit_of_work
 from services.user import UserService
 from schemas.users import (

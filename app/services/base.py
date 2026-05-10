@@ -1,8 +1,6 @@
-from typing import Type
-
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.repository import BaseRepository
+
 from exceptions.common import (
     NotFoundException,
     AlreadyExistException,
@@ -19,12 +17,16 @@ class BaseService:
         self.session = session
         self.repository = None
 
-    async def check_unique_constrain(self,  filter_dict: dict, object_id: int | None = None):
+    async def check_unique_constraint(self,  filter_dict: dict, object_id: int | None = None):
         filters = {
             unq: filter_dict.get(unq, None)
             for unq in self.unique_fields
             if filter_dict.get(unq, None) is not None
         }
+
+        if object_id is not None:
+            filters["id"] = object_id
+
         if self.unique_fields is not None :
             object_exist = await self.repository.get_one_by_filter(filters)
             if object_exist is not None and object_id != object_exist.id:
@@ -52,7 +54,7 @@ class BaseService:
             )
 
         if self.unique_fields:
-            await self.check_unique_constrain(object_dict, object_id)
+            await self.check_unique_constraint(object_dict, object_id)
         res = await self.repository.update_by_id(object_id, object_dict)
         if not res:
             raise NotFoundException(
@@ -73,5 +75,5 @@ class BaseService:
         object_dict = object_model.model_dump(exclude_none=True)
 
         if self.unique_fields:
-            await self.check_unique_constrain(object_dict)
+            await self.check_unique_constraint(object_dict)
         return await self.repository.add(object_dict)

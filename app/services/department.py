@@ -1,9 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from db.repository.department import DepartmentRepository
-from db.uow import unit_of_work
-from exceptions.common import AlreadyExistException
-from schemas.departments import SDepartment, DepartmentUpdate
 from services.base import BaseService
 
 
