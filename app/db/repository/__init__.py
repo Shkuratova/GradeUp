@@ -11,3 +11,4 @@ from db.repository.skill import (
 )
 from db.repository.stage import StageRepository, StageVersionRepository
 from db.repository.user_profiles import UserProfileRepository
+from db.repository.meetings import MeetingRepository, ParticipantsRepository

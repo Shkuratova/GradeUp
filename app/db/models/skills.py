@@ -59,6 +59,7 @@ class StageVersion(Base):
 
     stage: Mapped[Stage] = relationship(back_populates="stage_versions")
     questions: Mapped[list["StageQuestion"]] = relationship(back_populates="stage_version")
+    meetings: Mapped[list["Meeting"]] = relationship(back_populates="stage_version")
 
 class StageQuestion(Base):
     stage_version_id: Mapped[int] = mapped_column(ForeignKey("stage_versions.id", ondelete="CASCADE"))

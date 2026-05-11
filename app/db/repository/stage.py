@@ -34,11 +34,15 @@ class StageRepository(BaseRepository):
     @db_exception_handler
     async def get_last_version_by_id(self, stage_id: int):
         last_version = self.last_version_subquery()
-        stmt = stmt = select(func.max(StageVersion.version)).where(
-            StageVersion.stage_id == stage_id
+        stmt = stmt = (
+            select(StageVersion.id, last_version.c.version)
+            .where(StageVersion.stage_id == stage_id)
+            .join(last_version, (StageVersion.stage_id == last_version.c.stage_id)
+                & (StageVersion.version == last_version.c.version),)
         )
+
         res = await self._session.execute(stmt)
-        return res.scalar_one_or_none()
+        return res.first()
 
 
     @db_exception_handler

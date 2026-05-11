@@ -148,3 +148,13 @@ class SUserFilter(BaseModel):
     department_id: int | None = None
     role_id: int | None = None
     position: str | None = None
+
+
+class UserFIO(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    first_name: str
+    last_name: str
+    patronymic: str | None = None
+    # department_id: int
+    # department_name: str

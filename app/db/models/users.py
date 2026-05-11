@@ -30,4 +30,5 @@ class User(Base):
     role: Mapped["Role"] = relationship(back_populates="users")
     profile: Mapped["UserProfile"] = relationship(back_populates="user")
     levels: Mapped[list["UserLevel"]] = relationship(back_populates="user")
+    meetings: Mapped["MeetingParticipant"] = relationship(back_populates="user")
     # skills_created: Mapped[list["Skill"]] = relationship(back_populates="creator")

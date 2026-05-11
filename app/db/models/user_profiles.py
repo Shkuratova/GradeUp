@@ -1,8 +1,9 @@
 from db import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import ForeignKey, text, func, TIMESTAMP
+from sqlalchemy import ForeignKey, text, func, TIMESTAMP, Text
 from datetime import datetime
-from db.models.types import CertificationRole
+
+from db.models.types import CertificationRole, CertificationStatus
 
 
 class UserProfile(Base):
@@ -34,9 +35,8 @@ class UserStage(Base):
     user_skill_id: Mapped[int] = mapped_column(ForeignKey("user_skills.id"))
     stage_version_id: Mapped[int] = mapped_column(ForeignKey("stage_versions.id")) #FK1
     status: Mapped[str]
-
+    comment: Mapped[str] = mapped_column(Text, nullable=True)
     user_skill: Mapped[UserSkill] = relationship(back_populates="stages")
-    meetings: Mapped[list["Meeting"]] = relationship(back_populates="user_stage")
     answers: Mapped[list["UserAnswer"]] = relationship(back_populates="user_stage")
 
 class UserAnswer(Base):
@@ -49,14 +49,14 @@ class UserAnswer(Base):
 
 
 class Meeting(Base):
-    user_stage_id: Mapped[int] = mapped_column(ForeignKey("user_stages.id"))
-    status: Mapped[str]
-    started_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now())
+    stage_version_id: Mapped[int] = mapped_column(ForeignKey("stage_versions.id"))
+    status: Mapped[CertificationStatus] = mapped_column(server_default=(CertificationStatus.planned.value))
+    started_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=text("TIMEZONE('utc', now())"))
     duration: Mapped[int]
     location: Mapped[str]
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
-
-    user_stage: Mapped[UserStage] = relationship(back_populates="meetings")
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    stage_version: Mapped["StageVersion"] = relationship(back_populates="meetings")
     participants: Mapped[list["MeetingParticipant"]] = relationship(back_populates="meeting")
 
 
@@ -66,6 +66,6 @@ class MeetingParticipant(Base):
     role: Mapped[CertificationRole] = mapped_column(default=CertificationRole.student, server_default=CertificationRole.student)
 
     meeting: Mapped[Meeting] = relationship(back_populates="participants")
-
+    user: Mapped["User"] = relationship(back_populates="meetings")
 
 

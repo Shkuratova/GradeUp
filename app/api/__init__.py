@@ -7,7 +7,7 @@ from api.skill import skill_router
 from api.categories import category_router
 from api.stages import stage_router
 from api.user_profiles import user_profile_router
-
+from api.meetings import meeting_router
 skill_router.include_router(stage_router)
 
 routers = [
@@ -18,5 +18,6 @@ routers = [
     profile_router,
     skill_router,
     user_profile_router,
+    meeting_router,
     category_router,
 ]

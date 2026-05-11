@@ -7,4 +7,4 @@ from db.models.skills import (
     Skill
 )
 from db.models.profiles import Profile,  ProfileLevel, ProfileLevelVersion
-from db.models.user_profiles import UserProfile, UserLevel, UserStage, UserAnswer
+from db.models.user_profiles import UserProfile, UserLevel, UserStage, UserAnswer, Meeting, MeetingParticipant
