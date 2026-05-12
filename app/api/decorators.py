@@ -1,6 +1,8 @@
 from fastapi import HTTPException, status, Depends
 from functools import wraps
 from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError
+
 from dependencies.auth import get_current_user
 from exceptions.user import (
     UnauthorizedException,

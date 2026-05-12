@@ -6,7 +6,6 @@ from pydantic import (
     model_validator,
     computed_field,
 )
-from schemas.departments import SDepartment
 
 
 class ProfileBase(BaseModel):
@@ -145,13 +144,5 @@ class LevelDetail(BaseModel):
 
 class ProfileDetail(ProfileBase):
     description: str | None = None
-    department: SDepartment | None = Field(None, exclude=True)
-    department_name: str | None = None
     levels: list[LevelDetail]
 
-    @model_validator(mode="after")
-    def set_department_name(self):
-        self.department_name = (
-            self.department.department_name if self.department else None
-        )
-        return self

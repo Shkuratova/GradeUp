@@ -10,7 +10,7 @@ class Profile(Base):
     is_active: Mapped[bool] = mapped_column(default=True, server_default=text("true"))
     department_id: Mapped[int] = mapped_column(ForeignKey("departments.id"), nullable=True)
 
-    department: Mapped["Department"] = relationship(back_populates="profiles")
+    departments: Mapped["Department"] = relationship(secondary="department_profiles", back_populates="profiles")
     levels: Mapped[list["ProfileLevel"]] = relationship(back_populates="profile", order_by="ProfileLevel.num")
     user_profiles: Mapped[list["UserProfile"]] = relationship(back_populates="profile")
 

@@ -1,4 +1,5 @@
-from db.models.users import User, Department, Role
+from db.models.users import User
+from db.models.departments import Role, Department,Division, DepartmentProfile
 from db.models.skills import (
     Stage,
     StageQuestion,

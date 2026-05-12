@@ -1,6 +1,6 @@
 from db.repository.base import BaseRepository
 from db.repository.user import UserRepository, RoleRepository
-from db.repository.department import DepartmentRepository
+from db.repository.department import DepartmentRepository, DivisionRepository, DepartmentProfileRepository
 from db.repository.profiles import ProfileRepository, LevelRepository
 from db.repository.skill import (
     SkillRepository,
