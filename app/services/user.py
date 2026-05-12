@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.repository import UserRepository
 from exceptions.common import NotFoundException
 from exceptions.user import InvalidLoginException
-from schemas.users import UserAuth, EmailModel
+from schemas.users import UserAuth, EmailModel, UserFilter, SUserFilter
 from schemas.users import UserInfo
 from services.base import BaseService
 from services.department import DepartmentService
@@ -39,6 +39,10 @@ class UserService(BaseService):
 
         new_user = await super().add(user_model)
         return new_user
+
+    async def get_users(self, filters: SUserFilter, department_ids: list[int] | None):
+        filter_dict = filters.model_dump(exclude_none=True)
+        return await self.repository.get_all(filter_dict, department_ids)
 
     # async def get_by_id(self, user_id: int) -> SUser:
     #     async with unit_of_work() as uow:

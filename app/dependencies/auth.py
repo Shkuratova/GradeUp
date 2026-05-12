@@ -1,12 +1,15 @@
-from fastapi import Request, Depends, HTTPException, status
+from typing import Annotated
+from fastapi import Request, Depends, HTTPException, status, Query
 from jwt.exceptions import PyJWTError, ExpiredSignatureError
-from schemas.users import UserBase, UserRole, UserInfo
+
+from db.uow import unit_of_work
 from exceptions.user import (
     InvalidTokenException,
 )
-from db.uow import unit_of_work
-from utils import AuthUtils
+from schemas.users import UserBase, UserInfo
+from services.department import DepartmentService
 from services.user import UserService
+from utils import AuthUtils
 
 
 def get_token_by_type(token_type: str):
@@ -45,3 +48,4 @@ async def get_current_user(
     token: str = Depends(get_token_by_type("access_token")),
 ) -> UserInfo:
     return await get_user_from_token(token=token)
+

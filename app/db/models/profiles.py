@@ -8,7 +8,6 @@ class Profile(Base):
     title: Mapped[str] = mapped_column(unique=True)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True, server_default=text("true"))
-    department_id: Mapped[int] = mapped_column(ForeignKey("departments.id"), nullable=True)
 
     departments: Mapped["Department"] = relationship(secondary="department_profiles", back_populates="profiles")
     levels: Mapped[list["ProfileLevel"]] = relationship(back_populates="profile", order_by="ProfileLevel.num")

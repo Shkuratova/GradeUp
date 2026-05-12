@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from dependencies.auth import get_current_user
 from exceptions.user import (
     UnauthorizedException,
-    UserException,
+    UserException, ForbiddenException,
 )
 from exceptions.common import AlreadyExistException, NotFoundException, DataValidationError
 from schemas.users import UserInfo
@@ -31,6 +31,8 @@ def exception_handler(func):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)
             )
+        except ForbiddenException as error:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error))
         except ValidationError as error:
             if any(err["type"] == "extra_forbidden" for err in error.errors()):
                 raise HTTPException(

@@ -36,6 +36,10 @@ class DepartmentRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    async def get_ids_by_division_id(self, division_id):
+        stmt = select(Department.id).where(Department.division_id == division_id)
+        res = await self._session.execute(stmt)
+        return res.scalars().all()
 
 class DepartmentProfileRepository(BaseRepository):
     model = DepartmentProfile

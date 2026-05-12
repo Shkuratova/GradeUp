@@ -26,7 +26,7 @@ async def add(division: DivisionAdd, current_user = Depends(get_current_user)):
 
 @division_router.get("/{division_id}", response_model=DivisionDetail)
 @exception_handler
-async def get_division_detail(division_id: int, division: DivisionUpdate, current_user= Depends(get_current_user)):
+async def get_division_detail(division_id: int, current_user= Depends(get_current_user)):
     async with unit_of_work() as uow:
         return await DivisionService(uow.session).get_division_detail(division_id)
 

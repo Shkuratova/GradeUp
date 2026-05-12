@@ -2,20 +2,21 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy import select
 from db.repository.decorators import db_exception_handler
 from db.repository import BaseRepository
-from db.models import User, Role
-
+from db.models import User, Role, Department
 
 class UserRepository(BaseRepository):
     model = User
 
     @db_exception_handler
-    async def get_all(self, user_filter: dict):
+    async def get_all(self, filter_dict: dict, department_ids: list[int] | None = None):
         stmt = (
             select(
                 User
-            ).filter_by(**user_filter)
+            ).filter_by(**filter_dict)
             .options(joinedload(User.role), joinedload(User.department))
         )
+        if department_ids:
+            stmt = stmt.where(User.department.has(Department.id.in_(department_ids)))
         res = await self._session.execute(stmt)
         return res.scalars().all()
 
@@ -24,7 +25,11 @@ class UserRepository(BaseRepository):
         stmt = (
             select(User)
             .filter_by(**user_filter)
-            .options(joinedload(User.role), joinedload(User.department))
+            .options(
+                joinedload(User.role),
+                joinedload(User.department),
+                joinedload(User.managed_division)
+            )
         )
         res = await self._session.execute(stmt)
         user = res.scalar_one_or_none()
@@ -47,4 +52,3 @@ class UserRepository(BaseRepository):
 
 class RoleRepository(BaseRepository):
     model = Role
-

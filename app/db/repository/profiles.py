@@ -2,7 +2,7 @@ from sqlalchemy import select, update, func, or_, and_, outerjoin
 from sqlalchemy.orm import selectinload, joinedload, contains_eager
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models import Department
+from db.models import Department, DepartmentProfile
 from db.repository.base import BaseRepository
 from db.models.users import User
 from db.models.profiles import Profile, ProfileLevel, ProfileLevelVersion
@@ -17,22 +17,27 @@ class ProfileRepository(BaseRepository):
         self.level_skill_repository = None
         super().__init__(session)
 
-    async def get_list(self, filter_dict: dict, department_id: int | None):
+    async def get_list(self, filter_dict: dict, department_ids: list[int] | None):
         stmt = select(Profile)
 
         stmt = stmt.filter_by(**filter_dict)
 
-        if department_id is not None:
+        if department_ids is not None:
             stmt = stmt.where(
-                and_(
-                    Profile.is_active == True,
-                    or_(
-                        Profile.department_id.is_(None),
-                        Profile.department_id == department_id,
-                    ),
-                )
+                Profile.is_active == True,
+                Profile.departments.has(Department.id.in_(department_ids)),
             )
 
+        res = await self._session.execute(stmt)
+        return res.scalars().all()
+
+    async def accessible_profiles(self, department_ids: list[int] | None = None):
+        stmt = select(Profile.id)
+        if department_ids is not None:
+            stmt = stmt.where(
+                Profile.is_active == True,
+                Profile.departments.has(Department.id.in_(department_ids)),
+            )
         res = await self._session.execute(stmt)
         return res.scalars().all()
 
@@ -58,30 +63,23 @@ class ProfileRepository(BaseRepository):
     async def get_profiles_with_latest_levels(
         self,
         profile_id: int | None = None,
-        department_id: int | None = None,
+        department_ids: list[int] | None = None
     ):
         last_versions = (
-        select(
-            ProfileLevelVersion.profile_level_id,
-            func.max(ProfileLevelVersion.version).label("last_version"),
-        )
-        .group_by(ProfileLevelVersion.profile_level_id)
-        .subquery()
-        )
-
-        stmt = (
-            select(Profile)
-            .where(Profile.id == profile_id)
-        )
-
-        if department_id is not None:
-            stmt = stmt.where(
-                or_(
-                    Profile.department_id == department_id,
-                    Profile.department_id.is_(None),
-                )
+            select(
+                ProfileLevelVersion.profile_level_id,
+                func.max(ProfileLevelVersion.version).label("last_version"),
             )
+            .group_by(ProfileLevelVersion.profile_level_id)
+            .subquery()
+        )
 
+        stmt = select(Profile).where(Profile.id == profile_id)
+        if department_ids:
+            stmt = stmt.where(
+                Profile.is_active == True,
+                Profile.departments.has(Department.id.in_(department_ids)),
+            )
         stmt = (
             stmt.outerjoin(Profile.levels)
             .where(func.coalesce(ProfileLevel.is_active, True).is_(True))
@@ -102,7 +100,7 @@ class ProfileRepository(BaseRepository):
                 .contains_eager(ProfileLevelVersion.skills)
                 .contains_eager(LevelSkill.skill)
                 .load_only(Skill.id, Skill.title),
-                joinedload(Profile.department).load_only(
+                joinedload(Profile.departments).load_only(
                     Department.id,
                     Department.department_name,
                 ),
@@ -113,22 +111,20 @@ class ProfileRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.unique().scalar_one_or_none()
 
+
 class LevelRepository(BaseRepository):
     model = ProfileLevel
 
     async def get_last_level_by_num(self, profile_id: int, level_num: int):
 
-
-        stmt = (
-            select(ProfileLevel.id)
-            .where(
-                ProfileLevel.profile_id == profile_id,
-                ProfileLevel.is_active.is_(True),
-                ProfileLevel.num == level_num
-            )
+        stmt = select(ProfileLevel.id).where(
+            ProfileLevel.profile_id == profile_id,
+            ProfileLevel.is_active.is_(True),
+            ProfileLevel.num == level_num,
         )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
+
 
 class LevelVersionRepository(BaseRepository):
     model = ProfileLevelVersion

@@ -1,11 +1,10 @@
 from typing import Annotated
+
 from fastapi import APIRouter, Depends, Query
-from dependencies import get_current_user
-from exceptions.user import ForbiddenException
+
 from api.decorators import exception_handler, check_role
-from utils.roles import UserRole
 from db.uow import unit_of_work
-from services.user import UserService
+from dependencies import get_current_user
 from schemas.users import (
     SUserFullInfo,
     SUserFilter,
@@ -14,6 +13,9 @@ from schemas.users import (
     UserUpdateBase,
     UserUpdateAdmin,
 )
+from services import DepartmentService
+from services.user import UserService
+from utils.roles import UserRole
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -21,24 +23,24 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @router.get("/", response_model=list[SUserFullInfo], response_model_exclude_none=False)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
-async def get_all_users(
+async def get_all(
     user_filters: Annotated[SUserFilter, Query()],
     current_user: UserInfo = Depends(get_current_user),
 ) -> list[SUserFullInfo]:
-    if current_user.role_name == UserRole.SUPERVISOR:
-        if current_user.department_id is None:
-            raise ForbiddenException("Руководитель не привязан к отделу.")
-        user_filters.department_id = current_user.department_id
     async with unit_of_work() as uow:
-        res = await UserService(uow.session).get_all(user_filters)
+        department_ids = await DepartmentService(
+            uow.session
+        ).get_accessible_departments(
+            current_user=current_user, department_id=user_filters.department_id
+        )
+        res = await UserService(uow.session).get_users(user_filters, department_ids)
         return list(res)
 
 
 @router.get("/{user_id}", response_model=UserInfo)
 @exception_handler
-async def get_user(
-    user_id: int,
-    current_user: UserInfo = Depends(get_current_user),
+async def get_by_id(
+    user_id: int, current_user: UserInfo = Depends(get_current_user)
 ) -> UserInfo:
     async with unit_of_work() as uow:
         return await UserService(uow.session).get_user_role(UserBase(id=user_id))

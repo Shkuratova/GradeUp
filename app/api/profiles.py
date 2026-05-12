@@ -2,6 +2,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from dependencies.auth import get_current_user
 from api.decorators import check_role, exception_handler
+from services import DepartmentService
 from utils.roles import UserRole
 from db.uow import unit_of_work
 from services.profile import ProfileService
@@ -25,8 +26,11 @@ async def get_all(
     current_user: UserInfo = Depends(get_current_user),
 ):
     async with unit_of_work() as uow:
+        department_ids = await DepartmentService(
+            uow.session
+        ).get_accessible_departments(current_user, profile_filter.department_id)
         return await ProfileService(uow.session).get_profile_list(
-            profile_filter, current_user
+            profile_filter, department_ids
         )
 
 
@@ -53,7 +57,8 @@ async def get_levels(current_user=Depends(get_current_user)):
 @exception_handler
 async def get_by_id(profile_id: int, current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
-        return await ProfileService(uow.session).get_with_details(profile_id, current_user)
+        department_ids = await DepartmentService(uow.session).get_accessible_departments(current_user)
+        return await ProfileService(uow.session).get_with_details(profile_id, department_ids)
 
 
 @profile_router.put("/{profile_id}")

@@ -11,6 +11,7 @@ from exceptions.common import (
     NotFoundException,
     DataValidationError,
 )
+from exceptions.user import ForbiddenException
 from schemas.profiles import (
     SProfileAdd,
     ProfileDetail,
@@ -19,7 +20,6 @@ from schemas.profiles import (
     SLevelUpdate,
     LevelDetail,
     ProfileFilter,
-    ProfileList,
 )
 from schemas.users import UserInfo
 from services.base import BaseService
@@ -40,19 +40,12 @@ class ProfileService(BaseService):
         self.skill_repository = SkillRepository(session)
 
     async def get_profile_list(
-        self, filters: ProfileFilter, current_user: UserInfo | None = None
+        self, filters: ProfileFilter, department_ids: list[int] | None = None
     ):
-        department_id = None
-
-        if current_user and current_user.role_name == UserRole.SUPERVISOR:
-            department_id = current_user.department_id
-            if filters.department_id:
-                filters.department_id = department_id
-
-        filter_dict = filters.model_dump(exclude_none=True)
+        filter_dict = filters.model_dump(exclude_none=True, exclude={"department_id"})
         profiles = await self.repository.get_list(
             filter_dict=filter_dict,
-            department_id=department_id,
+            department_ids=department_ids,
         )
         return profiles
 
@@ -60,17 +53,19 @@ class ProfileService(BaseService):
         profiles = await self.repository.get_profiles_with_latest_levels()
         return [ProfileDetail.model_validate(profile) for profile in profiles]
 
+    async def _can_access_profile(self, profile_id: int, department_ids: list[int]):
+        profiles = await self.repository.accessible_profiles(department_ids)
+        return profile_id in profiles
+
     async def get_with_details(
-        self, profile_id: int, current_user: UserInfo | None = None
+        self, profile_id: int, department_ids: list[int] | None = None
     ):
 
-        department_id = None
-        if current_user and current_user.role_name == UserRole.SUPERVISOR:
-            department_id = current_user.department_id
+        # if department_ids:
+        #     if not (has_access := await self._can_access_profile(profile_id, department_ids)):
+        #         raise ForbiddenException("Нет доступа к выбранному профилю.")
 
-        profile = await self.repository.get_profiles_with_latest_levels(
-            profile_id, department_id
-        )
+        profile = await self.repository.get_profiles_with_latest_levels(profile_id, department_ids)
 
         if profile is None:
             raise NotFoundException(
@@ -158,3 +153,5 @@ class ProfileService(BaseService):
                     ]
             if level_skills:
                 await self.level_skill_repository.add_list(level_skills)
+
+
