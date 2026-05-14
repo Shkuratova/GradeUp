@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from config import settings
 from db import Base
-from db.models.users import Role, Department, User
+from db.models.users import User
+from db.models.departments import Role, Department, Division, DepartmentProfile
 from db.models.types import CertificationRole, ConfirmationTypes
 from db.models.profiles import Profile, ProfileLevel, ProfileLevelVersion
 from db.models.skills import (
