@@ -33,11 +33,13 @@ class UserSkill(Base):
 
 class UserStage(Base):
     user_skill_id: Mapped[int] = mapped_column(ForeignKey("user_skills.id"))
-    stage_version_id: Mapped[int] = mapped_column(ForeignKey("stage_versions.id")) #FK1
-    status: Mapped[str]
+    stage_version_id: Mapped[int] = mapped_column(ForeignKey("stage_versions.id"))
+    is_accepted: Mapped[bool] = mapped_column(default=False, server_default=text('false'))
     comment: Mapped[str] = mapped_column(Text, nullable=True)
+
     user_skill: Mapped[UserSkill] = relationship(back_populates="stages")
     answers: Mapped[list["UserAnswer"]] = relationship(back_populates="user_stage")
+    stage_version: Mapped["StageVersion"] = relationship(back_populates="user_stages")
 
 class UserAnswer(Base):
     user_stage_id: Mapped[int] = mapped_column(ForeignKey("user_stages.id"))
