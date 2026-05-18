@@ -21,7 +21,12 @@ class UserRepository(BaseRepository):
         return res.scalars().all()
 
     @db_exception_handler
-    async def get_user_role(self, user_filter: dict):
+    async def get_user_role(self, user_filter: dict, department_ids: list[int] | None = None):
+        stmt = select(User).filter_by(**user_filter)
+
+        if department_ids:
+            stmt = stmt.where(User.department_id.has(Department.id.in_(department_ids)))
+
         stmt = (
             select(User)
             .filter_by(**user_filter)

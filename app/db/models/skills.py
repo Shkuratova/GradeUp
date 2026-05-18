@@ -2,7 +2,7 @@ from db import Base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey, Text, text, UniqueConstraint
 
-from db.models.profiles import ProfileLevelVersion
+from db.models.profiles import ProfileLevel
 from db.models.types import ConfirmationTypes
 
 class Category(Base):
@@ -33,11 +33,11 @@ class SkillCategory(Base):
     skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"))
 
 class LevelSkill(Base):
-    profile_level_version_id: Mapped[int] = mapped_column(ForeignKey("profile_level_versions.id", ondelete="CASCADE"))
-    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"))
+    profile_level_id: Mapped[int] = mapped_column(ForeignKey("profile_levels.id", ondelete="CASCADE"))
+    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id", ondelete="CASCADE"))
 
 
-    profile_level_version: Mapped["ProfileLevelVersion"] = relationship(back_populates="skills")
+    profile_level: Mapped["ProfileLevel"] = relationship(back_populates="skills")
     skill: Mapped["Skill"] = relationship(back_populates="profile_levels")
 
 
@@ -59,7 +59,6 @@ class StageVersion(Base):
 
     stage: Mapped[Stage] = relationship(back_populates="stage_versions")
     questions: Mapped[list["StageQuestion"]] = relationship(back_populates="stage_version")
-    meetings: Mapped[list["Meeting"]] = relationship(back_populates="stage_version")
     user_stages: Mapped[list["UserStage"]] = relationship(back_populates="stage_version")
 
 class StageQuestion(Base):

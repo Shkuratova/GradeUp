@@ -92,6 +92,9 @@ class SkillService(BaseService):
 
         return await self.get_skill_with_questions(skill_id)
 
+    async def get_accessible_skills(self, current_user):
+        pass
+
 
 class LevelSkillService(BaseService):
     unique_fields = ["skill_id", "profile_level_id"]

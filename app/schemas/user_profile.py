@@ -1,6 +1,14 @@
-from pydantic import BaseModel, Field, ConfigDict, computed_field, model_validator, EmailStr
-from schemas.users import SUser
+from pydantic import (
+    BaseModel,
+    Field,
+    ConfigDict,
+    computed_field,
+    EmailStr,
+)
+
+from db.models import ConfirmationTypes
 from schemas.profiles import ProfileList
+from schemas.users import SUser
 
 
 class UserProfileBase(BaseModel):
@@ -17,11 +25,20 @@ class UserProfileAdd(BaseModel):
     profile_id: int
 
 
+class UserProfileTitle(UserProfileBase):
+    profile: ProfileList = Field(exclude=True)
+
+    @computed_field
+    def title(self) -> str:
+        return self.profile.title
+
+
 class UserProfileSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     user: SUser
     profile: ProfileList
+
 
 class UserProfileProgressList(BaseModel):
     id: int
@@ -40,3 +57,47 @@ class UserProfileProgressList(BaseModel):
     @property
     def progress(self) -> float:
         return self.completed_cnt / self.total_cnt if self.total_cnt else 0
+
+
+class Stage(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    confirmation_type: ConfirmationTypes
+
+
+class Skill(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
+    stages: list[Stage]
+
+
+class LevelSkill(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    skill: Skill = Field(exclude=True)
+
+    @computed_field
+    def skill_id(self) -> int:
+        return self.skill.id
+
+    @computed_field
+    def title(self) -> str:
+        return self.skill.title
+
+    @computed_field
+    def stages(self) -> list[Stage]:
+        return self.skill.stages
+
+
+class CurrentLevel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    num: int
+    level_name: str
+    skills: list[LevelSkill]
+
+
+class ProfileAvailableSkills(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    profile_id: int
+    user_id: int
+    current_level: CurrentLevel

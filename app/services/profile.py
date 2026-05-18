@@ -4,14 +4,12 @@ from db.repository import LevelSkillRepository
 from db.repository.profiles import (
     ProfileRepository,
     LevelRepository,
-    LevelVersionRepository,
 )
 from db.repository.skill import SkillRepository
 from exceptions.common import (
     NotFoundException,
     DataValidationError,
 )
-from exceptions.user import ForbiddenException
 from schemas.profiles import (
     SProfileAdd,
     ProfileDetail,
@@ -21,9 +19,7 @@ from schemas.profiles import (
     LevelDetail,
     ProfileFilter,
 )
-from schemas.users import UserInfo
 from services.base import BaseService
-from utils.roles import UserRole
 
 
 class ProfileService(BaseService):
@@ -35,7 +31,6 @@ class ProfileService(BaseService):
         super().__init__(session)
         self.repository = ProfileRepository(session)
         self.level_repository = LevelRepository(session)
-        self.level_version_repository = LevelVersionRepository(session)
         self.level_skill_repository = LevelSkillRepository(session)
         self.skill_repository = SkillRepository(session)
 
@@ -49,9 +44,14 @@ class ProfileService(BaseService):
         )
         return profiles
 
-    async def get_profile_levels(self):
-        profiles = await self.repository.get_profiles_with_latest_levels()
-        return [ProfileDetail.model_validate(profile) for profile in profiles]
+    async def get_profile_levels(
+        self, filters: ProfileFilter, department_ids: list[int] | None = None
+    ):
+
+        profiles = await self.repository.get_profiles_with_levels(
+            department_ids=department_ids
+        )
+        return [ProfileDetail.model_validate(p) for p in profiles]
 
     async def _can_access_profile(self, profile_id: int, department_ids: list[int]):
         profiles = await self.repository.accessible_profiles(department_ids)
@@ -65,7 +65,9 @@ class ProfileService(BaseService):
         #     if not (has_access := await self._can_access_profile(profile_id, department_ids)):
         #         raise ForbiddenException("Нет доступа к выбранному профилю.")
 
-        profile = await self.repository.get_profiles_with_latest_levels(profile_id, department_ids)
+        profile = await self.repository.get_profiles_with_levels(
+            profile_id, department_ids
+        )
 
         if profile is None:
             raise NotFoundException(
@@ -86,21 +88,14 @@ class ProfileService(BaseService):
     async def add_levels(self, profile_id: int, levels: list[SLevelAdd]):
         await self._validate_skills(levels)
         new_levels = []
-        level_versions = []
         level_skills = []
         for lvl in levels:
             new_level = await self.level_repository.add(
                 {"profile_id": profile_id, "level_name": lvl.level_name, "num": lvl.num}
             )
             new_levels.append(new_level)
-            level_version = await self.level_version_repository.add(
-                {"profile_level_id": new_level.id}
-            )
-            level_versions.append(level_version)
             for s in lvl.skills:
-                level_skills.append(
-                    {"profile_level_version_id": level_version.id, "skill_id": s}
-                )
+                level_skills.append({"profile_level_id": new_level.id, "skill_id": s})
 
         await self.level_skill_repository.add_list(level_skills)
 
@@ -140,18 +135,13 @@ class ProfileService(BaseService):
                     await self.level_repository.update_by_id(
                         lvl.id, {"level_name": lvl.level_name, "num": lvl.num}
                     )
-                old_skills = set(s.id for s in old_level.skills)
+                old_skills = set(s.id for s in old_level.level_skills)
                 new_skills = set(lvl.skills)
-                if old_skills != new_skills:
-                    new_version_num = old_level.last_version + 1
-                    new_version = await self.level_version_repository.add(
-                        {"profile_level_id": lvl.id, "version": new_version_num}
-                    )
+                if add_skill := new_skills - old_skills:
                     level_skills += [
-                        {"profile_level_version_id": new_version.id, "skill_id": s}
-                        for s in lvl.skills
+                        {"profile_level_id": lvl.id, "skill_id": s} for s in add_skill
                     ]
+                if del_skill := old_skills - new_skills:
+                    await self.level_skill_repository.delete_by_skill_ids(lvl.id, list(del_skill))
             if level_skills:
                 await self.level_skill_repository.add_list(level_skills)
-
-

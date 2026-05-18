@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field, ConfigDict, computed_field, model_validator
 from db.models.types import CertificationStatus, CertificationRole, ConfirmationTypes
+from exceptions.common import DataValidationError
 from schemas.profiles import SkillList
 from schemas.users import UserFIO
 
@@ -19,11 +20,13 @@ class MeetingBase(BaseModel):
 
 class ParticipantBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+    id: int
     user_id: int
     role: CertificationRole
 
 
 class Participant(ParticipantBase):
+
     user: UserFIO = Field(exclude=True)
 
     @computed_field
@@ -48,7 +51,14 @@ class MeetingStage(BaseModel):
 class MeetingStageVersion(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    stage_id: int
     stage: MeetingStage
+
+
+class UserStage(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    stage_version: MeetingStageVersion
 
 
 class MeetingDetail(BaseModel):
@@ -58,20 +68,46 @@ class MeetingDetail(BaseModel):
     duration: int
     description: str | None = None
     status: CertificationStatus
-    participants: list[Participant]
-    stage_version: MeetingStageVersion = Field(exclude=True)
+    participants: list[Participant] = Field(exclude=True)
+    user_stage: UserStage = Field(exclude=True)
+
+    @computed_field
+    def user_stage_id(self) -> int:
+        return self.user_stage.id
+
+    @computed_field
+    def stage_id(self) -> int:
+        return self.user_stage.stage_version.stage_id
 
     @computed_field
     def stage_version_id(self) -> int:
-        return self.stage_version.id
+        return self.user_stage.stage_version.id
 
     @computed_field
     def confirmation_type(self) -> ConfirmationTypes:
-        return self.stage_version.stage.confirmation_type
+        return self.user_stage.stage_version.stage.confirmation_type
 
     @computed_field
     def skill_title(self) -> str:
-        return self.stage_version.stage.skill.title
+        return self.user_stage.stage_version.stage.skill.title
+
+    @computed_field
+    def student(self) -> Participant | None:
+        participant = next(
+            (p for p in self.participants if p.role == CertificationRole.student), None
+        )
+        if participant is None:
+            return None
+        return participant
+
+    @computed_field
+    def examiner(self) -> Participant | None:
+        participant = next(
+            (p for p in self.participants if p.role == CertificationRole.examiner), None
+        )
+        if participant is None:
+            return None
+        return participant
 
 
 class MeetingAdd(BaseModel):
@@ -86,23 +122,29 @@ class MeetingAddForm(BaseModel):
     stage_id: int
     started_at: datetime
     location: str
-    duration: int
+    duration: int = Field(..., gt=0)
     description: str | None = None
     student_id: int
     examiner_id: int
 
+
 class MeetingUpdateForm(MeetingAddForm):
     id: int
+    examiner_id: int | None = None
+    student_id: int | None = None
+
 
 class MeetingFilters(BaseModel):
     id: int | None = None
     user_id: int | None = None
+    user_role: CertificationRole | None = None
     start_date: datetime | None = None
-    end_date: datetime = Field(datetime.now())
+    end_date: datetime | None = None
     status: CertificationStatus | None = None
+    stage_id: int | None = None
     confirmation_type: ConfirmationTypes | None = None
     skill_id: int | None = None
-    department_id: int | None = None
+    department_ids: list[int] | None = None
 
     @model_validator(mode="after")
     def check_filters(self):

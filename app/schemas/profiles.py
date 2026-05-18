@@ -11,19 +11,16 @@ from pydantic import (
 class ProfileBase(BaseModel):
     id: int
     title: str
-    department_id: int | None = None
     model_config = ConfigDict(from_attributes=True)
 
 
 class ProfileFilter(BaseModel):
-    id: int | None = None
     department_id: int | None = None
 
 
 class ProfileAdd(BaseModel):
     title: str
     description: str | None = None
-    department_id: int | None = None
 
 
 class LevelBase(BaseModel):
@@ -108,38 +105,19 @@ class LevelSkill(BaseModel):
     skill: SkillList
 
 
-class LevelVersion(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    version: int
-    skills: list[LevelSkill] | None = Field(default=None, exclude=True)
-
-    @computed_field
-    @property
-    def skill_list(self) -> list[SkillList]:
-        if self.skills:
-            return [ls.skill for ls in self.skills if ls.skill]
-        return []
-
-
 class LevelDetail(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     num: int
     level_name: str
-    versions: list[LevelVersion] | None = Field(None, exclude=True)
+    skills: list[LevelSkill] | None = Field(None, exclude=True)
 
     @computed_field
     @property
-    def last_version(self) -> int | None:
-        if self.versions is None:
-            return None
-        return self.versions[0].version
-
-    @computed_field
-    @property
-    def skills(self) -> list[SkillList] | None:
-        return self.versions[0].skill_list
+    def level_skills(self) -> list[SkillList] | None:
+        if self.skills:
+            return [ls.skill for ls in self.skills if ls.skill]
+        return []
 
 
 class ProfileDetail(ProfileBase):

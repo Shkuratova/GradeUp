@@ -11,7 +11,7 @@ from db import Base
 from db.models.users import User
 from db.models.departments import Role, Department, Division, DepartmentProfile
 from db.models.types import CertificationRole, ConfirmationTypes
-from db.models.profiles import Profile, ProfileLevel, ProfileLevelVersion
+from db.models.profiles import Profile, ProfileLevel
 from db.models.skills import (
     Category,
     Skill,
@@ -22,14 +22,8 @@ from db.models.skills import (
     StageQuestion,
 )
 
-from db.models.user_profiles import (
-    UserLevel,
-    UserSkill,
-    UserStage,
-    UserAnswer,
-    Meeting,
-    MeetingParticipant,
-)
+from db.models.user_profiles import UserLevel, UserSkill, UserStage
+from db.models.meetings import Meeting, MeetingParticipant
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

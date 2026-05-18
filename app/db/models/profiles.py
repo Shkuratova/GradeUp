@@ -23,14 +23,6 @@ class ProfileLevel(Base):
     is_active: Mapped[bool] = mapped_column(default=True, server_default=text('true'))
 
     profile: Mapped["Profile"] = relationship(back_populates="levels")
-    versions: Mapped[list["ProfileLevelVersion"]] = relationship(back_populates="profile_level")
-
-class ProfileLevelVersion(Base):
-    profile_level_id: Mapped[int] = mapped_column(ForeignKey("profile_levels.id"))
-    version: Mapped[int] = mapped_column(server_default=text('1'))
-
-    profile_level: Mapped[ProfileLevel] = relationship(back_populates="versions")
-    skills: Mapped[list["LevelSkill"]] = relationship(back_populates="profile_level_version")
-
-    __table_args__ = (UniqueConstraint("profile_level_id", "version"),)
-
+    skills: Mapped[list["LevelSkill"]] = relationship(back_populates="profile_level")
+    user_profiles: Mapped["UserProfile"] = relationship(back_populates="current_level")
+    user_levels: Mapped["UserLevel"] = relationship(back_populates="profile_level")

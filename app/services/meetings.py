@@ -1,18 +1,35 @@
+from datetime import datetime, timezone
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models.types import CertificationRole
-from db.repository import MeetingRepository, ParticipantsRepository, StageRepository
-from exceptions.common import NotFoundException
+from db.models.types import CertificationRole, CertificationStatus
+from db.repository import (
+    MeetingRepository,
+    ParticipantsRepository,
+    StageRepository,
+    UserStageRepository,
+    UserSkillRepository,
+    UserLevelRepository,
+    StageVersionRepository, UserProfileRepository,
+)
+from exceptions.common import (
+    NotFoundException,
+    DataValidationError,
+    AlreadyExistException,
+)
+from exceptions.user import ForbiddenException
 from schemas.meetings import (
     MeetingAddForm,
     MeetingFilters,
-    MeetingAdd,
     MeetingUpdateForm,
     MeetingDetail,
 )
 from schemas.users import UserInfo
 from services.base import BaseService
+from services.department import DepartmentService
+from services.user import UserService
 from utils.roles import UserRole
+
 
 class MeetingService(BaseService):
 
@@ -21,10 +38,22 @@ class MeetingService(BaseService):
         self.repository = MeetingRepository(session)
         self.participant_repository = ParticipantsRepository(session)
         self.stage_repository = StageRepository(session)
+        self.user_stage_repository = UserStageRepository(session)
+        self.user_skill_repository = UserSkillRepository(session)
+        self.user_level_repository = UserLevelRepository(session)
+        self.stage_version_repository = StageVersionRepository(session)
+        self.user_profile_repository = UserProfileRepository(session)
+
+    async def get_meeting_by_filters(self, filters: MeetingFilters):
+        filter_dict = filters.model_dump(exclude_none=True)
+        meeting = await self.repository.get_meeting(filter_dict)
+        if meeting is None:
+            raise NotFoundException(f"Встреча с параметрами {filter_dict} не найдена.")
+        return MeetingDetail.model_validate(meeting, from_attributes=True)
 
     async def get_meetings(self, filters: MeetingFilters):
         filter_dict = filters.model_dump(exclude_none=True)
-        return await self.repository.get_meetings(filter_dict)
+        return await self.repository.get_meeting_list(filter_dict)
 
     async def get_user_next_meeting(self, user_id: int):
         res = await self.repository.get_next_meeting(user_id)
@@ -32,35 +61,180 @@ class MeetingService(BaseService):
             return {"detail": "У пользователя нет запланированных встреч"}
         return MeetingDetail.model_validate(res, from_attributes=True)
 
-    async def schedule_meeting(self, meeting: MeetingAddForm, current_user_id: int):
-
-        stage_version = await self.stage_repository.get_last_version_by_id(meeting.stage_id)
-
+    async def get_user_stage(self, user_id, stage_id: int):
+        stage_version = await self.stage_repository.get_last_version_with_options(
+            stage_id
+        )
         if stage_version is None:
-            raise NotFoundException(f"Этап подтверждения с id = {meeting.stage_id} не найден.")
+            raise NotFoundException(f"Этап подтверждения с id = {stage_id} не найден.")
+        stage = stage_version.stage
+        skill_id = stage.skill_id
+        available_skills = await self.user_profile_repository.has_available_stage(user_id, stage_id)
+        if not available_skills:
+            raise NotFoundException("Выбранный этап недоступен для назначения пользователю.")
+        current_lvl = await self.user_level_repository.get_current_lvl(user_id)
+        if current_lvl is None:
+            raise NotFoundException("Нет доступных навыков для назначения встречи.")
+
+        user_skill = await self.user_skill_repository.get_by_user(user_id, skill_id)
+        if user_skill is None:
+            user_skill = await self.user_skill_repository.add(
+                {"user_level_id": current_lvl.id, "skill_id": skill_id}
+            )
+
+        user_stage_dict = {
+            "user_skill_id": user_skill.id,
+            "stage_version_id": stage_version.id,
+        }
+        user_stage = await self.user_stage_repository.get_one_by_filter(user_stage_dict)
+        if user_stage is not None and user_stage.is_accepted:
+            raise DataValidationError("Этап уже пройден.")
+        if user_stage is None:
+            user_stage = await self.user_stage_repository.add(
+                {"user_skill_id": user_skill.id, "stage_version_id": stage_version.id}
+            )
+        return user_stage
+
+    async def _validate_participants(
+        self, student_id: int, examiner_id: int, current_user: UserInfo
+    ):
+        user_service = UserService(self.session)
+        student = await user_service.get_by_id(student_id)
+        examiner = await user_service.get_by_id(examiner_id)
+        department_ids = await DepartmentService(
+            self.session
+        ).get_accessible_departments(current_user)
+        if department_ids is not None:
+            if student.department_id not in department_ids or (
+                examiner.department_id not in department_ids
+                and examiner.id != current_user.id
+            ):
+                raise ForbiddenException(
+                    "Руководитель может выбирать Аттестуемого и Аттестующего только из своих подчиненных."
+                )
+        return student
+
+    async def schedule_meeting(self, meeting: MeetingAddForm, current_user: UserInfo):
+        filters = MeetingFilters(
+            stage_id=meeting.stage_id,
+            user_id=meeting.student_id,
+            user_role=CertificationRole.student,
+            status=CertificationStatus.planned,
+            start_date=meeting.started_at,
+            end_date=datetime.now(tz=timezone.utc),
+        )
+        meetings = await self.repository.get_meeting(filters.model_dump(exclude_none=True))
+        if meetings is not None:
+            raise AlreadyExistException(
+                f"Встреча с заданными параметрами уже назначена на {meetings.started_at}."
+            )
+        student = await self._validate_participants(
+            meeting.student_id, meeting.examiner_id, current_user
+        )
+        user_stage = await self.get_user_stage(student.id, meeting.stage_id)
 
         new_meeting = {
-            "stage_version_id": stage_version.id,
-            "created_by": current_user_id,
-            **meeting.model_dump(exclude={"student_id", "examiner_id", "stage_id"})
+            "user_stage_id": user_stage.id,
+            "created_by": current_user.id,
+            **meeting.model_dump(exclude={"student_id", "examiner_id", "stage_id"}),
         }
         new_meeting = await self.repository.add(new_meeting)
 
-
         participants = [
             {
-                'meeting_id': new_meeting.id,
-                'user_id': meeting.student_id,
-                'role':CertificationRole.student
+                "meeting_id": new_meeting.id,
+                "user_id": meeting.student_id,
+                "role": CertificationRole.student,
             },
             {
-                'meeting_id': new_meeting.id,
-                'user_id': meeting.examiner_id,
-                'role':CertificationRole.examiner
-            }
+                "meeting_id": new_meeting.id,
+                "user_id": meeting.examiner_id,
+                "role": CertificationRole.examiner,
+            },
         ]
-        res = await self.participant_repository.add_list(participants)
-        return new_meeting
+        await self.participant_repository.add_list(participants)
+        return await self.repository.get_meeting({"id": new_meeting.id})
 
-    async def update_meeting(self, meeting: MeetingUpdateForm):
-        pass
+    async def update_meeting(
+        self, meeting_id: int, meeting: MeetingUpdateForm, current_user: UserInfo
+    ):
+        meeting_filters = MeetingFilters(id=meeting_id)
+        old_meeting = await self.get_meetings(meeting_filters)
+        if old_meeting is None:
+            raise NotFoundException(f"Встреча с id = {meeting.id} не найдена.")
+        if meeting.student_id and meeting.examiner_id:
+            await self._validate_participants(
+                meeting.student_id, meeting.examiner_id, current_user
+            )
+
+        upd_meeting = meeting.model_dump(
+            exclude={"id", "student_id", "examiner_id", "stage_id"}
+        )
+
+        student_changed = (
+            old_meeting.student.user_id != meeting.student_id and meeting.student_id
+        )
+        examiner_changed = (
+            old_meeting.examiner.user_id != meeting.examiner_id and meeting.examiner_id
+        )
+        stage_changed = old_meeting.stage_id != meeting.stage_id
+
+        if student_changed:
+            await self.participant_repository.update_by_id(
+                old_meeting.student.id, {"user_id": meeting.student_id}
+            )
+        if examiner_changed:
+            await self.participant_repository.update_by_id(
+                old_meeting.examiner.id, {"user_id": meeting.examiner_id}
+            )
+        if student_changed or stage_changed:
+            user_stage = await self.get_user_stage(meeting.student_id, meeting.stage_id)
+            upd_meeting["user_stage_id"] = user_stage.id
+
+        await self.repository.update_by_id(meeting_id, upd_meeting)
+        return await self.get_meetings(meeting_filters)
+
+    async def get_participant_role(self, meeting_id: int, user_id: int):
+        res = await self.participant_repository.get_participant_role(
+            meeting_id, user_id
+        )
+        if res is None:
+            raise NotFoundException(
+                f"Участник с user_id = {user_id} не назначени на встречу с meeting_id = {meeting_id}."
+            )
+        return res
+
+    async def _check_supervisor_access(
+        self, meeting: MeetingDetail, current_user: UserInfo
+    ):
+        if meeting.student.user_id == current_user.id:
+            return
+
+        student = await UserService(self.session).get_by_id(meeting.student.id)
+
+        department_ids = await DepartmentService(
+            self.session
+        ).get_accessible_departments(current_user)
+
+        if student.department_id not in department_ids:
+            raise ForbiddenException("Отказано в доступе.")
+
+    async def _check_examiner_access(self, meeting_id: int, user_id: int):
+        participant_role = await self.get_participant_role(meeting_id, user_id)
+        if participant_role != CertificationRole.examiner:
+            raise ForbiddenException("Отказано в доступе.")
+
+    async def get_questions(self, meeting_id: int, current_user: UserInfo):
+        meeting: MeetingDetail = await self.get_meeting_by_filters(
+            MeetingFilters(id=meeting_id)
+        )
+
+        if current_user.role_name == UserRole.SUPERVISOR:
+            await self._check_supervisor_access(meeting, current_user)
+
+        elif current_user.role_name == UserRole.EMPLOYEE:
+            await self._check_examiner_access(meeting_id, current_user.id)
+
+        return await self.stage_version_repository.get_questions(
+            meeting.stage_version_id
+        )

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import Department, DepartmentProfile
 from db.repository.base import BaseRepository
 from db.models.users import User
-from db.models.profiles import Profile, ProfileLevel, ProfileLevelVersion
+from db.models.profiles import Profile, ProfileLevel
 from db.models.skills import LevelSkill, Skill
 
 
@@ -60,21 +60,14 @@ class ProfileRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalars().unique().all()
 
-    async def get_profiles_with_latest_levels(
+    async def get_profiles_with_levels(
         self,
         profile_id: int | None = None,
-        department_ids: list[int] | None = None
+        department_ids: list[int] | None = None,
     ):
-        last_versions = (
-            select(
-                ProfileLevelVersion.profile_level_id,
-                func.max(ProfileLevelVersion.version).label("last_version"),
-            )
-            .group_by(ProfileLevelVersion.profile_level_id)
-            .subquery()
-        )
-
-        stmt = select(Profile).where(Profile.id == profile_id)
+        stmt = select(Profile)
+        if profile_id:
+            stmt = select(Profile).where(Profile.id == profile_id)
         if department_ids:
             stmt = stmt.where(
                 Profile.is_active == True,
@@ -83,21 +76,11 @@ class ProfileRepository(BaseRepository):
         stmt = (
             stmt.outerjoin(Profile.levels)
             .where(func.coalesce(ProfileLevel.is_active, True).is_(True))
-            .outerjoin(
-                last_versions,
-                last_versions.c.profile_level_id == ProfileLevel.id,
-            )
-            .outerjoin(
-                ProfileLevelVersion,
-                (ProfileLevelVersion.profile_level_id == ProfileLevel.id)
-                & (ProfileLevelVersion.version == last_versions.c.last_version),
-            )
-            .outerjoin(ProfileLevelVersion.skills)
+            .outerjoin(ProfileLevel.skills)
             .outerjoin(LevelSkill.skill)
             .options(
                 contains_eager(Profile.levels)
-                .contains_eager(ProfileLevel.versions)
-                .contains_eager(ProfileLevelVersion.skills)
+                .contains_eager(ProfileLevel.skills)
                 .contains_eager(LevelSkill.skill)
                 .load_only(Skill.id, Skill.title),
                 joinedload(Profile.departments).load_only(
@@ -109,7 +92,9 @@ class ProfileRepository(BaseRepository):
         )
 
         res = await self._session.execute(stmt)
-        return res.unique().scalar_one_or_none()
+        if profile_id:
+            return res.unique().scalar_one_or_none()
+        return res.unique().scalars().all()
 
 
 class LevelRepository(BaseRepository):
@@ -126,5 +111,3 @@ class LevelRepository(BaseRepository):
         return res.scalar_one_or_none()
 
 
-class LevelVersionRepository(BaseRepository):
-    model = ProfileLevelVersion

@@ -18,6 +18,7 @@ async def get_all(current_user: UserInfo = Depends(get_current_user)):
     async with unit_of_work() as uow:
         return await UserProfileService(uow.session).get_all_with_progress()
 
+
 @user_profile_router.post("/")
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
@@ -26,9 +27,40 @@ async def add(user_profile: UserProfileAdd, current_user: UserInfo = Depends(get
         return await UserProfileService(uow.session).create(user_profile)
 
 
+@user_profile_router.get("/level-skills")
+@exception_handler
+async def get_available_skills_by_user(user_id: int, current_user = Depends(get_current_user)):
+    async with unit_of_work() as uow:
+        return await UserProfileService(uow.session).get_available_skills(user_id)
+
+
 @user_profile_router.get("/{user_profile_id}")
 @exception_handler
 async def get_by_id(
     user_profile_id: int, current_user: UserInfo = Depends(get_current_user)
 ):
-    pass
+    async with unit_of_work() as uow:
+        return await UserProfileService(uow.session).status(user_profile_id)
+
+@user_profile_router.post("/{user_profile_id}")
+@check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
+@exception_handler
+async def gradeup_user(user_profile_id: int, current_user : UserInfo = Depends(get_current_user)):
+    async with unit_of_work() as uow:
+        # logs
+        await UserProfileService(uow.session).gradeup(user_profile_id)
+
+user_stage_router = APIRouter(prefix="/stages", tags=["UserProfiles"])
+
+@user_stage_router.post("/")
+@check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
+@exception_handler
+async def evaluate(current_user = Depends(get_current_user)):
+    async with unit_of_work() as uow:
+        pass
+
+@user_stage_router.get("/{user_stage_id}")
+@exception_handler
+async def get(user_stage_id: int, current_user: UserInfo = Depends(get_current_user)):
+    async with unit_of_work() as uow:
+        pass

@@ -5,11 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.repository import UserRepository
 from exceptions.common import NotFoundException
 from exceptions.user import InvalidLoginException
-from schemas.users import UserAuth, EmailModel, UserFilter, SUserFilter
+from schemas.users import UserAuth, EmailModel, SUserFilter
 from schemas.users import UserInfo
 from services.base import BaseService
 from services.department import DepartmentService
-from services.profile import ProfileService
 
 
 class UserService(BaseService):
@@ -33,8 +32,6 @@ class UserService(BaseService):
     async def add(self, user_model: BaseModel):
         if user_model.department_id is not None:
             await DepartmentService(self.session).get_by_id(user_model.department_id)
-        if user_model.profile_id is not None:
-            await ProfileService(self.session).get_by_id(user_model.profile_id)
         user_model.password = self.hash_password(user_model.password)
 
         new_user = await super().add(user_model)
@@ -44,17 +41,10 @@ class UserService(BaseService):
         filter_dict = filters.model_dump(exclude_none=True)
         return await self.repository.get_all(filter_dict, department_ids)
 
-    # async def get_by_id(self, user_id: int) -> SUser:
-    #     async with unit_of_work() as uow:
-    #         repository = self.repository_factory(uow.session)
-    #         user = await repository.get_by_id(user_id)
-    #         if user is None:
-    #             raise UserNotFoundException("Пользователь не найден")
-    #         return SUser.model_validate(user)
 
-    async def get_user_role(self, filters: BaseModel) -> UserInfo:
+    async def get_user_role(self, filters: BaseModel, department_ids: list[int] | None = None) -> UserInfo:
         filter_dict = filters.model_dump(exclude_none=True)
-        user = await self.repository.get_user_role(filter_dict)
+        user = await self.repository.get_user_role(filter_dict, department_ids)
         if user is None:
             raise NotFoundException("Пользователь не найден")
         return UserInfo.model_validate(user)

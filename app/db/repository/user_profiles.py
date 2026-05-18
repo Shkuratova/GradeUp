@@ -1,15 +1,22 @@
-from sqlalchemy import select, func
-from sqlalchemy.orm import joinedload
+from sqlalchemy import select, func, and_, exists, insert, literal
+from sqlalchemy.orm import joinedload, selectinload
 
+from db.models.skills import StageVersion
+from db.models.user_profiles import UserSkill
 from db.repository import BaseRepository
 from db.models import (
     UserProfile,
     User,
     UserLevel,
     ProfileLevel,
-    ProfileLevelVersion,
-    Profile, Department,
+    Profile,
+    Department,
+    UserStage,
+    Skill,
+    Stage,
+    LevelSkill,
 )
+from schemas.skills import SkillStages
 
 
 class UserProfileRepository(BaseRepository):
@@ -65,8 +72,189 @@ class UserProfileRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.all()
 
+    async def get_profile(self, user_profile_id):
+        stmt = (
+            select(UserProfile)
+            .where(UserProfile.id == user_profile_id)
+            .options(
+                joinedload(UserProfile.profile).load_only(Profile.id, Profile.title)
+            )
+        )
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
 
-# UserProfile -> Profile -> LastLevels (where last_version)
-# UserProfile -> Users -> UserLevels (where is_accepted == True)
-# left join last_levels + user_levels
-# Посчитать процент прохождения как кол-во пройденных на кол-во уровней
+    async def get_progress(self, user_id: int, profile_id: int):
+        level_status_subq = (
+            select(UserLevel.profile_level_id, UserLevel.is_closed)
+            .where(UserLevel.user_id == user_id)
+            .subquery()
+        )
+
+        user_progress_subq = (
+            select(
+                UserLevel.profile_level_id,
+                UserSkill.skill_id,
+                Stage.id.label("stage_id"),
+                UserStage.is_accepted.label("stage_accepted"),
+            )
+            .join(UserSkill, UserSkill.user_level_id == UserLevel.id)
+            .join(UserStage, UserStage.user_skill_id == UserSkill.id)
+            .join(StageVersion, StageVersion.id == UserStage.stage_version_id)
+            .join(Stage, Stage.id == StageVersion.stage_id)
+            .where(UserLevel.user_id == user_id)
+            .subquery()
+        )
+
+        query = (
+            select(
+                ProfileLevel.id.label("profile_level_id"),
+                level_status_subq.c.is_closed,
+                Skill.id.label("skill_id"),
+                Skill.title.label("skill_title"),
+                Stage.id.label("stage_id"),
+                Stage.confirmation_type,
+                user_progress_subq.c.stage_accepted
+            )
+            .select_from(Profile)
+            .join(ProfileLevel, ProfileLevel.profile_id == Profile.id)
+            .join(LevelSkill, LevelSkill.profile_level_id == ProfileLevel.id)
+            .join(Skill, Skill.id == LevelSkill.skill_id)
+            .join(Stage, Stage.skill_id == Skill.id)
+            .outerjoin(
+                user_progress_subq,
+                and_(
+                    user_progress_subq.c.profile_level_id == ProfileLevel.id,
+                    user_progress_subq.c.skill_id == Skill.id,
+                    user_progress_subq.c.stage_id == Stage.id,
+                ),
+            )
+            .outerjoin(
+                level_status_subq,
+                level_status_subq.c.profile_level_id == ProfileLevel.id,
+            )
+            .where(Profile.id == profile_id)
+            .order_by(ProfileLevel.id, Skill.id, Stage.id)
+        )
+
+        result = await self._session.execute(query)
+        return result.mappings().all()
+
+    async def get_available_skills(self, user_id: int):
+        stmt = (
+            select(UserProfile)
+            .where(UserProfile.user_id == user_id)
+            .options(
+                joinedload(UserProfile.current_level)
+                .selectinload(ProfileLevel.skills)
+                .load_only(LevelSkill.id),
+                joinedload(UserProfile.current_level)
+                .selectinload(ProfileLevel.skills)
+                .joinedload(LevelSkill.skill)
+                .load_only(Skill.id, Skill.title),
+                joinedload(UserProfile.current_level)
+                .selectinload(ProfileLevel.skills)
+                .joinedload(LevelSkill.skill)
+                .selectinload(Skill.stages)
+                .load_only(Stage.id, Stage.confirmation_type),
+            )
+        )
+
+        res = await self._session.execute(stmt)
+
+        return res.scalar_one_or_none()
+
+    async def has_available_stage(self, user_id: int, stage_id: int) -> bool:
+        stmt = (
+            select(Stage.id)
+            .join(Skill, Skill.id == Stage.skill_id)
+            .join(LevelSkill, LevelSkill.skill_id == Skill.id)
+            .join(ProfileLevel, ProfileLevel.id == LevelSkill.profile_level_id)
+            .join(UserProfile, UserProfile.current_level_id == ProfileLevel.id)
+            .where(
+                UserProfile.user_id == user_id,
+                Stage.id == stage_id,
+            )
+            .limit(1)
+        )
+
+        result = await self._session.execute(stmt)
+
+        return result.scalar_one_or_none() is not None
+
+
+class UserLevelRepository(BaseRepository):
+    model = UserLevel
+
+    async def get_current_lvl(self, user_id: int):
+        stmt = (
+            select(UserLevel)
+            .where(UserLevel.user_id == user_id)
+            .join(
+                UserProfile,
+                (UserProfile.user_id == UserLevel.user_id)
+                & (UserProfile.current_level_id == UserLevel.profile_level_id),
+            )
+            .options(
+                joinedload(UserLevel.profile_level)
+                .selectinload(ProfileLevel.skills)
+                .load_only(LevelSkill.skill_id)
+            )
+        )
+        res = await self._session.execute(stmt)
+        return res.unique().scalar_one_or_none()
+
+
+class UserSkillRepository(BaseRepository):
+    model = UserSkill
+
+    async def add_skill(self, user_id: int, skill_id: int):
+        stmt = (
+            insert(UserSkill)
+            .from_select(
+                ["user_level_id", "skill_id"],
+                select(UserLevel.id, literal(skill_id)).where(
+                    UserLevel.user_id == user_id
+                ),
+            )
+            .returning(UserSkill)
+        )
+        res = await self._session.execute(stmt)
+        return res.scalar_one()
+
+    async def get_by_user(self, user_id: int, skill_id: int):
+        stmt = select(UserSkill).where(
+            and_(
+                UserSkill.skill_id == skill_id,
+                UserSkill.user_level.has(UserLevel.user_id == user_id),
+            )
+        )
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
+
+
+class UserStageRepository(BaseRepository):
+    model = UserStage
+
+    async def get_by_version_id(self, user_id: int, stage_version_id: int):
+        stmt = (
+            select(UserStage)
+            .join(UserStage.user_skill)
+            .join(UserSkill.user_level)
+            .where(
+                UserLevel.user_id == user_id,
+                UserStage.stage_version_id == stage_version_id,
+            )
+        )
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def get_by_stage_id(self, stage_id: int):
+        stmt = (
+            select(UserStage)
+            .join(UserStage.stage_version)
+            .join(StageVersion.stage)
+            .where(Stage.id == stage_id)
+        )
+
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()

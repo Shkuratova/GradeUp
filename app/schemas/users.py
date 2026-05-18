@@ -13,10 +13,12 @@ class EmailModel(BaseModel):
 class UserInfo(UserBase, EmailModel):
     role: SRole = Field(exclude=True)
     department: SDepartment | None = Field(None, exclude=True)
+    managed_division: SDivision | None = Field(None, exclude=True)
     first_name: str
     last_name: str
     patronymic: str | None
     position: str | None
+    accessed_departments: list[int] | None = Field(None, exclude=True)
 
     password: str = Field(exclude=True)
     @computed_field
@@ -30,6 +32,14 @@ class UserInfo(UserBase, EmailModel):
     @computed_field
     def department_id(self) -> int | None:
         return self.department.id if self.department else None
+
+    @computed_field
+    def division_id(self) -> int | None:
+        return self.managed_division.id if self.managed_division else None
+
+    @computed_field
+    def division_name(self) -> str | None:
+        return self.managed_division.division_name if self.managed_division else None
 
 
 class UserAuth(EmailModel):
@@ -82,6 +92,7 @@ class UserFilter(BaseModel):
     role_id: int | None
     position: str | None
 
+
 class SetUserRole(BaseModel):
     id: int = Field(exclude=True)
     role_id: int
@@ -105,7 +116,6 @@ class UserRegistration(BaseModel):
     patronymic: str | None = None
     department_id: int | None = None
     position: str | None = None
-    profile_id: int| None = None
     password: str
     confirm_password: str = Field(exclude=True)
 
@@ -119,6 +129,11 @@ class SDepartment(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     department_name: str
+
+class SDivision(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    division_name: str
 
 
 class SUserFullInfo(BaseModel):
@@ -148,6 +163,7 @@ class SUserFilter(BaseModel):
     department_id: int | None = None
     role_id: int | None = None
     position: str | None = None
+    only_subordinates: bool = Field(False, exclude=True)
 
 
 class UserFIO(BaseModel):
