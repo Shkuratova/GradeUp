@@ -45,8 +45,6 @@ async def get_by_id(
         return await UserService(uow.session).get_user_role(UserBase(id=user_id))
 
 
-
-
 @router.patch("/{user_id}")
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler

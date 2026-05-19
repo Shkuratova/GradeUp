@@ -101,3 +101,61 @@ class ProfileAvailableSkills(BaseModel):
     profile_id: int
     user_id: int
     current_level: CurrentLevel
+
+class UserStageBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    is_accepted: bool
+    stage_version_id: int
+
+class UserStageAdd(BaseModel):
+    user_id: int
+    stage_id: int
+    is_accepted: bool = False
+    comment: str | None = None
+
+class UserStageProgress(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    stage_id: int
+    confirmation_type: ConfirmationTypes
+    stage_accepted: bool | None = None
+
+class UserSkillProgress(BaseModel):
+    skill_id: int
+    title: str
+    stages: list[UserStageProgress | None]
+
+    @computed_field
+    @property
+    def skill_pcnt(self) -> int:
+        if not self.stages:
+            return 0
+
+        accepted = sum(1 for stage in self.stages if stage.stage_accepted is True)
+
+        return round(accepted / len(self.stages) * 100)
+
+
+class UserLevelProgress(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    profile_level_id: int
+    user_level_id: int | None = None
+    num: int
+    level_name: str
+    is_closed: bool | None = None
+    skills: list[UserSkillProgress | None]
+
+    @computed_field
+    @property
+    def level_pcnt(self) -> int:
+        if not self.skills:
+            return 0
+
+        completed = sum(1 for skill in self.skills if skill.skill_pcnt == 100)
+
+        return round(completed / len(self.skills) * 100)
+
+
+class UserProfileProgress(UserProfileBase):
+    title: str
+    profile_levels: list[UserLevelProgress]

@@ -59,9 +59,7 @@ async def get_levels(
         return profiles
 
 
-@profile_router.get(
-    "/{profile_id}"
-)
+@profile_router.get("/{profile_id}")
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_by_id(profile_id: int, current_user=Depends(get_current_user)):

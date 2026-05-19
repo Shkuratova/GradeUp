@@ -26,3 +26,5 @@ class User(Base):
     profile: Mapped["UserProfile"] = relationship(back_populates="user")
     levels: Mapped[list["UserLevel"]] = relationship(back_populates="user")
     meetings: Mapped["MeetingParticipant"] = relationship(back_populates="user")
+
+    user_stages: Mapped[list["UserStage"]] = relationship(back_populates="supervisor")

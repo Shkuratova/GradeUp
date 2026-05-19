@@ -28,6 +28,7 @@ from schemas.users import UserInfo
 from services.base import BaseService
 from services.department import DepartmentService
 from services.user import UserService
+from services.user_stage import UserStageService
 from utils.roles import UserRole
 
 
@@ -37,12 +38,9 @@ class MeetingService(BaseService):
         super().__init__(session)
         self.repository = MeetingRepository(session)
         self.participant_repository = ParticipantsRepository(session)
-        self.stage_repository = StageRepository(session)
-        self.user_stage_repository = UserStageRepository(session)
-        self.user_skill_repository = UserSkillRepository(session)
-        self.user_level_repository = UserLevelRepository(session)
         self.stage_version_repository = StageVersionRepository(session)
-        self.user_profile_repository = UserProfileRepository(session)
+        self.user_stage_service = UserStageService(session)
+        self.user_service = UserService(session)
 
     async def get_meeting_by_filters(self, filters: MeetingFilters):
         filter_dict = filters.model_dump(exclude_none=True)
@@ -61,39 +59,7 @@ class MeetingService(BaseService):
             return {"detail": "У пользователя нет запланированных встреч"}
         return MeetingDetail.model_validate(res, from_attributes=True)
 
-    async def get_user_stage(self, user_id, stage_id: int):
-        stage_version = await self.stage_repository.get_last_version_with_options(
-            stage_id
-        )
-        if stage_version is None:
-            raise NotFoundException(f"Этап подтверждения с id = {stage_id} не найден.")
-        stage = stage_version.stage
-        skill_id = stage.skill_id
-        available_skills = await self.user_profile_repository.has_available_stage(user_id, stage_id)
-        if not available_skills:
-            raise NotFoundException("Выбранный этап недоступен для назначения пользователю.")
-        current_lvl = await self.user_level_repository.get_current_lvl(user_id)
-        if current_lvl is None:
-            raise NotFoundException("Нет доступных навыков для назначения встречи.")
 
-        user_skill = await self.user_skill_repository.get_by_user(user_id, skill_id)
-        if user_skill is None:
-            user_skill = await self.user_skill_repository.add(
-                {"user_level_id": current_lvl.id, "skill_id": skill_id}
-            )
-
-        user_stage_dict = {
-            "user_skill_id": user_skill.id,
-            "stage_version_id": stage_version.id,
-        }
-        user_stage = await self.user_stage_repository.get_one_by_filter(user_stage_dict)
-        if user_stage is not None and user_stage.is_accepted:
-            raise DataValidationError("Этап уже пройден.")
-        if user_stage is None:
-            user_stage = await self.user_stage_repository.add(
-                {"user_skill_id": user_skill.id, "stage_version_id": stage_version.id}
-            )
-        return user_stage
 
     async def _validate_participants(
         self, student_id: int, examiner_id: int, current_user: UserInfo
@@ -131,7 +97,7 @@ class MeetingService(BaseService):
         student = await self._validate_participants(
             meeting.student_id, meeting.examiner_id, current_user
         )
-        user_stage = await self.get_user_stage(student.id, meeting.stage_id)
+        user_stage = await self.user_stage_service.ensure_user_stage(student.id, meeting.stage_id)
 
         new_meeting = {
             "user_stage_id": user_stage.id,
@@ -188,7 +154,7 @@ class MeetingService(BaseService):
                 old_meeting.examiner.id, {"user_id": meeting.examiner_id}
             )
         if student_changed or stage_changed:
-            user_stage = await self.get_user_stage(meeting.student_id, meeting.stage_id)
+            user_stage = await self.user_stage_service.ensure_user_stage(meeting.student_id, meeting.stage_id)
             upd_meeting["user_stage_id"] = user_stage.id
 
         await self.repository.update_by_id(meeting_id, upd_meeting)
@@ -210,7 +176,7 @@ class MeetingService(BaseService):
         if meeting.student.user_id == current_user.id:
             return
 
-        student = await UserService(self.session).get_by_id(meeting.student.id)
+        student = await self.user_service.get_by_id(meeting.student.id)
 
         department_ids = await DepartmentService(
             self.session

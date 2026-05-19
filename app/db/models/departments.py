@@ -11,7 +11,7 @@ class Role(Base):
 class Department(Base):
     department_name: Mapped[str] = mapped_column(unique=True, nullable=False)
     division_id: Mapped[int | None] = mapped_column(ForeignKey("divisions.id", ondelete="SET NULL"), )
-
+    description: Mapped[str | None]
     division: Mapped["Division"] = relationship(back_populates="departments")
     users: Mapped[list["User"]] = relationship(
         back_populates="department",
@@ -26,7 +26,7 @@ class Department(Base):
 class Division(Base):
     division_name: Mapped[str] = mapped_column(unique=True, nullable=False)
     departments: Mapped[list["Department"]] = relationship(back_populates="division")
-
+    description: Mapped[str | None]
     supervisor: Mapped["User"] = relationship(back_populates="managed_division")
 
 class DepartmentProfile(Base):

@@ -43,11 +43,12 @@ class UserStage(Base):
     stage_version_id: Mapped[int] = mapped_column(ForeignKey("stage_versions.id"))
     is_accepted: Mapped[bool] = mapped_column(default=False, server_default=text('false'))
     comment: Mapped[str] = mapped_column(Text, nullable=True)
+    updated_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     user_skill: Mapped[UserSkill] = relationship(back_populates="stages")
     stage_version: Mapped["StageVersion"] = relationship(back_populates="user_stages")
     meetings: Mapped["Meeting"] = relationship(back_populates="user_stage")
-
+    supervisor: Mapped["User"] = relationship(back_populates="user_stages")
 
 
 

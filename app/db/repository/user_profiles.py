@@ -1,5 +1,5 @@
 from sqlalchemy import select, func, and_, exists, insert, literal
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, with_loader_criteria
 
 from db.models.skills import StageVersion
 from db.models.user_profiles import UserSkill
@@ -92,6 +92,7 @@ class UserProfileRepository(BaseRepository):
 
         user_progress_subq = (
             select(
+                UserLevel.id.label("user_level_id"),
                 UserLevel.profile_level_id,
                 UserSkill.skill_id,
                 Stage.id.label("stage_id"),
@@ -108,12 +109,15 @@ class UserProfileRepository(BaseRepository):
         query = (
             select(
                 ProfileLevel.id.label("profile_level_id"),
+                ProfileLevel.num,
+                ProfileLevel.level_name,
                 level_status_subq.c.is_closed,
+                user_progress_subq.c.user_level_id,
                 Skill.id.label("skill_id"),
                 Skill.title.label("skill_title"),
                 Stage.id.label("stage_id"),
                 Stage.confirmation_type,
-                user_progress_subq.c.stage_accepted
+                user_progress_subq.c.stage_accepted,
             )
             .select_from(Profile)
             .join(ProfileLevel, ProfileLevel.profile_id == Profile.id)
@@ -156,6 +160,52 @@ class UserProfileRepository(BaseRepository):
                 .joinedload(LevelSkill.skill)
                 .selectinload(Skill.stages)
                 .load_only(Stage.id, Stage.confirmation_type),
+                with_loader_criteria(
+                    LevelSkill,
+                    ~exists(
+                        select(1)
+                        .select_from(UserSkill)
+                        .join(
+                            UserLevel,
+                            UserLevel.id == UserSkill.user_level_id,
+                        )
+                        .where(
+                            and_(
+                                UserSkill.skill_id == LevelSkill.skill_id,
+                                UserLevel.user_id == user_id,
+                                UserSkill.is_accepted.is_(True),
+                            )
+                        )
+                    ).correlate(LevelSkill),
+                    include_aliases=True,
+                ),
+                with_loader_criteria(
+                    Stage,
+                    ~exists(
+                        select(1)
+                        .select_from(UserStage)
+                        .join(
+                            StageVersion,
+                            StageVersion.id == UserStage.stage_version_id,
+                        )
+                        .join(
+                            UserSkill,
+                            UserSkill.id == UserStage.user_skill_id,
+                        )
+                        .join(
+                            UserLevel,
+                            UserLevel.id == UserSkill.user_level_id,
+                        )
+                        .where(
+                            and_(
+                                StageVersion.stage_id == Stage.id,
+                                UserLevel.user_id == user_id,
+                                UserStage.is_accepted.is_(True),
+                            )
+                        )
+                    ).correlate(Stage),
+                    include_aliases=True,
+                ),
             )
         )
 
@@ -185,21 +235,17 @@ class UserProfileRepository(BaseRepository):
 class UserLevelRepository(BaseRepository):
     model = UserLevel
 
-    async def get_current_lvl(self, user_id: int):
+    async def get_current_lvl(self, user_id: int, profile_level_id: int):
         stmt = (
             select(UserLevel)
-            .where(UserLevel.user_id == user_id)
-            .join(
-                UserProfile,
-                (UserProfile.user_id == UserLevel.user_id)
-                & (UserProfile.current_level_id == UserLevel.profile_level_id),
-            )
+            .where(UserLevel.user_id == user_id, UserLevel.profile_level_id == profile_level_id)
             .options(
                 joinedload(UserLevel.profile_level)
                 .selectinload(ProfileLevel.skills)
                 .load_only(LevelSkill.skill_id)
             )
         )
+
         res = await self._session.execute(stmt)
         return res.unique().scalar_one_or_none()
 
@@ -231,6 +277,63 @@ class UserSkillRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    async def get_skill_detail(self, user_id: int, skill_id: int):
+        stmt = (
+            select(
+                Skill.id.label("skill_id"),
+                Skill.title,
+                Skill.description,
+                Skill.literature,
+                Stage.id.label("stage_id"),
+                Stage.confirmation_type,
+                UserStage.id.label("user_stage_id"),
+                UserStage.is_accepted,
+                UserStage.comment,
+                UserStage.updated_at,
+            )
+            .select_from(Skill)
+            .join(Stage, Stage.skill_id == Skill.id)
+            .join(StageVersion, StageVersion.stage_id == Stage.id)
+            .outerjoin(
+                UserSkill,
+                UserSkill.skill_id == Skill.id,
+            )
+            .outerjoin(
+                UserLevel,
+                and_(
+                    UserLevel.id == UserSkill.user_level_id,
+                    UserLevel.user_id == user_id,
+                ),
+            )
+            .outerjoin(
+                UserStage,
+                and_(
+                    UserStage.user_skill_id == UserSkill.id,
+                    UserStage.stage_version_id == StageVersion.id,
+                ),
+            )
+            .where(Skill.id == skill_id)
+        )
+        res = await self._session.execute(stmt)
+        return res.mappings().all()
+
+    async def get_accepted_count(self, user_level_id: int) -> int:
+        stmt = (
+            select(func.count(UserSkill.id))
+            .join(
+                UserLevel,
+                UserSkill.user_level_id == UserLevel.id,
+            )
+            .where(
+                UserLevel.id == user_level_id,
+                UserSkill.is_accepted.is_(True),
+            )
+        )
+
+        res = await self._session.execute(stmt)
+
+        return res.scalar_one()
+
 
 class UserStageRepository(BaseRepository):
     model = UserStage
@@ -256,5 +359,20 @@ class UserStageRepository(BaseRepository):
             .where(Stage.id == stage_id)
         )
 
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def accepted_count(self, skill_id: int, user_skill_id: int):
+        stmt = (
+            select(func.count(UserStage.id))
+            .join(StageVersion, StageVersion.id == UserStage.stage_version_id)
+            .where(
+                UserStage.user_skill_id == user_skill_id,
+                UserStage.is_accepted.is_(True),
+                StageVersion.stage_id.in_(
+                    select(Stage.id).where(Stage.skill_id == skill_id)
+                ),
+            )
+        )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()

@@ -26,15 +26,7 @@ async def get_all(
     filters: Annotated[MeetingFilters, Query()], current_user=Depends(get_current_user)
 ):
     async with unit_of_work() as uow:
-        department_ids = await DepartmentService(
-            uow.session
-        ).get_accessible_departments(current_user)
-        if filters.department_ids:
-            filters.department_ids = [
-                d for d in filters.department_ids if d in department_ids
-            ]
-        else:
-            filters.department_ids = department_ids
+
         return await MeetingService(uow.session).get_meetings(filters)
 
 

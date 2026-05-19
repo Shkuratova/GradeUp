@@ -110,4 +110,10 @@ class LevelRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    async def get_skills_cnt(self, profile_level_id):
+        stmt = select(func.count(LevelSkill.id)).where(LevelSkill.profile_level_id == profile_level_id)
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
+
+
 

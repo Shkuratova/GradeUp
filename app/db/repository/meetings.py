@@ -109,12 +109,12 @@ class MeetingRepository(BaseRepository):
                 )
             )
             .options(
-                joinedload(Meeting.stage_version)
-                .load_only(StageVersion.id)
+                joinedload(Meeting.user_stage)
+                .load_only(UserStage.id)
                 .options(
-                    joinedload(StageVersion.stage)
-                    .load_only(Stage.confirmation_type)
-                    .options(joinedload(Stage.skill).load_only(Skill.title))
+                    joinedload(UserStage.stage_version)
+                    .joinedload(StageVersion.stage)
+                    .joinedload(Stage.skill)
                 ),
                 selectinload(Meeting.participants).options(
                     joinedload(MeetingParticipant.user).load_only(

@@ -95,6 +95,14 @@ class StageRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    async def stage_count(self, skill_id):
+        stmt = (
+            select(func.count(Stage.id))
+            .where(Stage.skill_id == skill_id)
+        )
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
+
 
 class StageVersionRepository(BaseRepository):
     model = StageVersion

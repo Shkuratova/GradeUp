@@ -10,11 +10,13 @@ class DepartmentBase(BaseModel):
     department_name: str
 
 class DepartmentDetail(DepartmentBase):
+    description: str | None = None
     supervisor: UserFIO | None = None
     profiles: list[ProfileList] = []
 
 class DepartmentAdd(BaseModel):
     department_name: str
+    description: str | None = None
 
 
 class DepartmentUpdate(DepartmentAdd):
