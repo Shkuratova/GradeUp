@@ -1,16 +1,18 @@
 from fastapi import APIRouter, Depends
-from dependencies.auth import get_current_user
-from schemas.users import UserInfo
-from utils.roles import UserRole
+
 from api.decorators import check_role, exception_handler
 from db.uow import unit_of_work
-from services.department import DepartmentService
+from dependencies.auth import get_current_user
 from schemas.departments import (
     DepartmentBase,
-    DepartmentAdd,
-    DepartmentUpdate,
     DepartmentDetail,
+    DepartmentSchema,
+    DepartmentAddForm,
+    DepartmentUpdateForm,
 )
+from schemas.users import UserInfo
+from services.department import DepartmentService
+from utils.roles import UserRole
 
 department_router = APIRouter(prefix="/departments", tags=["Departments"])
 
@@ -19,19 +21,19 @@ department_router = APIRouter(prefix="/departments", tags=["Departments"])
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def add(
-    department: DepartmentAdd, current_user: UserInfo = Depends(get_current_user)
+    department: DepartmentAddForm, current_user: UserInfo = Depends(get_current_user)
 ):
     async with unit_of_work() as uow:
-        instance = await DepartmentService(uow.session).add(department)
+        instance = await DepartmentService(uow.session).add_with_relations(department)
     return instance
 
 
-@department_router.get("/")
+@department_router.get("/", response_model=list[DepartmentSchema])
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_all(
     current_user: UserInfo = Depends(get_current_user),
-) -> list[DepartmentBase]:
+) -> list[DepartmentSchema]:
     async with unit_of_work() as uow:
         return await DepartmentService(uow.session).get_all()
 
@@ -51,7 +53,7 @@ async def get_department_detail(
 @exception_handler
 async def update_by_id(
     department_id: int,
-    department: DepartmentUpdate,
+    department: DepartmentUpdateForm,
     current_user: UserInfo = Depends(get_current_user),
 ):
     async with unit_of_work() as uow:

@@ -1,22 +1,23 @@
-from fastapi import APIRouter, Query
 from typing import Annotated
 
+from fastapi import APIRouter, Query
 from fastapi.params import Depends
-from dependencies.auth import get_current_user
-from utils.roles import UserRole
+
 from api.decorators import exception_handler, check_role
 from db.uow import unit_of_work
-from services.skill import SkillService, StageService
-from schemas.users import UserInfo
+from dependencies.auth import get_current_user
 from schemas.skills import (
     SkillSchema,
     SkillFilter,
     StageAdd,
     SkillDetail,
-    SkillStages,
     SkillAddForm,
     SkillUpdateForm,
 )
+from schemas.users import UserInfo
+from services.access import AccessService
+from services.skill import SkillService, StageService
+from utils.roles import UserRole
 
 skill_router = APIRouter(prefix="/skills", tags=["Skill"])
 
@@ -44,8 +45,9 @@ async def add(skill: SkillAddForm, current_user: UserInfo = Depends(get_current_
 @skill_router.get("/{skill_id}", response_model=SkillDetail)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
-async def get_by_id(skill_id: int, current_user=Depends(get_current_user)):
+async def get_by_id(skill_id: int, current_user: UserInfo = Depends(get_current_user)):
     async with unit_of_work() as uow:
+        await AccessService(uow.session).can_get_skill(skill_id, current_user)
         skill = await SkillService(uow.session).get_skill_with_questions(skill_id)
         return skill
 

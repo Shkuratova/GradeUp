@@ -21,6 +21,7 @@ class UserProfileService(BaseService):
     def __init__(self, session: AsyncSession):
         super().__init__(session)
         self.repository = UserProfileRepository(self.session)
+        # self.auth_service = AccessService(self.session)
         self.level_repository = LevelRepository(self.session)
         self.user_level_repository = UserLevelRepository(self.session)
         self.user_skill_repository = UserSkillRepository(session)
@@ -60,11 +61,6 @@ class UserProfileService(BaseService):
         )
         return user_profile
 
-    async def update(self):
-        pass
-
-    async def delete(self):
-        pass
 
     async def status(self, user_profile_id: int):
         user_profile = await self.repository.get_profile(user_profile_id)
@@ -167,7 +163,6 @@ class UserProfileService(BaseService):
     async def gradeup(self, user_profile_id):
         user_profile = await self.get_by_id(user_profile_id)
         current_level = await self.user_level_repository.get_current_lvl(user_profile.user_id, user_profile.current_level_id)
-        print("CURRENT_LEVEL", current_level)
         accepted_skills = await self.user_skill_repository.get_accepted_count(current_level.id)
         total_skills = await self.level_repository.get_skills_cnt(current_level.profile_level_id)
         if accepted_skills != total_skills:

@@ -1,5 +1,7 @@
 from sqlalchemy.orm import contains_eager, selectinload, with_loader_criteria, aliased
 from sqlalchemy import select, delete, func
+
+from db.models import ProfileLevel, Profile, DepartmentProfile
 from db.repository.base import BaseRepository
 from db.models.skills import (
     Skill,
@@ -85,6 +87,26 @@ class SkillRepository(BaseRepository):
         return res.unique().scalars().all()
 
     @db_exception_handler
+    async def skill_exist(self, skill_id: int, departments_id: list[int]):
+        stmt = (
+            select(Skill.id)
+            .join(LevelSkill, LevelSkill.skill_id == Skill.id)
+            .join(ProfileLevel, ProfileLevel.id == LevelSkill.profile_level_id)
+            .join(Profile, Profile.id == ProfileLevel.profile_id)
+            .join(DepartmentProfile, DepartmentProfile.profile_id == Profile.id)
+            .where(
+                Skill.id == skill_id,
+                DepartmentProfile.department_id.in_(departments_id),
+            Profile.is_active.is_(True),
+            ProfileLevel.is_active.is_(True)
+            )
+            .limit(1)
+        )
+
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    @db_exception_handler
     async def get_last_skill_with_questions(self, skill_id: int):
         last_version = self.get_last_version()
         stmt = (
@@ -152,6 +174,3 @@ class CategoryRepository(BaseRepository):
 
 class SkillCategoryRepository(BaseRepository):
     model = SkillCategory
-
-
-

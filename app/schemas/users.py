@@ -27,7 +27,7 @@ class UserInfo(UserBase, EmailModel):
 
     @computed_field
     def department_name(self)-> str | None:
-        return self.department.department_name if self.department else None
+        return self.managed_department.department_name
 
     @computed_field
     def department_id(self) -> int | None:
@@ -75,7 +75,6 @@ class SUser(BaseModel):
     patronymic: str | None
     role_id: int
     position: str  | None
-    profile_id: int | None = None
     department_id: int | None = None
 
 
@@ -105,7 +104,6 @@ class UserAdd(BaseModel):
     patronymic: str | None = None
     position: str | None = None
     department_id: int | None = None
-    profile_id: int | None = None
     role_id: int = Field(default=1)
 
 
@@ -143,14 +141,23 @@ class SUserFullInfo(BaseModel):
     last_name: str | None
     patronymic: str | None
     department_id: int | None
-    profile_id: int | None = None
 
     department: SDepartment | None = Field(None, exclude=True)
+    managed_department: SDepartment | None = Field(exclude=True)
+    managed_division: SDivision | None = Field(exclude=True)
     role: SRole | None = Field(default=None, exclude=True)
 
     @computed_field
     def department_name(self) -> str | None:
+        if self.managed_department:
+            return self.managed_department.department_name
         return self.department and self.department.department_name
+
+    @computed_field
+    def managed_division_name(self) -> str | None:
+        if self.managed_division:
+            return self.managed_division.division_name
+
 
     @computed_field
     def role_name(self) -> str | None:
@@ -160,7 +167,7 @@ class SUserFullInfo(BaseModel):
 class SUserFilter(BaseModel):
     id: int | None = None
     email: EmailStr | None = None
-    department_id: int | None = None
+    departments_id: list[int] | None = None
     role_id: int | None = None
     position: str | None = None
     only_subordinates: bool = Field(False, exclude=True)

@@ -9,6 +9,8 @@ from db.repository import (
 )
 from exceptions.common import NotFoundException, DataValidationError
 from schemas.user_profile import UserStageAdd
+from schemas.users import UserInfo
+from services.access import AccessService
 from services.base import BaseService
 
 
@@ -25,10 +27,9 @@ class UserStageService(BaseService):
         self.user_profile_repository = UserProfileRepository(session)
 
     async def ensure_user_stage(
-        self,
-        user_id: int,
-        stage_id: int,
+        self, user_id: int, stage_id: int
     ):
+
         stage_version = await self.stage_repository.get_last_version_with_options(
             stage_id
         )
@@ -94,9 +95,13 @@ class UserStageService(BaseService):
         res = await self.repository.update_by_id(user_stage.id, stage_dict)
 
         stage = await self.stage_repository.get_by_id(new_stage.stage_id)
-        accepted_cnt = await self.repository.accepted_count(stage.skill_id, user_stage.user_skill_id)
+        accepted_cnt = await self.repository.accepted_count(
+            stage.skill_id, user_stage.user_skill_id
+        )
         total_cnt = await self.stage_repository.stage_count(stage.skill_id)
         if accepted_cnt >= total_cnt:
-            await self.user_skill_repository.update_by_id(user_stage.user_skill_id, {'is_accepted': True})
+            await self.user_skill_repository.update_by_id(
+                user_stage.user_skill_id, {"is_accepted": True}
+            )
 
         return res

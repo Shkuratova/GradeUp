@@ -1,4 +1,4 @@
-from sqlalchemy.ext.asyncio import AsyncSession
+import sqlalchemy.ext.asyncio
 
 from db.repository import LevelSkillRepository
 from db.repository.profiles import (
@@ -7,7 +7,6 @@ from db.repository.profiles import (
 )
 from db.repository.skill import SkillRepository
 from exceptions.common import (
-    NotFoundException,
     DataValidationError,
 )
 from schemas.profiles import (
@@ -27,21 +26,16 @@ class ProfileService(BaseService):
     entity_name = "Профиль"
     unique_fields = ["title"]
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: sqlalchemy.ext.asyncio.AsyncSession):
         super().__init__(session)
         self.repository = ProfileRepository(session)
         self.level_repository = LevelRepository(session)
         self.level_skill_repository = LevelSkillRepository(session)
         self.skill_repository = SkillRepository(session)
 
-    async def get_profile_list(
-        self, filters: ProfileFilter, department_ids: list[int] | None = None
-    ):
-        filter_dict = filters.model_dump(exclude_none=True, exclude={"department_id"})
-        profiles = await self.repository.get_list(
-            filter_dict=filter_dict,
-            department_ids=department_ids,
-        )
+    async def get_profile_list(self, filters: ProfileFilter):
+        filter_dict = filters.model_dump(exclude_none=True)
+        profiles = await self.repository.get_list(filter_dict=filter_dict)
         return profiles
 
     async def get_profile_levels(
@@ -53,26 +47,9 @@ class ProfileService(BaseService):
         )
         return [ProfileDetail.model_validate(p) for p in profiles]
 
-    async def _can_access_profile(self, profile_id: int, department_ids: list[int]):
-        profiles = await self.repository.accessible_profiles(department_ids)
-        return profile_id in profiles
 
-    async def get_with_details(
-        self, profile_id: int, department_ids: list[int] | None = None
-    ):
-
-        # if department_ids:
-        #     if not (has_access := await self._can_access_profile(profile_id, department_ids)):
-        #         raise ForbiddenException("Нет доступа к выбранному профилю.")
-
-        profile = await self.repository.get_profiles_with_levels(
-            profile_id, department_ids
-        )
-
-        if profile is None:
-            raise NotFoundException(
-                f"{self.entity_name} c id = {profile_id} не найден."
-            )
+    async def get_with_details(self, profile_id: int):
+        profile = await self.repository.get_profiles_with_levels(profile_id)
         return ProfileDetail.model_validate(profile)
 
     async def _validate_skills(self, levels: list[SLevelAdd]):

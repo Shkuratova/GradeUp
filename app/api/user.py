@@ -10,10 +10,9 @@ from schemas.users import (
     SUserFilter,
     UserInfo,
     UserBase,
-    UserUpdateBase,
     UserUpdateAdmin,
 )
-from services import DepartmentService
+from services.access import AccessService
 from services.user import UserService
 from utils.roles import UserRole
 
@@ -24,14 +23,21 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_all(
-    user_filters: Annotated[SUserFilter, Query()],
+    filters: Annotated[SUserFilter, Query()],
     current_user: UserInfo = Depends(get_current_user),
 ) -> list[SUserFullInfo]:
     async with unit_of_work() as uow:
-        department_ids = None
-        if user_filters.only_subordinates:
-            department_ids = await DepartmentService(uow.session).get_accessible_departments(current_user)
-        res = await UserService(uow.session).get_users(user_filters, department_ids)
+        auth_service = AccessService(uow.session)
+        if filters.departments_id:
+            filters.departments_id = await auth_service.get_department_filter(
+                filters.departments_id, current_user
+            )
+        if filters.only_subordinates:
+            filters.departments_id = await auth_service.get_managed_departments(
+                current_user
+            )
+
+        res = await UserService(uow.session).get_users(filters)
         return list(res)
 
 
@@ -42,10 +48,11 @@ async def get_by_id(
     user_id: int, current_user: UserInfo = Depends(get_current_user)
 ) -> UserInfo:
     async with unit_of_work() as uow:
+        await AccessService(uow.session).can_manage_user(user_id, current_user)
         return await UserService(uow.session).get_user_role(UserBase(id=user_id))
 
 
-@router.patch("/{user_id}")
+@router.patch("/{user_id}", response_model=UserInfo)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def update_user(
@@ -55,9 +62,4 @@ async def update_user(
 ):
     async with unit_of_work() as uow:
         user_service = UserService(uow.session)
-        if current_user.role_name == UserRole.ADMIN:
-            await user_service.update_by_id(user_id, user_data)
-        else:
-            user_data = UserUpdateBase.model_validate(user_data.model_dump())
-            await user_service.update_by_id(user_id, user_data)
-        return {"detail": "Пользователь успешно обновлен"}
+        return await user_service.update(user_id, user_data, current_user)

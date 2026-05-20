@@ -8,15 +8,20 @@ class UserRepository(BaseRepository):
     model = User
 
     @db_exception_handler
-    async def get_all(self, filter_dict: dict, department_ids: list[int] | None = None):
+    async def get_all(self, filter_dict: dict):
+        departments_id = filter_dict.pop("departments_id", None)
         stmt = (
             select(
                 User
             ).filter_by(**filter_dict)
-            .options(joinedload(User.role), joinedload(User.department))
+            .options(
+                joinedload(User.role),
+                        joinedload(User.department),
+                        joinedload(User.managed_division),
+                        joinedload(User.managed_department))
         )
-        if department_ids:
-            stmt = stmt.where(User.department.has(Department.id.in_(department_ids)))
+        if departments_id:
+            stmt = stmt.where(User.department.has(Department.id.in_(departments_id)))
         res = await self._session.execute(stmt)
         return res.scalars().all()
 

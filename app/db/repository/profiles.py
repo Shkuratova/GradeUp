@@ -1,46 +1,48 @@
-from sqlalchemy import select, update, func, or_, and_, outerjoin
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload, joinedload, contains_eager
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models import Department, DepartmentProfile
-from db.repository.base import BaseRepository
-from db.models.users import User
 from db.models.profiles import Profile, ProfileLevel
 from db.models.skills import LevelSkill, Skill
+from db.repository.base import BaseRepository
+from db.repository.decorators import db_exception_handler
 
 
 class ProfileRepository(BaseRepository):
     model = Profile
 
-    def __init__(self, session: AsyncSession):
-        self.level_repository = None
-        self.level_skill_repository = None
-        super().__init__(session)
-
-    async def get_list(self, filter_dict: dict, department_ids: list[int] | None):
+    @db_exception_handler
+    async def get_list(self, filter_dict: dict):
         stmt = select(Profile)
-
+        departments_id = filter_dict.pop("departments_id", None)
         stmt = stmt.filter_by(**filter_dict)
 
-        if department_ids is not None:
+        if departments_id is not None:
             stmt = stmt.where(
                 Profile.is_active == True,
-                Profile.departments.has(Department.id.in_(department_ids)),
+                Profile.departments.has(Department.id.in_(departments_id)),
             )
 
         res = await self._session.execute(stmt)
         return res.scalars().all()
 
-    async def accessible_profiles(self, department_ids: list[int] | None = None):
-        stmt = select(Profile.id)
-        if department_ids is not None:
-            stmt = stmt.where(
-                Profile.is_active == True,
-                Profile.departments.has(Department.id.in_(department_ids)),
+    @db_exception_handler
+    async def profile_exist(self, profile_id: int, department_ids: list[int]):
+        stmt = (
+            select(Profile.id)
+            .join(DepartmentProfile, DepartmentProfile.profile_id == Profile.id)
+            .where(
+                Profile.id == profile_id,
+                Profile.is_active.is_(True),
+                DepartmentProfile.department_id.in_(department_ids),
             )
-        res = await self._session.execute(stmt)
-        return res.scalars().all()
+            .limit(1)
+        )
 
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    @db_exception_handler
     async def get_profile_levels(self, profile_id: int):
         stmt = (
             select(Profile)
@@ -50,29 +52,11 @@ class ProfileRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
-    async def get_profiles_by_department(self, department_id: int):
-        stmt = (
-            select(Profile)
-            .distinct()
-            .join(Profile.users)
-            .where(User.department_id == department_id)
-        )
-        res = await self._session.execute(stmt)
-        return res.scalars().unique().all()
-
-    async def get_profiles_with_levels(
-        self,
-        profile_id: int | None = None,
-        department_ids: list[int] | None = None,
-    ):
+    @db_exception_handler
+    async def get_profiles_with_levels(self, profile_id: int | None = None):
         stmt = select(Profile)
         if profile_id:
             stmt = select(Profile).where(Profile.id == profile_id)
-        if department_ids:
-            stmt = stmt.where(
-                Profile.is_active == True,
-                Profile.departments.has(Department.id.in_(department_ids)),
-            )
         stmt = (
             stmt.outerjoin(Profile.levels)
             .where(func.coalesce(ProfileLevel.is_active, True).is_(True))
@@ -83,10 +67,6 @@ class ProfileRepository(BaseRepository):
                 .contains_eager(ProfileLevel.skills)
                 .contains_eager(LevelSkill.skill)
                 .load_only(Skill.id, Skill.title),
-                joinedload(Profile.departments).load_only(
-                    Department.id,
-                    Department.department_name,
-                ),
             )
             .order_by(ProfileLevel.num)
         )
@@ -111,9 +91,8 @@ class LevelRepository(BaseRepository):
         return res.scalar_one_or_none()
 
     async def get_skills_cnt(self, profile_level_id):
-        stmt = select(func.count(LevelSkill.id)).where(LevelSkill.profile_level_id == profile_level_id)
+        stmt = select(func.count(LevelSkill.id)).where(
+            LevelSkill.profile_level_id == profile_level_id
+        )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
-
-
-

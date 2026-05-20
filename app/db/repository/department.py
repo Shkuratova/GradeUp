@@ -13,8 +13,12 @@ class DivisionRepository(BaseRepository):
             select(Division)
             .where(Division.id == division_id)
             .options(
-                selectinload(Division.departments),
-                joinedload(Division.supervisor)
+                selectinload(Division.departments).load_only(
+                    Department.id, Department.department_name, Department.description
+                ),
+                joinedload(Division.supervisor).load_only(
+                    User.id, User.first_name, User.last_name, User.patronymic
+                ),
             )
         )
         res = await self._session.execute(stmt)
@@ -29,17 +33,22 @@ class DepartmentRepository(BaseRepository):
             select(Department)
             .where(Department.id == department_id)
             .options(
-                joinedload(Department.supervisor).load_only(User.id, User.first_name, User.last_name, User.patronymic),
-                selectinload(Department.profiles).load_only(Profile.id, Profile.title)
+                joinedload(Department.supervisor).load_only(
+                    User.id, User.first_name, User.last_name, User.patronymic
+                ),
+                selectinload(Department.profiles).load_only(Profile.id, Profile.title),
             )
         )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
-    async def get_ids_by_division_id(self, division_id):
-        stmt = select(Department.id).where(Department.division_id == division_id)
+    async def get_departments_id(self, division_id: int | None = None):
+        stmt = select(Department.id)
+        if division_id:
+            stmt = stmt.where(Department.division_id == division_id)
         res = await self._session.execute(stmt)
         return res.scalars().all()
+
 
 class DepartmentProfileRepository(BaseRepository):
     model = DepartmentProfile

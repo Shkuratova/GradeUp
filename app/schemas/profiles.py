@@ -15,7 +15,7 @@ class ProfileBase(BaseModel):
 
 
 class ProfileFilter(BaseModel):
-    department_id: int | None = None
+    departments_id: list[int]| None = None
 
 
 class ProfileAdd(BaseModel):

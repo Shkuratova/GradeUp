@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends
-from dependencies.auth import get_current_user
-from schemas.users import UserInfo
-from utils.roles import UserRole
+
 from api.decorators import check_role, exception_handler
 from db.uow import unit_of_work
+from dependencies.auth import get_current_user
+from schemas.departments import (
+    DivisionDetail,
+    DivisionAddForm,
+    DivisionUpdateForm,
+)
 from services.department import DivisionService
-from schemas.departments import DepartmentBase, DepartmentAdd, DepartmentUpdate, DivisionAdd, DivisionUpdate, \
-    DivisionDetail
+from utils.roles import UserRole
 
 division_router = APIRouter(prefix="/divisions")
 
@@ -17,12 +20,12 @@ async def get_all(current_user = Depends(get_current_user)):
     async with unit_of_work() as uow:
         return await DivisionService(uow.session).get_all()
 
-@division_router.post("/")
+@division_router.post("/", response_model=DivisionDetail)
 @check_role([UserRole.ADMIN])
 @exception_handler
-async def add(division: DivisionAdd, current_user = Depends(get_current_user)):
+async def add(division: DivisionAddForm, current_user = Depends(get_current_user)):
     async with unit_of_work() as uow:
-        return await DivisionService(uow.session).add(division)
+        return await DivisionService(uow.session).add_with_relations(division)
 
 @division_router.get("/{division_id}", response_model=DivisionDetail)
 @exception_handler
@@ -31,11 +34,9 @@ async def get_division_detail(division_id: int, current_user= Depends(get_curren
         return await DivisionService(uow.session).get_division_detail(division_id)
 
 
-
 @division_router.put("/{division_id}", response_model=DivisionDetail)
 @check_role([UserRole.ADMIN])
 @exception_handler
-async def update_by_id_with_departments(division_id: int, division: DivisionUpdate, current_user= Depends(get_current_user)):
+async def update_by_id_with_departments(division_id: int, division: DivisionUpdateForm, current_user= Depends(get_current_user)):
     async with unit_of_work() as uow:
         return await DivisionService(uow.session).update_division_with_relations(division_id, division)
-

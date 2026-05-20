@@ -2,7 +2,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from dependencies.auth import get_current_user
 from api.decorators import check_role, exception_handler
-from services import DepartmentService
+from services.access import AccessService
 from utils.roles import UserRole
 from db.uow import unit_of_work
 from services.profile import ProfileService
@@ -22,16 +22,12 @@ profile_router = APIRouter(prefix="/profiles", tags=["Profiles"])
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_all(
-    profile_filter: Annotated[ProfileFilter, Query()],
+    filters: Annotated[ProfileFilter, Query()],
     current_user: UserInfo = Depends(get_current_user),
 ):
     async with unit_of_work() as uow:
-        department_ids = await DepartmentService(
-            uow.session
-        ).get_accessible_departments(current_user, profile_filter.department_id)
-        return await ProfileService(uow.session).get_profile_list(
-            profile_filter, department_ids
-        )
+        filters.departments_id = await AccessService(uow.session).get_department_filter(filters.departments_id, current_user)
+        return await ProfileService(uow.session).get_profile_list(filters)
 
 
 @profile_router.post("")
@@ -42,37 +38,16 @@ async def add(profile: SProfileAdd, current_user=Depends(get_current_user)):
         return await ProfileService(uow.session).add_profile(profile)
 
 
-@profile_router.get("/levels", response_model=list[ProfileDetail])
-@check_role([UserRole.ADMIN, UserRole.SPO])
-@exception_handler
-async def get_levels(
-    profile_filter: Annotated[ProfileFilter, Query()],
-    current_user=Depends(get_current_user),
-):
-    async with unit_of_work() as uow:
-        department_ids = await DepartmentService(
-            uow.session
-        ).get_accessible_departments(current_user, profile_filter.department_id)
-        profiles = await ProfileService(uow.session).get_profile_levels(
-             department_ids=department_ids
-        )
-        return profiles
-
-
-@profile_router.get("/{profile_id}")
+@profile_router.get("/{profile_id}", response_model=ProfileDetail)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_by_id(profile_id: int, current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
-        department_ids = await DepartmentService(
-            uow.session
-        ).get_accessible_departments(current_user)
-        return await ProfileService(uow.session).get_with_details(
-            profile_id, department_ids
-        )
+        await AccessService(uow.session).can_get_profile(profile_id, current_user)
+        return await ProfileService(uow.session).get_with_details(profile_id)
 
 
-@profile_router.put("/{profile_id}")
+@profile_router.put("/{profile_id}", response_model=ProfileDetail)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def update_by_id(
