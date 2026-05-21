@@ -20,7 +20,7 @@ class SkillSchema(SkillBase):
     description: str | None = None
     literature: str | None = None
     categories: list[CategoryBase] | None = None
-
+    stages: list[StageBase] | None = None
 
 class SkillUpdate(BaseModel):
     skill: SkillSchema
