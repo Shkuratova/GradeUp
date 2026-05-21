@@ -26,8 +26,6 @@ async def registration(
     user_data: UserRegistration,
     current_user: UserRole = Depends(get_current_user),
 ) -> dict:
-    if user_data.password != user_data.confirm_password:
-        raise PasswordDontMatchException
     async with unit_of_work() as uow:
         new_user = await UserService(uow.session).add(user_data)
         return new_user

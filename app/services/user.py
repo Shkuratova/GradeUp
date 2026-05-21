@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.repository import UserRepository
 from exceptions.common import NotFoundException
-from exceptions.user import InvalidLoginException
+from exceptions.user import InvalidLoginException, PasswordDontMatchException
 from schemas.users import UserAuth, EmailModel, SUserFilter, UserUpdateBase, UserBase
 from schemas.users import UserInfo
 from services.base import BaseService
@@ -31,6 +31,8 @@ class UserService(BaseService):
         )
 
     async def add(self, user_model: BaseModel):
+        if user_model.password != user_model.confirm_password:
+            raise PasswordDontMatchException("Пароли не совпадают.")
         if user_model.department_id is not None:
             await DepartmentService(self.session).get_by_id(user_model.department_id)
         user_model.password = self.hash_password(user_model.password)
@@ -64,4 +66,3 @@ class UserService(BaseService):
         await self.update_by_id(user_id, user_data)
 
         return await self.get_user_role(UserBase(id=user_id))
-

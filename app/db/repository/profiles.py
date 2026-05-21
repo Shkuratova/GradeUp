@@ -1,4 +1,4 @@
-from sqlalchemy import select, func
+from sqlalchemy import select, func, and_
 from sqlalchemy.orm import selectinload, joinedload, contains_eager
 
 from db.models import Department, DepartmentProfile
@@ -54,12 +54,11 @@ class ProfileRepository(BaseRepository):
 
     @db_exception_handler
     async def get_profiles_with_levels(self, profile_id: int | None = None):
-        stmt = select(Profile)
+        stmt = select(Profile).where(Profile.is_active.is_(True))
         if profile_id:
-            stmt = select(Profile).where(Profile.id == profile_id)
+            stmt = stmt.where(Profile.id == profile_id,)
         stmt = (
-            stmt.outerjoin(Profile.levels)
-            .where(func.coalesce(ProfileLevel.is_active, True).is_(True))
+            stmt.outerjoin(Profile.levels.and_(ProfileLevel.is_active.is_(True)))
             .outerjoin(ProfileLevel.skills)
             .outerjoin(LevelSkill.skill)
             .options(

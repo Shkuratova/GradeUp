@@ -8,6 +8,7 @@ from db.repository.profiles import (
 from db.repository.skill import SkillRepository
 from exceptions.common import (
     DataValidationError,
+    NotFoundException,
 )
 from schemas.profiles import (
     SProfileAdd,
@@ -50,6 +51,8 @@ class ProfileService(BaseService):
 
     async def get_with_details(self, profile_id: int):
         profile = await self.repository.get_profiles_with_levels(profile_id)
+        if profile is None:
+            raise NotFoundException(f"Профиль с id = {profile_id} не найден.")
         return ProfileDetail.model_validate(profile)
 
     async def _validate_skills(self, levels: list[SLevelAdd]):

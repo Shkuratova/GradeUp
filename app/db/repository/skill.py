@@ -110,16 +110,15 @@ class SkillRepository(BaseRepository):
     async def get_last_skill_with_questions(self, skill_id: int):
         last_version = self.get_last_version()
         stmt = (
-                select(Skill).where(Skill.id == skill_id)
-                .join(Skill.stages)
-                .where(Stage.is_active == True)
-                .join(last_version, last_version.c.stage_id == Stage.id)
-            .join(
+                select(Skill).where(Skill.id == skill_id, Skill.is_active.is_(True))
+                .outerjoin(Skill.stages.and_(Stage.is_active.is_(True)))
+                .outerjoin(last_version, last_version.c.stage_id == Stage.id)
+            .outerjoin(
                     StageVersion,
                     (StageVersion.stage_id == Stage.id)
                     & (StageVersion.version == last_version.c.version)
                 )
-            .join(StageQuestion, StageQuestion.stage_version_id == StageVersion.id)
+            .outerjoin(StageQuestion, StageQuestion.stage_version_id == StageVersion.id)
             .options(
                     contains_eager(Skill.stages)
                     .contains_eager(Stage.stage_versions)
