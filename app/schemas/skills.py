@@ -19,6 +19,7 @@ class SkillBase(BaseModel):
 class SkillSchema(SkillBase):
     description: str | None = None
     literature: str | None = None
+    categories: list[CategoryBase] | None = None
 
 
 class SkillUpdate(BaseModel):

@@ -24,8 +24,10 @@ class SkillRepository(BaseRepository):
         stmt = select(Skill).where(Skill.is_active.is_(True))
         if categories:
             stmt = stmt.join(Skill.categories.in_(categories)).options(
-                contains_eager(Skill.categories).load_only(Category.id)
+                contains_eager(Skill.categories).load_only(Category.id, Category.category_name)
             )
+        else:
+            stmt = stmt.options(selectinload(Skill.categories))
         res = await self._session.execute(stmt)
         return res.unique().scalars().all()
 
