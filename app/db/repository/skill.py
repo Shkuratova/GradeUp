@@ -19,14 +19,13 @@ class SkillRepository(BaseRepository):
     model = Skill
 
     @db_exception_handler
-    async def get_all_by_categories(self, categories: list[int]):
-        stmt = (
-            select(Skill)
-            .where(Skill.is_active == True)
-            .join(Skill.categories)
-            .where(Category.id.in_(categories))
-            .options(contains_eager(Skill.categories).load_only(Category.id))
-        )
+    async def get_all_by_categories(self, categories: list[int] | None = None):
+
+        stmt = select(Skill).where(Skill.is_active.is_(True))
+        if categories:
+            stmt = stmt.join(Skill.categories.in_(categories)).options(
+                contains_eager(Skill.categories).load_only(Category.id)
+            )
         res = await self._session.execute(stmt)
         return res.unique().scalars().all()
 
@@ -74,10 +73,7 @@ class SkillRepository(BaseRepository):
                 (StageVersion.stage_id == Stage.id)
                 & (StageVersion.version == last_version.c.version),
             )
-            .options(
-                contains_eager(Skill.stages)
-                .contains_eager(Stage.stage_versions)
-            )
+            .options(contains_eager(Skill.stages).contains_eager(Stage.stage_versions))
         )
 
         res = await self._session.execute(stmt)
@@ -97,8 +93,8 @@ class SkillRepository(BaseRepository):
             .where(
                 Skill.id == skill_id,
                 DepartmentProfile.department_id.in_(departments_id),
-            Profile.is_active.is_(True),
-            ProfileLevel.is_active.is_(True)
+                Profile.is_active.is_(True),
+                ProfileLevel.is_active.is_(True),
             )
             .limit(1)
         )
@@ -110,21 +106,22 @@ class SkillRepository(BaseRepository):
     async def get_last_skill_with_questions(self, skill_id: int):
         last_version = self.get_last_version()
         stmt = (
-                select(Skill).where(Skill.id == skill_id, Skill.is_active.is_(True))
-                .outerjoin(Skill.stages.and_(Stage.is_active.is_(True)))
-                .outerjoin(last_version, last_version.c.stage_id == Stage.id)
+            select(Skill)
+            .where(Skill.id == skill_id, Skill.is_active.is_(True))
+            .outerjoin(Skill.stages.and_(Stage.is_active.is_(True)))
+            .outerjoin(last_version, last_version.c.stage_id == Stage.id)
             .outerjoin(
-                    StageVersion,
-                    (StageVersion.stage_id == Stage.id)
-                    & (StageVersion.version == last_version.c.version)
-                )
+                StageVersion,
+                (StageVersion.stage_id == Stage.id)
+                & (StageVersion.version == last_version.c.version),
+            )
             .outerjoin(StageQuestion, StageQuestion.stage_version_id == StageVersion.id)
             .options(
-                    contains_eager(Skill.stages)
-                    .contains_eager(Stage.stage_versions)
-                    .joinedload(StageVersion.questions),
-                    selectinload(Skill.categories)
-                )
+                contains_eager(Skill.stages)
+                .contains_eager(Stage.stage_versions)
+                .joinedload(StageVersion.questions),
+                selectinload(Skill.categories),
+            )
             .order_by(StageQuestion.num)
         )
         res = await self._session.execute(stmt)
@@ -176,6 +173,8 @@ class SkillCategoryRepository(BaseRepository):
     model = SkillCategory
 
     async def delete_categories(self, skill_id: int, data_ids: list[int]):
-        stmt = delete(SkillCategory).where(SkillCategory.skill_id == skill_id, SkillCategory.category_id.in_(data_ids))
+        stmt = delete(SkillCategory).where(
+            SkillCategory.skill_id == skill_id, SkillCategory.category_id.in_(data_ids)
+        )
         res = await self._session.execute(stmt)
         return res
