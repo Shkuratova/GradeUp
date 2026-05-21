@@ -71,13 +71,11 @@ class SkillService(BaseService):
 
         res = await super().update_by_id(skill_id, model.skill)
 
-        old_categories = await self.skill_category_repository.get_all(
-            {"skill_id": skill_id}
-        )
+        old_categories =old_skill.categories
         new_cat_ids = set(model.categories)
         old_cat_ids = set(cat.id for cat in old_categories)
         if del_cat_id := old_cat_ids - new_cat_ids:
-            await self.skill_category_repository.delete_list(list(del_cat_id))
+            await self.skill_category_repository.delete_categories(skill_id, list(del_cat_id))
         if add_cat_ids := new_cat_ids - old_cat_ids:
             await self.skill_category_repository.add_list(
                 [

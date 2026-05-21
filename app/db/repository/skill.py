@@ -174,3 +174,8 @@ class CategoryRepository(BaseRepository):
 
 class SkillCategoryRepository(BaseRepository):
     model = SkillCategory
+
+    async def delete_categories(self, skill_id: int, data_ids: list[int]):
+        stmt = delete(SkillCategory).where(SkillCategory.skill_id == skill_id, SkillCategory.category_id.in_(data_ids))
+        res = await self._session.execute(stmt)
+        return res
