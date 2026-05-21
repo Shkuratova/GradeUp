@@ -44,19 +44,22 @@ class StageService(BaseService):
 
     async def add_stages(self, skill_id: int, stages: list[StageAdd]):
         questions = []
+
         for stage in stages:
             new_stage = await self.add(
                 StageAddDB(skill_id=skill_id, confirmation_type=stage.confirmation_type)
             )
-            stage_version = await self.stage_version_repository.add(
-                {"stage_id": new_stage.id}
-            )
-            for q in stage.questions:
-                questions.append(
-                    {**q.model_dump(), "stage_version_id": stage_version.id}
+            if stage.questions:
+                stage_version = await self.stage_version_repository.add(
+                    {"stage_id": new_stage.id}
                 )
 
-        await self.question_repository.add_list(questions)
+                for q in stage.questions:
+                    questions.append(
+                        {**q.model_dump(), "stage_version_id": stage_version.id}
+                    )
+        if questions:
+            await self.question_repository.add_list(questions)
 
     async def _add_stage_version(
         self, old_stage: StageQuestionsSchema, new_stage: StageAdd
@@ -91,7 +94,8 @@ class StageService(BaseService):
 
         if upd_stages:=[s for s in new_dict.values() if s.id in old_dict]:
             for stage in upd_stages:
-                await self._add_stage_version(old_dict[stage.id], stage)
+                if stage.questions:
+                    await self._add_stage_version(old_dict[stage.id], stage)
 
     async def update_questions(self, stage_id, stage: StageAdd):
         if not stage.questions:

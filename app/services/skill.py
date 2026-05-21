@@ -31,10 +31,7 @@ class SkillService(BaseService):
         self.skill_category_repository = SkillCategoryRepository(session)
 
     async def get_all_by_categories(self, filter_model: SkillFilter):
-        if filter_model.categories:
-            res = await self.repository.get_all_by_categories(filter_model.categories)
-        else:
-            res = await self.get_all()
+        res = await self.repository.get_all_by_categories(filter_model.categories)
         return res
 
     async def get_skills_stages(self, filters: BaseModel):
@@ -83,10 +80,10 @@ class SkillService(BaseService):
                     for cat_id in add_cat_ids
                 ]
             )
-
-        await StageService(self.session).update_stages(
-            skill_id, old_skill.stages, model.stages
-        )
+        if model.stages:
+            await StageService(self.session).update_stages(
+                skill_id, old_skill.stages, model.stages
+            )
 
         return await self.get_skill_with_questions(skill_id)
 

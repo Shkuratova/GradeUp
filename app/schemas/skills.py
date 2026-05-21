@@ -44,7 +44,7 @@ class StageAddDB(BaseModel):
 
 class StageAdd(BaseModel):
     confirmation_type: ConfirmationTypes
-    questions: list[QuestionAdd]
+    questions: list[QuestionAdd] | None = None
 
     @model_validator(mode="after")
     def check_questions_num(self):
@@ -68,7 +68,7 @@ class StageUpdate(StageAdd):
 class SkillAddForm(BaseModel):
     skill: SkillAdd
     categories: list[int] = []
-    stages: list[StageAdd] = []
+    stages: list[StageAdd] |  None = None
 
     @field_validator("stages", mode="after")
     @classmethod
@@ -82,11 +82,11 @@ class SkillAddForm(BaseModel):
 
 class SkillUpdateForm(SkillAddForm):
     skill: SkillAdd
-    stages: list[StageUpdate] = []
+    stages: list[StageUpdate] | None = None
 
 
 class SkillFilter(BaseModel):
-    categories: list[int] = []
+    categories: list[int] | None = None
     id: int | None = None
 
 
@@ -117,7 +117,7 @@ class StageSchema(StageBase):
     @computed_field
     @property
     def last_version(self) -> int | None:
-        if self.stage_versions is not None:
+        if self.stage_versions:
             return self.stage_versions[0].version
         return None
 
@@ -139,9 +139,10 @@ class StageQuestionsSchema(StageSchema):
     @computed_field
     @property
     def questions(self) -> list[Question] | None:
-        return self.stage_versions[0].questions
+        if self.stage_versions:
+            return self.stage_versions[0].questions
 
 
 class SkillDetail(SkillSchema):
-    stages: list[StageQuestionsSchema]
-    categories: list[CategoryBase]
+    stages: list[StageQuestionsSchema] | None = None
+    categories: list[CategoryBase] | None = None
