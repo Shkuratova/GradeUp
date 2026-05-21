@@ -18,7 +18,7 @@ class UserRepository(BaseRepository):
                 joinedload(User.role),
                         joinedload(User.department),
                         joinedload(User.managed_division),
-                        joinedload(User.managed_department))
+                       )
         )
         if departments_id:
             stmt = stmt.where(User.department.has(Department.id.in_(departments_id)))

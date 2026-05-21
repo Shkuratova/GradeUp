@@ -1,4 +1,3 @@
-from typing import Annotated
 from fastapi import Request, Depends, HTTPException, status, Query
 from jwt.exceptions import PyJWTError, ExpiredSignatureError
 
@@ -6,8 +5,7 @@ from db.uow import unit_of_work
 from exceptions.user import (
     InvalidTokenException,
 )
-from schemas.users import UserBase, UserInfo
-from services.department import DepartmentService
+from schemas.users import UserBase, UserInfo, UserRole
 from services.user import UserService
 from utils import AuthUtils
 
@@ -49,3 +47,18 @@ async def get_current_user(
 ) -> UserInfo:
     return await get_user_from_token(token=token)
 
+def check_role(required_roles: list[UserRole]):
+
+    async def checker(
+        current_user: UserInfo = Depends(get_current_user)
+    ):
+
+        if current_user.role_name not in required_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Отказано в доступе."
+            )
+
+        return current_user
+
+    return checker
