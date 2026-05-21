@@ -39,15 +39,10 @@ class ProfileService(BaseService):
         profiles = await self.repository.get_list(filter_dict=filter_dict)
         return profiles
 
-    async def get_profile_levels(
-        self, filters: ProfileFilter, department_ids: list[int] | None = None
-    ):
+    async def get_profile_levels(self, filters: ProfileFilter):
 
-        profiles = await self.repository.get_profiles_with_levels(
-            department_ids=department_ids
-        )
+        profiles = await self.repository.get_profiles_with_levels(departments_id=filters.departments_id)
         return [ProfileDetail.model_validate(p) for p in profiles]
-
 
     async def get_with_details(self, profile_id: int):
         profile = await self.repository.get_profiles_with_levels(profile_id)
@@ -122,6 +117,8 @@ class ProfileService(BaseService):
                         {"profile_level_id": lvl.id, "skill_id": s} for s in add_skill
                     ]
                 if del_skill := old_skills - new_skills:
-                    await self.level_skill_repository.delete_by_skill_ids(lvl.id, list(del_skill))
+                    await self.level_skill_repository.delete_by_skill_ids(
+                        lvl.id, list(del_skill)
+                    )
             if level_skills:
                 await self.level_skill_repository.add_list(level_skills)

@@ -47,7 +47,7 @@ class AccessService(BaseService):
 
         return department_id
 
-    async def get_department_filter(self, departments_id: list[int] | None, current_user: UserInfo):
+    async def get_department_filter(self, current_user: UserInfo, departments_id: list[int] | None = None):
         if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
             return departments_id
         else:

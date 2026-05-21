@@ -18,7 +18,7 @@ from schemas.profiles import (
 profile_router = APIRouter(prefix="/profiles", tags=["Profiles"])
 
 
-@profile_router.get("", response_model=list[ProfileList])
+@profile_router.get("/", response_model=list[ProfileList])
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_all(
@@ -26,16 +26,33 @@ async def get_all(
     current_user: UserInfo = Depends(get_current_user),
 ):
     async with unit_of_work() as uow:
-        filters.departments_id = await AccessService(uow.session).get_department_filter(filters.departments_id, current_user)
+        filters.departments_id = await AccessService(uow.session).get_department_filter(
+            current_user,
+            filters.departments_id,
+        )
         return await ProfileService(uow.session).get_profile_list(filters)
 
 
-@profile_router.post("")
+@profile_router.post("/")
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def add(profile: SProfileAdd, current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
+
         return await ProfileService(uow.session).add_profile(profile)
+
+
+@profile_router.get("/levels")
+@check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
+@exception_handler
+async def get_profiles_with_levels(
+    filters: Annotated[ProfileFilter, Query()], current_user=Depends(get_current_user)
+):
+    async with unit_of_work() as uow:
+        filters.departments_id = await AccessService(uow.session).get_department_filter(
+            current_user, filters.departments_id
+        )
+        return await ProfileService(uow.session).get_profile_levels(filters)
 
 
 @profile_router.get("/{profile_id}", response_model=ProfileDetail)

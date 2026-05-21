@@ -53,10 +53,12 @@ class ProfileRepository(BaseRepository):
         return res.scalar_one_or_none()
 
     @db_exception_handler
-    async def get_profiles_with_levels(self, profile_id: int | None = None):
+    async def get_profiles_with_levels(self, profile_id: int | None = None, departments_id: list[int] | None = None):
         stmt = select(Profile).where(Profile.is_active.is_(True))
         if profile_id:
             stmt = stmt.where(Profile.id == profile_id,)
+        if departments_id:
+            stmt = stmt.where(Profile.departments.has(Department.id.in_(departments_id)))
         stmt = (
             stmt.outerjoin(Profile.levels.and_(ProfileLevel.is_active.is_(True)))
             .outerjoin(ProfileLevel.skills)
