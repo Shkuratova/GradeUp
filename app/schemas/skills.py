@@ -7,6 +7,7 @@ from pydantic import (
     model_validator,
 )
 from db.models.types import ConfirmationTypes
+from schemas.categories import CategoryBase
 
 
 class SkillBase(BaseModel):
@@ -67,7 +68,7 @@ class StageUpdate(StageAdd):
 class SkillAddForm(BaseModel):
     skill: SkillAdd
     categories: list[int] = []
-    stages: list[StageAdd]
+    stages: list[StageAdd] = []
 
     @field_validator("stages", mode="after")
     @classmethod
@@ -81,7 +82,7 @@ class SkillAddForm(BaseModel):
 
 class SkillUpdateForm(SkillAddForm):
     skill: SkillAdd
-    stages: list[StageUpdate]
+    stages: list[StageUpdate] = []
 
 
 class SkillFilter(BaseModel):
@@ -143,3 +144,4 @@ class StageQuestionsSchema(StageSchema):
 
 class SkillDetail(SkillSchema):
     stages: list[StageQuestionsSchema]
+    categories: list[CategoryBase]

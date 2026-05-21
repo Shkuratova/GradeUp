@@ -122,7 +122,8 @@ class SkillRepository(BaseRepository):
             .options(
                     contains_eager(Skill.stages)
                     .contains_eager(Stage.stage_versions)
-                    .joinedload(StageVersion.questions)
+                    .joinedload(StageVersion.questions),
+                    selectinload(Skill.categories)
                 )
             .order_by(StageQuestion.num)
         )
