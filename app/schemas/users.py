@@ -69,9 +69,9 @@ class UserInfo(UserBase, EmailModel):
     def managed_division_name(self) -> str | None:
         return self.managed_division.division_name if self.managed_division else None
 
-    def get_name_with_email(self) -> str:
-        patronymic = f"{self.patronymic[0] if self.patronymic else ''} "
-        return f'{self.last_name} {self.first_name[0]}. {patronymic} ({self.email})'
+    def full_name(self) -> str:
+        patronymic = f"{self.patronymic[0] if self.patronymic else ''}"
+        return f'{self.last_name} {self.first_name[0]}. {patronymic}.'
 
 class UserAuth(EmailModel):
     password: str
@@ -156,7 +156,7 @@ class UserRegistration(BaseModel):
 class SRole(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    role_name: str
+    role_name: UserRole
 
 
 class SDepartment(BaseModel):
@@ -188,5 +188,7 @@ class UserFIO(BaseModel):
     last_name: str
     patronymic: str | None = None
     email: EmailStr | None = None
-    # department_id: int
-    # department_name: str
+
+    def full_name(self) -> str:
+        patronymic = f"{self.patronymic[0] if self.patronymic else ''}"
+        return f'{self.last_name} {self.first_name[0]}. {patronymic}.'

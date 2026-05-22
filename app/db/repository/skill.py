@@ -19,6 +19,16 @@ class SkillRepository(BaseRepository):
     model = Skill
 
     @db_exception_handler
+    async def get_list_by_categories(self, categories: list[int]):
+        stmt = (
+            select(Skill)
+            .where(Skill.is_active.is_(True))
+        )
+        if categories:
+            stmt = stmt.join(SkillCategory, SkillCategory.skill_id == Skill.id).where(SkillCategory.category_id.in_(categories))
+        res = await self._session.execute(stmt)
+        return res.unique().scalars().all()
+    @db_exception_handler
     async def get_all_by_categories(self, categories: list[int] | None = None):
 
         stmt = select(Skill).where(Skill.is_active.is_(True)).options(selectinload(Skill.stages))

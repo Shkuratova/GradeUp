@@ -1,7 +1,8 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+
+from fastapi import APIRouter, Depends, Query
+
 from api.decorators import exception_handler, check_role
-from db.models.types import CertificationRole
 from db.uow import unit_of_work
 from dependencies import get_current_user
 from schemas.meetings import (
@@ -13,7 +14,6 @@ from schemas.meetings import (
 from schemas.users import (
     UserInfo,
 )
-from services import DepartmentService
 from services.meetings import MeetingService
 from utils.roles import UserRole
 

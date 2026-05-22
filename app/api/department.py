@@ -11,6 +11,7 @@ from schemas.departments import (
     DepartmentUpdateForm,
 )
 from schemas.users import UserInfo
+from services import EventService
 from services.access import AccessService
 from services.department import DepartmentService
 from utils.roles import UserRole
@@ -38,12 +39,17 @@ async def get_all(
     async with unit_of_work() as uow:
         return await DepartmentService(uow.session).get_all()
 
+
 @department_router.get("/profiles", response_model=list[DepartmentDetail])
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
-async def get_all_with_profiles(current_user = Depends(get_current_user)):
+async def get_all_with_profiles(current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
-        departments_id = await AccessService(uow.session).get_department_filter(current_user)
-        return await DepartmentService(uow.session).get_all_with_profiles(departments_id)
+        departments_id = await AccessService(uow.session).get_department_filter(
+            current_user
+        )
+        return await DepartmentService(uow.session).get_all_with_profiles(
+            departments_id
+        )
 
 
 @department_router.get("/{department_id}", response_model=DepartmentDetail)
@@ -53,7 +59,9 @@ async def get_department_detail(
     department_id: int, current_user: UserInfo = Depends(get_current_user)
 ) -> DepartmentBase:
     async with unit_of_work() as uow:
-        await AccessService(uow.session).get_department_filter(current_user, [department_id])
+        await AccessService(uow.session).get_department_filter(
+            current_user, [department_id]
+        )
         return await DepartmentService(uow.session).get_detail(department_id)
 
 
@@ -66,9 +74,12 @@ async def update_by_id(
     current_user: UserInfo = Depends(get_current_user),
 ):
     async with unit_of_work() as uow:
-        return await DepartmentService(uow.session).update_department_with_relations(
+        upd_department = await DepartmentService(uow.session).update_department_with_relations(
             department_id, department
         )
+        if department.supervisor_id:
+            await EventService(uow.session).log_set_department_supervisor(upd_department, current_user)
+        return upd_department
 
 
 @department_router.delete("/{department_id}")
@@ -81,10 +92,16 @@ async def delete_by_id(
         await DepartmentService(uow.session).delete_by_id(department_id)
     return {"detail": f"Департамент с id = {department_id} удален"}
 
-@department_router.post("/{department_id}/remove-supervisor")
+
+@department_router.delete("/{department_id}/supervisor")
 @check_role([UserRole.ADMIN])
 @exception_handler
-async def remove_supervisor(department_id: int, current_user = Depends(get_current_user)):
+async def remove_supervisor(department_id: int, current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
-        await DepartmentService(uow.session).remove_supervisor(department_id)
-    return {"detail": "Руководитель был откреплен."}
+        department = await DepartmentService(uow.session).remove_supervisor(
+            department_id
+        )
+        await EventService(uow.session).log_department_supervisor_removed(
+            department, current_user
+        )
+    return {"detail": "Руководитель отдеда откреплён."}

@@ -1,23 +1,25 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from schemas.event import (
-    RegistrationEvent,
-    RegistrationPayload,
-    EventFilter,
-    SetProfilePayload,
-    SetProfileEvent,
-)
-from schemas.profiles import ProfileBase
-from schemas.user_profile import UserProfileBase, UserStageBase
-from schemas.users import UserInfo, SUser
-from services.base import BaseService
+from db.models.events import EventType, TargetType
 from db.repository import (
     EventRepository,
     UserRepository,
     UserProfileRepository,
     ProfileRepository,
 )
-from db.models.events import EventType, TargetType
+from schemas.departments import (
+    DepartmentDetail,
+    DivisionDetail,
+)
+from schemas.event import (
+    RegistrationPayload,
+    EventFilter,
+    SetProfilePayload,
+    EventAdd,
+)
+from schemas.user_profile import UserStageBase, UserProfileSchema
+from schemas.users import UserInfo
+from services.base import BaseService
 from utils.roles import UserRole
 
 
@@ -35,47 +37,140 @@ class EventService(BaseService):
         filter_dict = filters.model_dump(exclude_none=True)
         return await self.repository.get_events(filter_dict)
 
-    async def registration_log(self, user: UserInfo, current_user: UserInfo):
-        event = RegistrationPayload(
-            user_id=user.id, email=user.email, department_id=user.department_id
+    async def get_employee(self, user_id: int):
+        user = await self.user_repository.get_user_role({'id': user_id})
+        return UserInfo.model_validate(user, from_attributes=True)
+
+    async def log_event(
+        self,
+        *,
+        actor_id: int,
+        access_scope: UserRole,
+        target_id: int,
+        target_type: TargetType,
+        event_type: EventType,
+        payload: dict,
+    ):
+        event = EventAdd(
+            actor_id=actor_id,
+            access_scope=access_scope,
+            target_id=target_id,
+            target_type=target_type,
+            event_type=event_type,
+            payload=payload,
         )
-        username = user.get_name_with_email()
-        event = RegistrationEvent(
+        await self.repository.add(event.model_dump())
+
+    @staticmethod
+    def _division_payload(division):
+        return {
+            "division_id": division.id,
+            "division_name": division.division_name,
+            "supervisor_id": division.supervisor_id,
+            "supervisor_name": division.supervisor.full_name(),
+        }
+    @staticmethod
+    def _department_payload(department):
+        return {
+                "department_id": department.id,
+                "department_name": department.department_name,
+                "supervisor_id": department.supervisor_id,
+                "supervisor_name": department.supervisor.full_name(),
+            }
+
+    async def log_registration(self, user: UserInfo, current_user: UserInfo):
+        payload = RegistrationPayload(
+            user_id=user.id,
+            email=user.email,
+            full_name=user.full_name(),
+            department_id=user.department.id,
+        )
+        await self.log_event(
             actor_id=current_user.id,
-            actor_role=current_user.role_name,
+            access_scope=current_user.role.role_name,
             target_id=user.id,
             target_type=TargetType.USER,
             event_type=EventType.REGISTRATION,
-            message=f"Зарегистрирован пользователь {username}.",
-            payload=event.model_dump(),
+            payload=payload.model_dump()
         )
-        await self.repository.add(event.model_dump())
 
-    async def set_user_profile(
-        self, user_profile: UserProfileBase, current_user: UserInfo
+    async def log_set_user_profile(
+        self, user_profile: UserProfileSchema, current_user: UserInfo
     ):
         profile_payload = SetProfilePayload(
+            user_id=user_profile.user_id,
+            email=user_profile.user.email,
+            full_name=user_profile.user.full_name(),
             profile_id=user_profile.profile_id,
-            department_id=current_user.department_id
+            title=user_profile.profile.title,
+            department_id=user_profile.user.department_id,
         )
-        user: UserInfo = await self.user_repository.get_user_role({'id':user_profile.user_id})
-        profile: ProfileBase = await self.profile_repository.get_by_id(user_profile.profile_id)
-        event = SetProfileEvent(
+        await self.log_event(
             actor_id=current_user.id,
-            actor_role=UserRole.SUPERVISOR,
+            access_scope=UserRole.SUPERVISOR,
             target_id=user_profile.id,
             target_type=TargetType.USER_PROFILE,
             event_type=EventType.SET_PROFILE,
-            message=f"Сотруднику {user.get_name_with_email()} назначен профиль {profile.title.__repr__()}.",
-            payload=profile.model_dump(),
+            payload=profile_payload.model_dump(),
+        )
+
+    async def log_gradeup(self, user_id: int, profile_id: int, current_user: UserInfo):
+        pass
+
+    async def log_schedule(self, meeting, current_user: UserInfo):
+        pass
+
+    async def log_evaluate_stage(
+        self, user_stage: UserStageBase, current_user: UserInfo
+    ):
+        pass
+
+    async def log_set_division_supervisor(
+        self, division: DivisionDetail, current_user
+    ):
+        await self.log_event(
+            actor_id=current_user.id,
+            access_scope=UserRole.ADMIN,
+            target_id=division.id,
+            target_type=TargetType.DIVISION,
+            event_type=EventType.SET_DIVISION_SUPERVISOR,
+            payload=self._division_payload(division),
+        )
+
+    async def log_set_department_supervisor(
+        self, department:DepartmentDetail, current_user: UserInfo
+    ):
+        event = EventAdd(
+            actor_id=current_user.id,
+            access_scope=UserRole.ADMIN,
+            target_id=department.id,
+            target_type=TargetType.DEPARTMENT,
+            event_type=EventType.SET_DEPARTMENT_SUPERVISOR,
+            payload=self._department_payload(department)
         )
         await self.repository.add(event.model_dump())
 
-    async def schedule_log(self, current_user: UserInfo):
-        pass
+    async def log_remove_division_supervisor(
+        self, division: DivisionDetail, current_user
+    ):
+        await self.log_event(
+            actor_id=current_user.id,
+            access_scope=UserRole.ADMIN,
+            target_id=division.id,
+            target_type=TargetType.DIVISION,
+            event_type=EventType.REMOVE_DIVISION_SUPERVISOR,
+            payload=self._division_payload(division),
+        )
 
-    async def gradeup_log(self, current_user: UserInfo):
-        pass
-
-    async def evaluate_stage_log(self, user_stage: UserStageBase, current_user: UserInfo):
-        pass
+    async def log_department_supervisor_removed(
+        self, department: DepartmentDetail, current_user: UserInfo
+    ):
+        event = EventAdd(
+            actor_id=current_user.id,
+            access_scope=UserRole.ADMIN,
+            target_id=department.id,
+            target_type=TargetType.DEPARTMENT,
+            event_type=EventType.REMOVE_DEPARTMENT_SUPERVISOR,
+            payload=self._department_payload(department),
+        )
+        await self.repository.add(event.model_dump())

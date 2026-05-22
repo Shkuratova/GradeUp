@@ -14,7 +14,10 @@ from schemas.departments import (
     DivisionAddForm,
     DepartmentAddForm,
     DivisionUpdateForm,
-    DepartmentUpdateForm, DivisionBase,
+    DepartmentUpdateForm,
+    DivisionBase,
+    DivisionDetail,
+    DepartmentBase,
 )
 from schemas.users import UserInfo
 from services.base import BaseService
@@ -78,14 +81,15 @@ class DivisionService(BaseService):
         )
         await self.update_by_id(division_id, new_division)
         await self._update_relations(division_id, division.departments)
-        return await self.get_division_detail(division_id)
+        res =  await self.get_division_detail(division_id)
+        return DivisionDetail.model_validate(res, from_attributes=True)
 
     async def remove_supervisor(self, division_id):
-        division: DivisionBase = self.get_by_id(division_id)
+        division = await self.get_division_detail(division_id)
         if division.supervisor_id is None:
             raise ConflictException("У направления нет руководителя.")
         await self.repository.update_by_id(division_id, {'supervisor_id': None})
-
+        return DepartmentDetail.model_validate(division)
 
 class DepartmentService(BaseService):
     entity_name = "Отдел"
@@ -179,7 +183,8 @@ class DepartmentService(BaseService):
         return DepartmentDetail.model_validate(new_department, from_attributes=True)
 
     async def remove_supervisor(self, department_id):
-        department = await self.get_by_id(department_id)
+        department = await self.get_detail(department_id)
         if department.supervisor_id is None:
             raise ConflictException("У отдела нет руководителя.")
         await self.repository.update_by_id(department_id, {'supervisor_id': None})
+        return DepartmentDetail.model_validate(department, from_attributes=True)

@@ -30,6 +30,10 @@ class SkillService(BaseService):
         self.repository = SkillRepository(session)
         self.skill_category_repository = SkillCategoryRepository(session)
 
+    async def get_list(self, filter_model: SkillFilter):
+        res = await self.repository.get_list_by_categories(filter_model.categories)
+        return res
+
     async def get_all_by_categories(self, filter_model: SkillFilter):
         res = await self.repository.get_all_by_categories(filter_model.categories)
         return res

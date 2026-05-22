@@ -72,10 +72,10 @@ class UserProfileRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.all()
 
-    async def get_profile(self, user_profile_id):
+    async def get_profile(self, user_id: int, profile_id: int):
         stmt = (
             select(UserProfile)
-            .where(UserProfile.id == user_profile_id)
+            .where(UserProfile.user_id == user_id, UserProfile.profile_id == profile_id)
             .options(
                 joinedload(UserProfile.profile).load_only(Profile.id, Profile.title)
             )

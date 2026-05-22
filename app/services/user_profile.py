@@ -7,12 +7,15 @@ from db.repository import (
     UserSkillRepository,
 )
 from exceptions.common import NotFoundException, DataValidationError
+from schemas.profiles import ProfileList
 from schemas.user_profile import (
     UserProfileAdd,
     ProfileAvailableSkills,
     UserProfileTitle,
     UserProfileProgress,
+    UserProfileSchema,
 )
+from schemas.users import SUser
 from services import BaseService, UserService, ProfileService
 
 
@@ -21,10 +24,19 @@ class UserProfileService(BaseService):
     def __init__(self, session: AsyncSession):
         super().__init__(session)
         self.repository = UserProfileRepository(self.session)
-        # self.auth_service = AccessService(self.session)
         self.level_repository = LevelRepository(self.session)
         self.user_level_repository = UserLevelRepository(self.session)
         self.user_skill_repository = UserSkillRepository(session)
+
+    async def get_profile(self, user_id: int, profile_id: int):
+        profile = await self.repository.get_one_by_filter(
+            {"user_id": user_id, "profile_id": profile_id}
+        )
+        if profile is None:
+            raise NotFoundException(
+                f"Сотруднику с id = {user_id} не назначен профиль с id = {profile_id}"
+            )
+        return profile
 
     async def get_all_with_progress(self):
         user_profiles = await self.repository.get_all_with_progress()
@@ -59,15 +71,16 @@ class UserProfileService(BaseService):
         user_level = await self.user_level_repository.add(
             {"user_id": model.user_id, "profile_level_id": current_lvl}
         )
-        return user_profile
+        return UserProfileSchema(
+            id=user_profile.id,
+            user=SUser.model_validate(user, from_attributes=True),
+            profile=ProfileList.model_validate(profile, from_attributes=True),
+        )
 
-
-    async def status(self, user_profile_id: int):
-        user_profile = await self.repository.get_profile(user_profile_id)
+    async def status(self, user_id: int, profile_id: int):
+        user_profile = await self.repository.get_profile(user_id, profile_id)
         if user_profile is None:
-            raise NotFoundException(
-                f"Профиль пользователя с id = {user_profile_id} не найден."
-            )
+            raise NotFoundException(f"Профиль пользователя не найден.")
         user_profile_model = UserProfileTitle.model_validate(user_profile)
 
         user_progress = await self.repository.get_progress(
@@ -160,18 +173,31 @@ class UserProfileService(BaseService):
         skills = await self.repository.get_available_skills(user_id)
         return ProfileAvailableSkills.model_validate(skills, from_attributes=True)
 
-    async def gradeup(self, user_profile_id):
-        user_profile = await self.get_by_id(user_profile_id)
-        current_level = await self.user_level_repository.get_current_lvl(user_profile.user_id, user_profile.current_level_id)
-        accepted_skills = await self.user_skill_repository.get_accepted_count(current_level.id)
-        total_skills = await self.level_repository.get_skills_cnt(current_level.profile_level_id)
+    async def gradeup(self, user_id: int, profile_id: int):
+        user_profile = await self.get_profile(user_id, profile_id)
+        current_level = await self.user_level_repository.get_current_lvl(
+            user_profile.user_id, user_profile.current_level_id
+        )
+        accepted_skills = await self.user_skill_repository.get_accepted_count(
+            current_level.id
+        )
+        total_skills = await self.level_repository.get_skills_cnt(
+            current_level.profile_level_id
+        )
         if accepted_skills != total_skills:
-            raise DataValidationError("Для получения повышения сотрудник должен получить зачеты по всем навыкам.")
+            raise DataValidationError(
+                "Для получения повышения сотрудник должен получить зачеты по всем навыкам."
+            )
 
-        await self.user_level_repository.update_by_id(current_level.id, {'is_closed': True})
-        next_lvl = await self._add_user_level(user_profile.user_id, user_profile.profile_id, current_level.profile_level.num + 1)
-        await self.repository.update_by_id(user_profile_id, {'current_level_id': next_lvl.profile_level_id})
-        return await self.get_by_id(user_profile_id)
-
-
-
+        await self.user_level_repository.update_by_id(
+            current_level.id, {"is_closed": True}
+        )
+        next_lvl = await self._add_user_level(
+            user_profile.user_id,
+            user_profile.profile_id,
+            current_level.profile_level.num + 1,
+        )
+        await self.repository.update_by_id(
+            user_profile.id, {"current_level_id": next_lvl.profile_level_id}
+        )
+        return await self.get_by_id(user_profile.id)

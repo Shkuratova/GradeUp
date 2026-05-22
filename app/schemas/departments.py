@@ -8,6 +8,7 @@ class DepartmentBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     department_name: str
+    supervisor_id: int | None = None
 
 class DepartmentSchema(DepartmentBase):
     description: str | None = None

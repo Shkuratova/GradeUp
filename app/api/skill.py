@@ -6,6 +6,7 @@ from fastapi.params import Depends
 from api.decorators import exception_handler, check_role
 from db.uow import unit_of_work
 from dependencies.auth import get_current_user
+from schemas.profiles import SkillList
 from schemas.skills import (
     SkillSchema,
     SkillFilter,
@@ -22,7 +23,7 @@ from utils.roles import UserRole
 skill_router = APIRouter(prefix="/skills", tags=["Skill"])
 
 
-@skill_router.get("/", response_model=list[SkillSchema])
+@skill_router.get("/", response_model=list[SkillList])
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def get_all(
@@ -30,7 +31,7 @@ async def get_all(
     current_user=Depends(get_current_user),
 ):
     async with unit_of_work() as uow:
-        return await SkillService(uow.session).get_all_by_categories(skill_filter)
+        return await SkillService(uow.session).get_list(skill_filter)
 
 
 @skill_router.post("/")
@@ -40,6 +41,16 @@ async def add(skill: SkillAddForm, current_user: UserInfo = Depends(get_current_
     async with unit_of_work() as uow:
         new_skill = await SkillService(uow.session).add_skill(skill)
         return new_skill
+
+@skill_router.get("/stages", response_model=list[SkillSchema])
+@check_role([UserRole.ADMIN, UserRole.SPO])
+@exception_handler
+async def get_all(
+    skill_filter: Annotated[SkillFilter, Query()],
+    current_user=Depends(get_current_user),
+):
+    async with unit_of_work() as uow:
+        return await SkillService(uow.session).get_all_by_categories(skill_filter)
 
 
 @skill_router.get("/{skill_id}", response_model=SkillDetail)

@@ -1,18 +1,16 @@
-from typing import Annotated
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 
+from api.decorators import exception_handler, check_role
 from db.uow import unit_of_work
 from dependencies import get_current_user
-from api.decorators import exception_handler, check_role
-from schemas.user_profile import UserProfileAdd, UserProfileProgressList, UserStageAdd
+from schemas.user_profile import UserProfileAdd, UserProfileProgressList
+from schemas.users import UserInfo
 from services import EventService
 from services.access import AccessService
 from services.user_profile import UserProfileService
-from services.user_stage import UserStageService
 from utils.roles import UserRole
-from schemas.users import UserInfo
 
-user_profile_router = APIRouter(prefix="/user-profiles", tags=["UserProfiles"])
+user_profile_router = APIRouter(prefix="/users/profiles", tags=["Users", "UserProfiles"])
 
 
 @user_profile_router.get("/", response_model=list[UserProfileProgressList])
@@ -26,58 +24,43 @@ async def get_all(current_user: UserInfo = Depends(get_current_user)):
 @user_profile_router.post("/")
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
-async def add(user_profile: UserProfileAdd, current_user: UserInfo = Depends(get_current_user)):
+async def add(
+    user_profile: UserProfileAdd, current_user: UserInfo = Depends(get_current_user)
+):
     async with unit_of_work() as uow:
-        await AccessService(uow.session).can_manage_user(user_profile.user_id, current_user)
-        new_user_profile =  await UserProfileService(uow.session).create(user_profile)
-        await EventService(uow.session).set_user_profile(new_user_profile, current_user)
+        await AccessService(uow.session).can_manage_user(
+            user_profile.user_id, current_user
+        )
+        new_user_profile = await UserProfileService(uow.session).create(user_profile)
+        await EventService(uow.session).log_set_user_profile(new_user_profile, current_user)
         return new_user_profile
 
 
-
-@user_profile_router.get("/level-skills")
-@exception_handler
-async def get_available_skills_by_user(user_id: int, current_user = Depends(get_current_user)):
-    async with unit_of_work() as uow:
-        await AccessService(uow.session).can_manage_user(user_id, current_user)
-        return await UserProfileService(uow.session).get_available_skills(user_id)
-
-@user_profile_router.get("/skills")
-@exception_handler
-async def get_user_skill_detail(user_id: Annotated[int, Query()], skill_id: Annotated[int, Query()], current_user = Depends(get_current_user)):
-    async with unit_of_work() as uow:
-        return await UserProfileService(uow.session).get_skill_progress(user_id, skill_id)
-
-@user_profile_router.post("/stages")
-@check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
-@exception_handler
-async def evaluate(user_stage: UserStageAdd, current_user = Depends(get_current_user)):
-    async with unit_of_work() as uow:
-        await AccessService(uow.session).can_manage_user(user_stage.user_id, current_user)
-        evaluation =  await UserStageService(uow.session).evaluate(user_stage)
-        await EventService.evaluate_stage_log(user_stage, current_user)
-        return evaluation
+user_profile_detail_router = APIRouter(prefix="/profiles/{profile_id}", tags=["ProfileProgress"])
 
 
-@user_profile_router.get("/stages/{user_stage_id}")
-@exception_handler
-async def get(user_stage_id: int, current_user: UserInfo = Depends(get_current_user)):
-    async with unit_of_work() as uow:
-        pass
-
-@user_profile_router.get("/{user_profile_id}")
+@user_profile_detail_router.get("")
 @exception_handler
 async def get_by_id(
-    user_profile_id: int, current_user: UserInfo = Depends(get_current_user)
+    user_id: int, profile_id: int, current_user: UserInfo = Depends(get_current_user)
 ):
     async with unit_of_work() as uow:
-        await AccessService(uow.session).can_get_user_profile(user_profile_id, current_user)
-        return await UserProfileService(uow.session).status(user_profile_id)
+        await AccessService(uow.session).can_get_user_profile(
+            user_id, profile_id, current_user
+        )
+        return await UserProfileService(uow.session).status(user_id, profile_id)
 
-@user_profile_router.post("/{user_profile_id}")
+
+@user_profile_detail_router.post("/grade-up")
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
-async def gradeup_user(user_profile_id: int, current_user : UserInfo = Depends(get_current_user)):
+async def gradeup_user(
+    user_id: int, profile_id: int, current_user: UserInfo = Depends(get_current_user)
+):
     async with unit_of_work() as uow:
-        await AccessService(uow.session).can_get_user_profile(user_profile_id, current_user)
-        return await UserProfileService(uow.session).gradeup(user_profile_id)
+        await AccessService(uow.session).can_get_user_profile(
+            user_id, profile_id, current_user
+        )
+        await UserProfileService(uow.session).gradeup(user_id, profile_id)
+        await EventService(uow.session).log_gradeup(user_id, profile_id, current_user)
+

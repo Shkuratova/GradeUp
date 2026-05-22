@@ -24,7 +24,7 @@ from db.models.skills import (
 
 from db.models.user_profiles import UserLevel, UserSkill, UserStage
 from db.models.meetings import Meeting, MeetingParticipant
-
+from db.models.events import Event
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

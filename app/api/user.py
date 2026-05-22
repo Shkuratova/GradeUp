@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, Query
 from api.decorators import exception_handler, check_role
 from db.uow import unit_of_work
 from dependencies import get_current_user
-from schemas.departments import DepartmentFilter
 from schemas.users import (
     SUserFilter,
     UserInfo,
@@ -17,10 +16,10 @@ from services.access import AccessService
 from services.user import UserService
 from utils.roles import UserRole
 
-router = APIRouter(prefix="/users", tags=["Users"])
+user_router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.get("/", response_model=list[UserInfo], response_model_exclude_none=False)
+@user_router.get("/", response_model=list[UserInfo], response_model_exclude_none=False)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_all(
@@ -47,7 +46,10 @@ async def get_all(
         return list(res)
 
 
-@router.get("/{user_id}", response_model=UserInfo)
+
+user_detail_router = APIRouter(prefix="/{user_id}", tags=["Users", "UserDetail"])
+
+@user_detail_router.get("", response_model=UserInfo)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_by_id(
@@ -58,7 +60,7 @@ async def get_by_id(
         return await UserService(uow.session).get_user_role(UserBase(id=user_id))
 
 
-@router.patch("/{user_id}", response_model=UserInfo)
+@user_detail_router.patch("", response_model=UserInfo)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def update_user(

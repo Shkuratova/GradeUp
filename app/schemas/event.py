@@ -12,18 +12,18 @@ class EventBase(BaseModel):
     id: int
     created_at: datetime
     actor_id: int
-    actor_role: str
+    access_scope: str
     target_id: int
     target_type: TargetType
     event_type: EventType
 
 class EventAdd(BaseModel):
     actor_id: int
-    actor_role: str
+    access_scope: str
     target_id: int
     target_type: TargetType
     event_type: EventType
-    message: str
+    payload: dict
 
 
 class EventSchema(EventBase):
@@ -32,7 +32,7 @@ class EventSchema(EventBase):
 
 class EventFilter(BaseModel):
     actor_id: int | None = None
-    actor_role: str | None = None
+    access_scope: str | None = None
     target_id: int | None = None
     target_type: TargetType | None = None
     event_type: EventType | None = None
@@ -43,6 +43,7 @@ class EventFilter(BaseModel):
 class UserPayloadBase(BaseModel):
     model_config = ConfigDict(extra="ignore")
     user_id: int
+    full_name: str
     email: EmailStr
 
 class RegistrationPayload(UserPayloadBase):
@@ -51,16 +52,11 @@ class RegistrationPayload(UserPayloadBase):
 class RegistrationEvent(EventAdd):
     payload: RegistrationPayload
 
-class SetManagerPayload(UserPayloadBase):
-    department_id: int | None = None
-    division_id: int | None = None
-
-class SetManagerEvent(EventAdd):
-    payload: SetManagerPayload
 
 class SetProfilePayload(UserPayloadBase):
     profile_id: int
-    department_id: int
+    title: str
+    department_id: int | None
 
 class SetProfileEvent(EventAdd):
     payload: SetProfilePayload

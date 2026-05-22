@@ -9,10 +9,11 @@ from schemas.departments import (
     DivisionUpdateForm,
     DivisionSchema,
 )
+from services import EventService
 from services.department import DivisionService
 from utils.roles import UserRole
 
-division_router = APIRouter(prefix="/divisions")
+division_router = APIRouter(prefix="/divisions", tags=["Divisions"])
 
 @division_router.get("/", response_model=list[DivisionSchema])
 @check_role([UserRole.ADMIN])
@@ -40,11 +41,17 @@ async def get_division_detail(division_id: int, current_user= Depends(get_curren
 @exception_handler
 async def update_by_id_with_departments(division_id: int, division: DivisionUpdateForm, current_user= Depends(get_current_user)):
     async with unit_of_work() as uow:
-        return await DivisionService(uow.session).update_division_with_relations(division_id, division)
+        upd_division =  await DivisionService(uow.session).update_division_with_relations(division_id, division)
+        if division.supervisor_id:
+            await EventService.log_set_division_supervisor(upd_division, current_user)
+        return upd_division
 
-@division_router.post("/{division_id}/remove-supervisor")
+
+@division_router.delete("/{division_id}/supervisor")
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def remove_supervisor(division_id: int, current_user = Depends(get_current_user)):
     async with unit_of_work() as uow:
-        await DivisionService(uow.session).remove_supervisor(division_id)
+        division = await DivisionService(uow.session).remove_supervisor(division_id)
+        await EventService(uow.session).log_remove_division_supervisor(division, current_user)
+        return {"detail": "Руководитель направления откреплён."}
