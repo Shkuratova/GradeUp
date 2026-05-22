@@ -1,7 +1,12 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.repository import DepartmentRepository, ProfileRepository, UserProfileRepository, UserRepository, \
-    SkillRepository
+from db.repository import (
+    DepartmentRepository,
+    ProfileRepository,
+    UserProfileRepository,
+    UserRepository,
+    SkillRepository,
+)
 from exceptions.common import NotFoundException
 from exceptions.user import ForbiddenException
 from schemas.users import UserInfo
@@ -22,16 +27,22 @@ class AccessService(BaseService):
 
         departments = []
         if current_user.role_name == UserRole.ADMIN:
-            departments =  await self.department_repository.get_departments_id()
+            departments = await self.department_repository.get_departments_id()
         elif current_user.is_supervisor:
             if current_user.division_id is not None:
-                departments = await self.department_repository.get_departments_id(current_user.managed_division.id)
+                departments = await self.department_repository.get_departments_id(
+                    current_user.managed_division.id
+                )
                 if not departments:
-                    raise ForbiddenException("Нет доступных отделов в вашем подразделении.")
+                    raise ForbiddenException(
+                        "Нет доступных отделов в вашем подразделении."
+                    )
                 elif current_user.department_id is not None:
                     departments = [current_user.department_id]
                 else:
-                    raise ForbiddenException("Руководитель должен быть привязан к отделу или подразделению.")
+                    raise ForbiddenException(
+                        "Руководитель должен быть привязан к отделу или подразделению."
+                    )
         else:
             raise ForbiddenException("Отказано в доступе.")
         return departments
@@ -47,7 +58,9 @@ class AccessService(BaseService):
 
         return department_id
 
-    async def get_department_filter(self, current_user: UserInfo, departments_id: list[int] | None = None):
+    async def get_department_filter(
+        self, current_user: UserInfo, departments_id: list[int] | None = None
+    ):
         if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
             return departments_id
         else:
@@ -86,10 +99,17 @@ class AccessService(BaseService):
 
         raise ForbiddenException("Нет доступа к выбранному пользователю")
 
-    async def can_get_user_profile(self, user_profile_id: int, current_user: UserInfo):
-        user_profile = await self.user_profile_repository.get_by_id(user_profile_id)
+    async def can_get_user_profile(
+        self, user_id: int, profile_id: int, current_user: UserInfo
+    ):
+        user_profile = await self.user_profile_repository.get_one_by_filter(
+            {"user_id": user_id, "profile_id": profile_id}
+        )
+
         if user_profile is None:
-            raise NotFoundException(f"Профиль пользователя с user_profile_id = {user_profile_id} не найден")
+            raise NotFoundException(
+                f"Профиль сотрудника с user_id = {user_id}, profile_id = {profile_id}  не найден"
+            )
 
         if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
             return user_profile
@@ -111,7 +131,9 @@ class AccessService(BaseService):
 
         if current_user.is_supervisor:
             departments_id = await self.get_managed_departments(current_user)
-            exist = await self.profile_repository.profile_exist(profile_id, departments_id)
+            exist = await self.profile_repository.profile_exist(
+                profile_id, departments_id
+            )
             if exist is not None:
                 return profile_id
         raise ForbiddenException("Нет доступа к выбранному профилю.")
@@ -129,7 +151,9 @@ class AccessService(BaseService):
         raise ForbiddenException("Нет доступа к выбранному навыку.")
 
     @staticmethod
-    def get_accessible_event_types(event_type: str | None, current_user: UserInfo) -> str | None:
+    def get_accessible_event_types(
+        event_type: str | None, current_user: UserInfo
+    ) -> str | None:
         if event_type is None:
             return
         if current_user.role_name == UserRole.ADMIN:
@@ -138,4 +162,3 @@ class AccessService(BaseService):
             return event_type
 
         raise ForbiddenException("Отказано в доступе.")
-
