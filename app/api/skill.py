@@ -59,7 +59,7 @@ async def update(
     skill_id: int, skill: SkillUpdateForm, current_user=Depends(get_current_user)
 ):
     async with unit_of_work() as uow:
-        new_skill = await SkillService(uow.session).update_by_id(skill_id, skill)
+        new_skill = await SkillService(uow.session).update(skill_id, skill)
         return new_skill
 
 

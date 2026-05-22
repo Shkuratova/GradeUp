@@ -25,22 +25,23 @@ class StageService(BaseService):
 
     @staticmethod
     def _questions_lists_equal(
-        new_questions: list[QuestionAdd], old_questions: list[Question]
-    ):
-        if len(new_questions) != len(old_questions):
-            return False
+        new_questions: list[QuestionAdd] | None,
+        old_questions: list[Question] | None,
+    ) -> bool:
 
-        new_sorted = sorted(new_questions, key=lambda q: q.num)
-        old_sorted = sorted(old_questions, key=lambda q: q.num)
+        if new_questions is None or old_questions is None:
+            return new_questions == old_questions
 
-        for new_q, old_q in zip(new_sorted, old_sorted):
-            if not (
-                new_q.num == old_q.num
-                and new_q.answer == old_q.answer
-                and new_q.question == old_q.question
-            ):
-                return False
-        return True
+        normalize = lambda questions: sorted(
+            (
+                q.num,
+                q.question,
+                q.answer,
+            )
+            for q in questions
+        )
+
+        return normalize(new_questions) == normalize(old_questions)
 
     async def add_stages(self, skill_id: int, stages: list[StageAdd]):
         questions = []
@@ -65,7 +66,7 @@ class StageService(BaseService):
         self, old_stage: StageQuestionsSchema, new_stage: StageAdd
     ):
         if not self._questions_lists_equal(new_stage.questions, old_stage.questions):
-            new_version = old_stage.last_version + 1
+            new_version = old_stage.last_version + 1 if old_stage.last_version else 1
             stage_version = await self.stage_version_repository.add(
                 {"stage_id": old_stage.id, "version": new_version}
             )
@@ -92,7 +93,7 @@ class StageService(BaseService):
         if add_stages := [s for s in new_stages if not s.id]:
             await self.add_stages(skill_id, add_stages)
 
-        if upd_stages:=[s for s in new_dict.values() if s.id in old_dict]:
+        if upd_stages := [s for s in new_dict.values() if s.id in old_dict]:
             for stage in upd_stages:
                 if stage.questions:
                     await self._add_stage_version(old_dict[stage.id], stage)

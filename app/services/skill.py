@@ -63,10 +63,10 @@ class SkillService(BaseService):
         await StageService(self.session).add_stages(new_skill.id, model.stages)
         return await self.get_skill_with_questions(new_skill.id)
 
-    async def update_by_id(self, skill_id: int, model: SkillUpdateForm):
+    async def update(self, skill_id: int, model: SkillUpdateForm):
         old_skill: SkillDetail = await self.get_skill_with_questions(skill_id)
 
-        res = await super().update_by_id(skill_id, model.skill)
+        res = await self.update_by_id(skill_id, model.skill)
 
         old_categories =old_skill.categories
         new_cat_ids = set(model.categories)

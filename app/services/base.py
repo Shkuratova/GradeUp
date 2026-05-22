@@ -12,27 +12,40 @@ class BaseService:
     entity_name = "Object"
     unique_fields = None
 
-
     def __init__(self, session: AsyncSession):
         self.session = session
         self.repository = None
 
-    async def check_unique_constraint(self,  filter_dict: dict, object_id: int | None = None):
+    async def check_unique_constraint(
+        self,
+        filter_dict: dict,
+        object_id: int | None = None,
+    ):
+        if not self.unique_fields:
+            return
+
         filters = {
-            unq: filter_dict.get(unq, None)
-            for unq in self.unique_fields
-            if filter_dict.get(unq, None) is not None
+            field: filter_dict[field]
+            for field in self.unique_fields
+            if filter_dict.get(field) is not None
         }
 
-        if object_id is not None:
-            filters["id"] = object_id
+        if not filters:
+            return
 
-        if self.unique_fields is not None :
-            object_exist = await self.repository.get_one_by_filter(filters)
-            if object_exist is not None and object_id != object_exist.id:
-                raise AlreadyExistException(
-                    f"""{self.entity_name} с {", ".join(f'{k} = {v}' for k, v in filters.items())} уже существует."""
-                )
+        object_exist = await self.repository.get_one_by_filter(filters)
+
+        if object_exist is None:
+            return
+
+        if object_id is not None and object_exist.id == object_id:
+            return
+
+        raise AlreadyExistException(
+            f"{self.entity_name} с "
+            f'{", ".join(f"{k}={v.__repr__()}" for k, v in filters.items())} '
+            f"уже существует."
+        )
 
     async def get_by_id(self, object_id: int):
         instance = await self.repository.get_by_id(object_id)
@@ -54,6 +67,7 @@ class BaseService:
             )
 
         if self.unique_fields:
+            print("SKILL UNIQUE", self.unique_fields)
             await self.check_unique_constraint(object_dict, object_id)
         res = await self.repository.update_by_id(object_id, object_dict)
         if not res:
