@@ -5,6 +5,7 @@ from db.uow import unit_of_work
 from dependencies import get_current_user
 from api.decorators import exception_handler, check_role
 from schemas.user_profile import UserProfileAdd, UserProfileProgressList, UserStageAdd
+from services import EventService
 from services.access import AccessService
 from services.user_profile import UserProfileService
 from services.user_stage import UserStageService
@@ -28,7 +29,10 @@ async def get_all(current_user: UserInfo = Depends(get_current_user)):
 async def add(user_profile: UserProfileAdd, current_user: UserInfo = Depends(get_current_user)):
     async with unit_of_work() as uow:
         await AccessService(uow.session).can_manage_user(user_profile.user_id, current_user)
-        return await UserProfileService(uow.session).create(user_profile)
+        new_user_profile =  await UserProfileService(uow.session).create(user_profile)
+        await EventService(uow.session).set_user_profile(new_user_profile, current_user)
+        return new_user_profile
+
 
 
 @user_profile_router.get("/level-skills")
@@ -50,7 +54,9 @@ async def get_user_skill_detail(user_id: Annotated[int, Query()], skill_id: Anno
 async def evaluate(user_stage: UserStageAdd, current_user = Depends(get_current_user)):
     async with unit_of_work() as uow:
         await AccessService(uow.session).can_manage_user(user_stage.user_id, current_user)
-        await UserStageService(uow.session).evaluate(user_stage)
+        evaluation =  await UserStageService(uow.session).evaluate(user_stage)
+        await EventService.evaluate_stage_log(user_stage, current_user)
+        return evaluation
 
 
 @user_profile_router.get("/stages/{user_stage_id}")

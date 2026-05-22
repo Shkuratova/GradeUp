@@ -1,0 +1,36 @@
+from db.database import Base
+from sqlalchemy import ForeignKey, JSON
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from enum import Enum
+
+class EventType(str, Enum):
+    EVALUATE = "EVALUATE"  # Оценка этапа
+    GRADEUP = "GRADEUP" # Повышение уровня
+    SCHEDULE_MEETING = "SCHEDULE_MEETING" # Назначение встречи
+    MEETING_CHANGED = "MEETING_CHANGED" # Изменение встречи
+    REGISTRATION = "REGISTRATION" # Регистрация
+    SET_PROFILE = "SET_PROFILE" # Назначение профиля
+    SET_DEPARTMENT_MANAGER = "SET_DEPARTMENT_MANAGER" # Назначение руководителя отдела
+    SET_DIVISION_MANAGER = "SET_DIVISION_MANAGER" # Назначение руководителя направления
+    REMOVE_DEPARTMENT_MANAGER = "REMOVE_DEPARTMENT_MANAGER" # Открепление руководителя от отдела
+    REMOVE_DIVISION_MANAGER = "REMOVE_DIVISION_MANAGER" # Открепление руководителя от направления
+
+class TargetType(str, Enum):
+    USER = "USER"
+    DEPARTMENT = "DEPARTMENT"
+    DIVISION = "DIVISION"
+    USER_STAGE = "USER_STAGE"
+    USER_PROFILE = "USER_PROFILE"
+    MEETING = "MEETING"
+
+
+class Event(Base):
+    event_type: Mapped[str]
+    actor_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    actor_role: Mapped[str]
+    target_id: Mapped[int]
+    target_type: Mapped[str]
+    message: Mapped[str]
+    payload: Mapped[dict] = mapped_column(JSON)
+
+    actor: Mapped["User"] = relationship(back_populates="events")
