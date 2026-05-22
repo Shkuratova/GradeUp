@@ -18,6 +18,7 @@ class UserRepository(BaseRepository):
                 joinedload(User.role),
                         joinedload(User.department),
                         joinedload(User.managed_division),
+                        joinedload(User.managed_department)
                        )
         )
         if departments_id:
@@ -38,21 +39,8 @@ class UserRepository(BaseRepository):
             .options(
                 joinedload(User.role),
                 joinedload(User.department),
-                joinedload(User.managed_division)
-            )
-        )
-        res = await self._session.execute(stmt)
-        user = res.scalar_one_or_none()
-        return user
-
-    @db_exception_handler
-    async def get_user_info(self, user_id: int):
-        stmt = (
-            select(User)
-            .where(User.id == user_id)
-            .options(
-                joinedload(User.department),
-                joinedload(User.role),
+                joinedload(User.managed_division),
+                joinedload(User.managed_department)
             )
         )
         res = await self._session.execute(stmt)

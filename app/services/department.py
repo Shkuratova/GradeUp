@@ -34,13 +34,6 @@ class DivisionService(BaseService):
     async def get_division_detail(self, division_id: int):
         return await self.repository.get_division_detail(division_id)
 
-    async def _check_supervisor(self, supervisor_id: int):
-        user: UserInfo = await self.user_repository.get_user_role({"id": supervisor_id})
-        if user.role.role_name not in [UserRole.SUPERVISOR, UserRole.SPO]:
-            raise DataValidationError(
-                "Руководителем направления можно назнчачить только сотрудника с правами руководителя или СПО."
-            )
-
     async def _update_relations(
         self,
         division_id: int,
@@ -52,8 +45,6 @@ class DivisionService(BaseService):
             )
 
     async def add_with_relations(self, division: DivisionAddForm):
-        if division.supervisor_id:
-            await self._check_supervisor(division.supervisor_id)
         new_division = DivisionAdd.model_validate(division, from_attributes=True)
         new_division = await self.add(new_division)
         await self._update_relations(new_division.id, division.departments)
@@ -63,10 +54,24 @@ class DivisionService(BaseService):
         self, division_id: int, division: DivisionUpdateForm
     ):
 
-        if not await self.repository.get_by_id(division_id):
+        old_division = await self.repository.get_by_id(division_id)
+        if old_division is None:
             raise NotFoundException(f"Направление с id = {division_id} не найдено.")
+
         if division.supervisor_id:
-            await self._check_supervisor(division.supervisor_id)
+            user: UserInfo = await self.user_repository.get_user_role(
+                {"id": division.supervisor_id}
+            )
+            if (
+                user.managed_division is not None
+                and user.managed_division.id != division_id
+                or user.managed_department is not None
+            ):
+                raise DataValidationError(
+                    "Сотрудник может быть руководителем только внутри одного направления или отдела"
+                )
+            await self.user_repository.update_by_id(user.id, {"department_id": None})
+
         new_division = DivisionUpdate(
             division_name=division.division_name,
             description=division.description,
@@ -93,18 +98,14 @@ class DepartmentService(BaseService):
             raise NotFoundException(f"Отдел с id ={department_id} не найден.")
         return department
 
-    async def _check_supervisor(self, supervisor_id: int):
-        user = await self.user_repository.get_user_role({"id": supervisor_id})
-        if user.role.role_name not in [UserRole.SUPERVISOR, UserRole.SPO]:
-            raise DataValidationError(
-                "Руководителем отдела можно назнчачить только сотрудника с правами руководителя или СПО."
-            )
-        return user
+    async def get_all_with_profiles(self, departments_id: list[int] | None = None):
+        departments = await self.repository.get_with_profiles(departments_id)
+        return departments
+
+    async def get_id_by_division(self, division_id: int):
+        return await self.repository.get_id_by_division_id(division_id)
 
     async def add_with_relations(self, department: DepartmentAddForm):
-        user = None
-        if department.supervisor_id:
-            user = await self._check_supervisor(department.supervisor_id)
 
         new_department = DepartmentAdd(
             department_name=department.department_name,
@@ -112,8 +113,6 @@ class DepartmentService(BaseService):
             supervisor_id=department.supervisor_id,
         )
         new_department = await self.add(new_department)
-        if user:
-            await self.user_repository.update_by_id(user.id, {'department_id': new_department.id})
         await self.department_profile_repository.add_list(
             [
                 {"department_id": new_department.id, "profile_id": p}
@@ -125,12 +124,25 @@ class DepartmentService(BaseService):
     async def update_department_with_relations(
         self, department_id: int, department: DepartmentUpdateForm
     ):
-        if not await self.repository.exists({"id": department_id}):
+        old_department = await self.get_by_id(department_id)
+
+        if not old_department:
             raise NotFoundException(f"Отдел с id ={department_id} не найден.")
 
         if department.supervisor_id:
-            user = await self._check_supervisor(department.supervisor_id)
-            await self.user_repository.update_by_id(user.id, {'department_id': department_id})
+            user: UserInfo = await self.user_repository.get_user_role(
+                {"id": department.supervisor_id}
+            )
+            if (
+                user.managed_department is not None
+                and user.managed_department.id != department_id
+                or user.managed_division is not None
+            ):
+                raise DataValidationError(
+                    "Сотрудник может быть руководителем только внутри одного направления или отдела"
+                )
+            if user.department_id != department_id:
+                raise DataValidationError("Руководителем может быть назначен только сотрудник из выбранного отдела.")
 
         await self.update_by_id(
             department_id,
@@ -160,35 +172,3 @@ class DepartmentService(BaseService):
 
         new_department = await self.get_detail(department_id)
         return DepartmentDetail.model_validate(new_department, from_attributes=True)
-
-    async def get_accessible_departments(
-        self, current_user: UserInfo, department_id: int | None = None
-    ):
-
-        if current_user.role_name == UserRole.EMPLOYEE:
-            raise ForbiddenException("Отказано в доступе.")
-
-        if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
-            return [department_id] if department_id else None
-
-        if current_user.division_id is not None:
-            departments = await self.repository.get_ids_by_division_id(
-                current_user.division_id
-            )
-            if not departments:
-                raise ForbiddenException("Нет доступных отделов в вашем подразделении.")
-
-            if department_id:
-                if department_id not in departments:
-                    raise ForbiddenException("Нет доступа к выбранному отделу.")
-                return [department_id]
-            return departments
-
-        if current_user.department_id:
-            if department_id and department_id != current_user.department_id:
-                raise ForbiddenException("Нет доступа к выбранному отделу.")
-            return [current_user.department_id]
-
-        raise ForbiddenException(
-            "Руководитель должен быть привязан к отделу или подразделению."
-        )

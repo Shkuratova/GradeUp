@@ -69,10 +69,12 @@ class ProfileService(BaseService):
                 {"profile_id": profile_id, "level_name": lvl.level_name, "num": lvl.num}
             )
             new_levels.append(new_level)
-            for s in lvl.skills:
-                level_skills.append({"profile_level_id": new_level.id, "skill_id": s})
+            if lvl.skills:
+                for s in lvl.skills:
+                    level_skills.append({"profile_level_id": new_level.id, "skill_id": s})
 
-        await self.level_skill_repository.add_list(level_skills)
+        if level_skills:
+            await self.level_skill_repository.add_list(level_skills)
 
     async def add_profile(self, model: SProfileAdd):
         profile = await self.add(model.profile)
@@ -110,15 +112,17 @@ class ProfileService(BaseService):
                     await self.level_repository.update_by_id(
                         lvl.id, {"level_name": lvl.level_name, "num": lvl.num}
                     )
-                old_skills = set(s.id for s in old_level.level_skills)
-                new_skills = set(lvl.skills)
-                if add_skill := new_skills - old_skills:
-                    level_skills += [
-                        {"profile_level_id": lvl.id, "skill_id": s} for s in add_skill
-                    ]
-                if del_skill := old_skills - new_skills:
-                    await self.level_skill_repository.delete_by_skill_ids(
-                        lvl.id, list(del_skill)
-                    )
+                if lvl.skills:
+                    old_skills = set(s.id for s in old_level.level_skills)
+                    new_skills = set(lvl.skills)
+                    if add_skill := new_skills - old_skills:
+                        level_skills += [
+                            {"profile_level_id": lvl.id, "skill_id": s} for s in add_skill
+                        ]
+                    if del_skill := old_skills - new_skills:
+                        await self.level_skill_repository.delete_by_skill_ids(
+                            lvl.id, list(del_skill)
+                        )
             if level_skills:
                 await self.level_skill_repository.add_list(level_skills)
+        return await self.get_with_details(profile_id)

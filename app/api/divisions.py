@@ -7,13 +7,14 @@ from schemas.departments import (
     DivisionDetail,
     DivisionAddForm,
     DivisionUpdateForm,
+    DivisionSchema,
 )
 from services.department import DivisionService
 from utils.roles import UserRole
 
 division_router = APIRouter(prefix="/divisions")
 
-@division_router.get("/")
+@division_router.get("/", response_model=list[DivisionSchema])
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def get_all(current_user = Depends(get_current_user)):

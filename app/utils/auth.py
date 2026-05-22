@@ -2,7 +2,6 @@ from fastapi import Response
 import jwt
 from datetime import datetime, timedelta, timezone
 from config import settings
-from schemas.users import  UserInfo
 
 class AuthUtils:
     @staticmethod
@@ -35,7 +34,7 @@ class AuthUtils:
     @classmethod
     def create_access_token(
         cls,
-        user: UserInfo,
+        user,
         expire_minutes: int = settings.jwt.expire_access_token_minutes,
         expire_timedelta: timedelta | None = None,
     ) -> str:

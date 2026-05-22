@@ -2,13 +2,16 @@ import bcrypt
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.repository import UserRepository
+from db.repository import UserRepository, RoleRepository, DepartmentRepository
 from exceptions.common import NotFoundException
-from exceptions.user import InvalidLoginException, PasswordDontMatchException
+from exceptions.user import (
+    InvalidLoginException,
+    PasswordDontMatchException,
+    ForbiddenException,
+)
 from schemas.users import UserAuth, EmailModel, SUserFilter, UserUpdateBase, UserBase
 from schemas.users import UserInfo
 from services.base import BaseService
-from services.department import DepartmentService
 from utils.roles import UserRole
 
 
@@ -19,6 +22,8 @@ class UserService(BaseService):
     def __init__(self, session: AsyncSession):
         super().__init__(session)
         self.repository = UserRepository(self.session)
+        self.role_repository = RoleRepository(self.session)
+        self.department_repository = DepartmentRepository(self.session)
 
     @staticmethod
     def hash_password(password: str) -> str:
@@ -33,8 +38,6 @@ class UserService(BaseService):
     async def add(self, user_model: BaseModel):
         if user_model.password != user_model.confirm_password:
             raise PasswordDontMatchException("Пароли не совпадают.")
-        if user_model.department_id is not None:
-            await DepartmentService(self.session).get_by_id(user_model.department_id)
         user_model.password = self.hash_password(user_model.password)
 
         new_user = await super().add(user_model)
@@ -56,13 +59,18 @@ class UserService(BaseService):
         if user is None or not self.validate_password(
             user_data.password, user.password
         ):
-            raise InvalidLoginException(f"Неверный логин или пароль.")
+            raise InvalidLoginException("Неверный логин или пароль.")
         return UserInfo.model_validate(user)
 
     async def update(self, user_id: int, user_data: BaseModel, current_user: UserInfo):
-        await self.auth_service.can_manage_user(user_id, current_user)
         if current_user.role_name != UserRole.ADMIN:
             user_data = UserUpdateBase.model_validate(user_data.model_dump())
+        if user_data.role_id is not None:
+            role = await self.role_repository.get_by_id(user_data.role_id)
+            if role is None:
+                raise NotFoundException(
+                    f"Роль с id={user_data.role_id} не найдена"
+                )
         await self.update_by_id(user_id, user_data)
-
         return await self.get_user_role(UserBase(id=user_id))
+

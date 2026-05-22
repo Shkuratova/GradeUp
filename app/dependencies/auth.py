@@ -5,7 +5,7 @@ from db.uow import unit_of_work
 from exceptions.user import (
     InvalidTokenException,
 )
-from schemas.users import UserBase, UserInfo, UserRole
+from schemas.users import UserBase, UserInfo, UserRoleName
 from services.user import UserService
 from utils import AuthUtils
 
@@ -47,7 +47,7 @@ async def get_current_user(
 ) -> UserInfo:
     return await get_user_from_token(token=token)
 
-def check_role(required_roles: list[UserRole]):
+def check_role(required_roles: list[UserRoleName]):
 
     async def checker(
         current_user: UserInfo = Depends(get_current_user)

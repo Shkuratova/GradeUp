@@ -12,6 +12,9 @@ class DepartmentBase(BaseModel):
 class DepartmentSchema(DepartmentBase):
     description: str | None = None
 
+class DepartmentFilter(BaseModel):
+    division_id: int
+
 class DepartmentDetail(DepartmentBase):
     description: str | None = None
     supervisor: UserFIO | None = None
@@ -39,13 +42,17 @@ class DepartmentUpdateForm(DepartmentUpdate):
 class DivisionBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    supervisor_id: int | None = None
     division_name: str
+
+
+class DivisionSchema(DivisionBase):
+    description: str | None = None
 
 
 class DivisionAdd(BaseModel):
     division_name: str
     description: str | None = None
-    supervisor_id: int | None = None
 
 class DivisionAddForm(DivisionAdd):
     departments: list[int] = []
@@ -61,5 +68,5 @@ class DivisionUpdateForm(DivisionUpdate):
     departments: list[int] = []
 
 class DivisionDetail(DivisionBase):
-    supervisor: UserFIO
+    supervisor: UserFIO | None = None
     departments: list[DepartmentSchema]

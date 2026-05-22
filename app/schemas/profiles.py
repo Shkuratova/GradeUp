@@ -50,7 +50,7 @@ class ProfileList(BaseModel):
 class SLevelAdd(BaseModel):
     level_name: str
     num: int = Field(..., gt=0)
-    skills: list[int] = []
+    skills: list[int] | None = None
 
 
 class SLevelUpdate(SLevelAdd):
@@ -94,15 +94,9 @@ class SkillList(BaseModel):
     id: int
     title: str
 
-
-class SLevelSkill(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    skill: SkillList
-
-
 class LevelSkill(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    skill: SkillList
+    skill: SkillList | None = None
 
 
 class LevelDetail(BaseModel):

@@ -20,20 +20,20 @@ class AccessService(BaseService):
 
     async def get_managed_departments(self, current_user: UserInfo):
 
-        if current_user.role_name == UserRole.EMPLOYEE:
-            raise ForbiddenException("Отказано в доступе.")
-
         departments = []
         if current_user.role_name == UserRole.ADMIN:
             departments =  await self.department_repository.get_departments_id()
-        elif current_user.division_id is not None:
-            departments = await self.department_repository.get_departments_id(current_user.managed_division.id)
-            if not departments:
-                raise ForbiddenException("Нет доступных отделов в вашем подразделении.")
-        elif current_user.department_id is not None:
-            departments = [current_user.department_id]
+        elif current_user.is_supervisor:
+            if current_user.division_id is not None:
+                departments = await self.department_repository.get_departments_id(current_user.managed_division.id)
+                if not departments:
+                    raise ForbiddenException("Нет доступных отделов в вашем подразделении.")
+                elif current_user.department_id is not None:
+                    departments = [current_user.department_id]
+                else:
+                    raise ForbiddenException("Руководитель должен быть привязан к отделу или подразделению.")
         else:
-            raise ForbiddenException("Руководитель должен быть привязан к отделу или подразделению.")
+            raise ForbiddenException("Отказано в доступе.")
         return departments
 
     async def can_access_department(self, department_id: int, current_user: UserInfo):
@@ -97,7 +97,7 @@ class AccessService(BaseService):
         if current_user.id == user_profile.user_id:
             return user_profile
 
-        if current_user.role_name == UserRole.SUPERVISOR:
+        if current_user.is_supervisor:
             user = await self.user_repository.get_by_id(user_profile.user_id)
             await self.can_get_user(user, current_user)
             return user_profile
@@ -109,7 +109,7 @@ class AccessService(BaseService):
         if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
             return profile_id
 
-        if current_user.role_name == UserRole.SUPERVISOR:
+        if current_user.is_supervisor:
             departments_id = await self.get_managed_departments(current_user)
             exist = await self.profile_repository.profile_exist(profile_id, departments_id)
             if exist is not None:
@@ -121,9 +121,21 @@ class AccessService(BaseService):
         if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
             return skill_id
 
-        if current_user.role_name == UserRole.SUPERVISOR:
+        if current_user.is_supervisor:
             departments_id = await self.get_managed_departments(current_user)
             exist = await self.skill_repository.skill_exist(skill_id, departments_id)
             if exist is not None:
                 return skill_id
         raise ForbiddenException("Нет доступа к выбранному навыку.")
+
+    @staticmethod
+    def get_accessible_event_types(event_type: str | None, current_user: UserInfo) -> str | None:
+        if event_type is None:
+            return
+        if current_user.role_name == UserRole.ADMIN:
+            return event_type
+        if event_type != UserRole.ADMIN:
+            return event_type
+
+        raise ForbiddenException("Отказано в доступе.")
+

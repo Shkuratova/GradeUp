@@ -71,8 +71,8 @@ async def update_by_id(
     profile_id: int, profile: SProfileUpdate, current_user=Depends(get_current_user)
 ):
     async with unit_of_work() as uow:
-        await ProfileService(uow.session).update_by_id(profile_id, profile)
-    return {"detail": "Профиль успешно обновлен."}
+        return await ProfileService(uow.session).update_by_id(profile_id, profile)
+
 
 
 @profile_router.delete("/{profile_id}")

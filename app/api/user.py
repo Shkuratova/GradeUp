@@ -5,12 +5,14 @@ from fastapi import APIRouter, Depends, Query
 from api.decorators import exception_handler, check_role
 from db.uow import unit_of_work
 from dependencies import get_current_user
+from schemas.departments import DepartmentFilter
 from schemas.users import (
     SUserFilter,
     UserInfo,
     UserBase,
     UserUpdateAdmin,
 )
+from services import DepartmentService
 from services.access import AccessService
 from services.user import UserService
 from utils.roles import UserRole
@@ -27,6 +29,11 @@ async def get_all(
 ) -> list[UserInfo]:
     async with unit_of_work() as uow:
         auth_service = AccessService(uow.session)
+        if filters.division_id:
+            filters.departments_id = await DepartmentService(
+                uow.session
+            ).get_id_by_division(filters.division_id)
+
         if filters.departments_id:
             filters.departments_id = await auth_service.get_department_filter(
                 filters.departments_id, current_user
@@ -60,5 +67,6 @@ async def update_user(
     current_user: UserInfo = Depends(get_current_user),
 ):
     async with unit_of_work() as uow:
+        await AccessService(uow.session).can_manage_user(user_id, current_user)
         user_service = UserService(uow.session)
         return await user_service.update(user_id, user_data, current_user)

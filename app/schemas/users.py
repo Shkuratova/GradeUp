@@ -6,6 +6,8 @@ from pydantic import (
     computed_field
 )
 
+from utils.roles import UserRole
+
 
 class UserBase(BaseModel):
     id: int
@@ -21,12 +23,27 @@ class UserInfo(UserBase, EmailModel):
     role: SRole = Field(exclude=True)
     department: SDepartment | None = Field(None, exclude=True)
     managed_division: SDivision | None = Field(None, exclude=True)
+    managed_department: SDepartment | None = Field(None, exclude=True)
     first_name: str
     last_name: str
     patronymic: str | None
     position: str | None
 
     password: str = Field(exclude=True)
+
+    @computed_field
+    def is_supervisor(self) -> bool:
+        return self.managed_division is not None or self.managed_department is not None
+
+    @computed_field
+    def roles(self) -> list[str]:
+        roles = {self.role.role_name}
+
+        if self.is_supervisor:
+            roles.add(UserRole.SUPERVISOR)
+
+        return list(roles)
+
 
     @computed_field
     def role_name(self) -> str:
@@ -52,12 +69,15 @@ class UserInfo(UserBase, EmailModel):
     def managed_division_name(self) -> str | None:
         return self.managed_division.division_name if self.managed_division else None
 
+    def get_name_with_email(self) -> str:
+        patronymic = f"{self.patronymic[0] if self.patronymic else ''} "
+        return f'{self.last_name} {self.first_name[0]}. {patronymic} ({self.email})'
 
 class UserAuth(EmailModel):
     password: str
 
 
-class UserRole(UserBase):
+class UserRoleName(UserBase):
     role_name: str
 
 
@@ -91,7 +111,7 @@ class SUser(BaseModel):
     department_id: int | None = None
 
 
-class UserFullInfo(EmailModel, UserRole):
+class UserFullInfo(EmailModel, UserRoleName):
     first_name: str
     last_name: str
     patronymic: str | None
@@ -155,6 +175,7 @@ class SUserFilter(BaseModel):
     id: int | None = None
     email: EmailStr | None = None
     departments_id: list[int] | None = None
+    division_id: int | None = None
     role_id: int | None = None
     position: str | None = None
     only_subordinates: bool = Field(False, exclude=True)
@@ -166,5 +187,6 @@ class UserFIO(BaseModel):
     first_name: str
     last_name: str
     patronymic: str | None = None
+    email: EmailStr | None = None
     # department_id: int
     # department_name: str
