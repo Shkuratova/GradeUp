@@ -14,8 +14,6 @@ class User(Base):
     department_id: Mapped[int] = mapped_column(ForeignKey("departments.id", ondelete='SET NULL'), nullable=True)
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), default=1, server_default=text("1"))
     position: Mapped[str] = mapped_column(nullable=True)
-    # managed_department_id: Mapped[int | None] = mapped_column(ForeignKey("departments.id"), unique=True)
-    # managed_division_id: Mapped[int | None] = mapped_column(ForeignKey("divisions.id"), unique=True)
 
     role: Mapped["Role"] = relationship(back_populates="users")
     department: Mapped["Department"] = relationship(back_populates="users", foreign_keys=[department_id])
@@ -28,3 +26,4 @@ class User(Base):
     meetings: Mapped["MeetingParticipant"] = relationship(back_populates="user")
 
     user_stages: Mapped[list["UserStage"]] = relationship(back_populates="supervisor")
+    events: Mapped[list["Event"]] = relationship(back_populates="actor")

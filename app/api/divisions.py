@@ -41,3 +41,10 @@ async def get_division_detail(division_id: int, current_user= Depends(get_curren
 async def update_by_id_with_departments(division_id: int, division: DivisionUpdateForm, current_user= Depends(get_current_user)):
     async with unit_of_work() as uow:
         return await DivisionService(uow.session).update_division_with_relations(division_id, division)
+
+@division_router.post("/{division_id}/remove-supervisor")
+@check_role([UserRole.ADMIN])
+@exception_handler
+async def remove_supervisor(division_id: int, current_user = Depends(get_current_user)):
+    async with unit_of_work() as uow:
+        await DivisionService(uow.session).remove_supervisor(division_id)

@@ -6,3 +6,6 @@ class AlreadyExistException(Exception):
 
 class DataValidationError(Exception):
     pass
+
+class ConflictException(Exception):
+    pass

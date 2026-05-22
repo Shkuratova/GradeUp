@@ -3,32 +3,36 @@ from dependencies.auth import (
     get_current_user,
     check_refresh_token,
 )
-from exceptions.user import PasswordDontMatchException
 from utils.auth import AuthUtils
 from utils.roles import UserRole
 from api.decorators import exception_handler, check_role
 from db.uow import unit_of_work
-from services import UserService
+from services import UserService, EventService
 from schemas.users import (
     UserAuth,
     UserInfo,
     UserRegistration,
     SUser,
+    UserBase,
 )
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@auth_router.post("/registration", response_model=SUser)
+@auth_router.post("/registration", response_model=UserInfo)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def registration(
     user_data: UserRegistration,
-    current_user: UserRole = Depends(get_current_user),
-) -> dict:
+    current_user: UserInfo = Depends(get_current_user),
+):
     async with unit_of_work() as uow:
-        new_user = await UserService(uow.session).add(user_data)
+        user_service = UserService(uow.session)
+        new_user =await user_service.add(user_data)
+        new_user = await user_service.get_user_role(UserBase(id=new_user.id))
+        await EventService(uow.session).registration_log(user=new_user, current_user=current_user)
         return new_user
+
 
 @auth_router.post("/login")
 @exception_handler

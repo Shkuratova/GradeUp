@@ -80,3 +80,11 @@ async def delete_by_id(
     async with unit_of_work() as uow:
         await DepartmentService(uow.session).delete_by_id(department_id)
     return {"detail": f"Департамент с id = {department_id} удален"}
+
+@department_router.post("/{department_id}/remove-supervisor")
+@check_role([UserRole.ADMIN])
+@exception_handler
+async def remove_supervisor(department_id: int, current_user = Depends(get_current_user)):
+    async with unit_of_work() as uow:
+        await DepartmentService(uow.session).remove_supervisor(department_id)
+    return {"detail": "Руководитель был откреплен."}

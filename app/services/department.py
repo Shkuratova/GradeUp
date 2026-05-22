@@ -1,10 +1,10 @@
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.repository import UserRepository, ProfileRepository, DepartmentProfileRepository
+from db.repository import UserRepository, DepartmentProfileRepository
 from db.repository.department import DepartmentRepository, DivisionRepository
-from exceptions.common import NotFoundException, DataValidationError
-from exceptions.user import ForbiddenException
+
+from exceptions.common import NotFoundException, DataValidationError, ConflictException
+
 from schemas.departments import (
     DivisionUpdate,
     DivisionAdd,
@@ -14,11 +14,10 @@ from schemas.departments import (
     DivisionAddForm,
     DepartmentAddForm,
     DivisionUpdateForm,
-    DepartmentUpdateForm,
+    DepartmentUpdateForm, DivisionBase,
 )
-from schemas.users import UserInfo, UserBase
+from schemas.users import UserInfo
 from services.base import BaseService
-from utils.roles import UserRole
 
 
 class DivisionService(BaseService):
@@ -80,6 +79,12 @@ class DivisionService(BaseService):
         await self.update_by_id(division_id, new_division)
         await self._update_relations(division_id, division.departments)
         return await self.get_division_detail(division_id)
+
+    async def remove_supervisor(self, division_id):
+        division: DivisionBase = self.get_by_id(division_id)
+        if division.supervisor_id is None:
+            raise ConflictException("У направления нет руководителя.")
+        await self.repository.update_by_id(division_id, {'supervisor_id': None})
 
 
 class DepartmentService(BaseService):
@@ -172,3 +177,9 @@ class DepartmentService(BaseService):
 
         new_department = await self.get_detail(department_id)
         return DepartmentDetail.model_validate(new_department, from_attributes=True)
+
+    async def remove_supervisor(self, department_id):
+        department = await self.get_by_id(department_id)
+        if department.supervisor_id is None:
+            raise ConflictException("У отдела нет руководителя.")
+        await self.repository.update_by_id(department_id, {'supervisor_id': None})

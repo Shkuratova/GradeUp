@@ -7,7 +7,7 @@ from exceptions.user import (
     UnauthorizedException,
     UserException, ForbiddenException,
 )
-from exceptions.common import AlreadyExistException, NotFoundException, DataValidationError
+from exceptions.common import AlreadyExistException, NotFoundException, DataValidationError, ConflictException
 from schemas.users import UserInfo
 
 def exception_handler(func):
@@ -32,6 +32,8 @@ def exception_handler(func):
             )
         except ForbiddenException as error:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error))
+        except ConflictException as error:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error))
         except ValidationError as error:
             if any(err["type"] == "extra_forbidden" for err in error.errors()):
                 raise HTTPException(
