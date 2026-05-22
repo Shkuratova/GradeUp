@@ -30,7 +30,7 @@ async def registration(
         user_service = UserService(uow.session)
         new_user =await user_service.add(user_data)
         new_user = await user_service.get_user_role(UserBase(id=new_user.id))
-        await EventService(uow.session).registration_log(user=new_user, current_user=current_user)
+        await EventService(uow.session).log_registration(user=new_user, current_user=current_user)
         return new_user
 
 
