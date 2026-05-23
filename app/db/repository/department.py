@@ -14,7 +14,7 @@ class DivisionRepository(BaseRepository):
             .where(Division.id == division_id)
             .options(
                 selectinload(Division.departments).load_only(
-                    Department.id, Department.department_name, Department.description
+                    Department.id, Department.department_name, Department.description, Department.supervisor_id
                 ),
                 joinedload(Division.supervisor).load_only(
                     User.id, User.first_name, User.last_name, User.patronymic, User.email

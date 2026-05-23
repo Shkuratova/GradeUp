@@ -2,9 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.repository import UserRepository, DepartmentProfileRepository
 from db.repository.department import DepartmentRepository, DivisionRepository
-
 from exceptions.common import NotFoundException, DataValidationError, ConflictException
-
 from schemas.departments import (
     DivisionUpdate,
     DivisionAdd,
@@ -15,9 +13,8 @@ from schemas.departments import (
     DepartmentAddForm,
     DivisionUpdateForm,
     DepartmentUpdateForm,
-    DivisionBase,
     DivisionDetail,
-    DepartmentBase,
+    DivisionBase, DepartmentBase,
 )
 from schemas.users import UserInfo
 from services.base import BaseService
@@ -34,7 +31,8 @@ class DivisionService(BaseService):
         self.user_repository = UserRepository(session)
 
     async def get_division_detail(self, division_id: int):
-        return await self.repository.get_division_detail(division_id)
+        division =  await self.repository.get_division_detail(division_id)
+        return DivisionDetail.model_validate(division)
 
     async def _update_relations(
         self,
@@ -49,18 +47,20 @@ class DivisionService(BaseService):
     async def add_with_relations(self, division: DivisionAddForm):
         new_division = DivisionAdd.model_validate(division, from_attributes=True)
         new_division = await self.add(new_division)
-        await self._update_relations(new_division.id, division.departments)
+        if division.departments:
+            await self._update_relations(new_division.id, division.departments)
         return await self.get_division_detail(new_division.id)
 
-    async def update_division_with_relations(
+    async def update_with_relations(
         self, division_id: int, division: DivisionUpdateForm
     ):
 
-        old_division = await self.repository.get_by_id(division_id)
-        if old_division is None:
+        old = await self.repository.get_by_id(division_id)
+        if old is None:
             raise NotFoundException(f"Направление с id = {division_id} не найдено.")
+        old = DivisionBase.model_validate(old)
+        if division.supervisor_id and division.supervisor_id != old.supervisor_id:
 
-        if division.supervisor_id:
             user: UserInfo = await self.user_repository.get_user_role(
                 {"id": division.supervisor_id}
             )
@@ -80,16 +80,17 @@ class DivisionService(BaseService):
             supervisor_id=division.supervisor_id,
         )
         await self.update_by_id(division_id, new_division)
-        await self._update_relations(division_id, division.departments)
-        res =  await self.get_division_detail(division_id)
-        return DivisionDetail.model_validate(res, from_attributes=True)
+        if division.departments:
+            await self._update_relations(division_id, division.departments)
+        upd =  await self.get_division_detail(division_id)
+        return upd, old
 
     async def remove_supervisor(self, division_id):
         division = await self.get_division_detail(division_id)
         if division.supervisor_id is None:
             raise ConflictException("У направления нет руководителя.")
         await self.repository.update_by_id(division_id, {'supervisor_id': None})
-        return DepartmentDetail.model_validate(division)
+        return division
 
 class DepartmentService(BaseService):
     entity_name = "Отдел"
@@ -105,7 +106,7 @@ class DepartmentService(BaseService):
         department = await self.repository.get_detail(department_id)
         if department is None:
             raise NotFoundException(f"Отдел с id ={department_id} не найден.")
-        return department
+        return DepartmentDetail.model_validate(department, from_attributes=True)
 
     async def get_all_with_profiles(self, departments_id: list[int] | None = None):
         departments = await self.repository.get_with_profiles(departments_id)
@@ -122,21 +123,20 @@ class DepartmentService(BaseService):
             supervisor_id=department.supervisor_id,
         )
         new_department = await self.add(new_department)
-        await self.department_profile_repository.add_list(
-            [
-                {"department_id": new_department.id, "profile_id": p}
-                for p in department.profiles
-            ]
-        )
+        if department.profiles:
+            await self.department_profile_repository.add_list(
+                [
+                    {"department_id": new_department.id, "profile_id": p}
+                    for p in department.profiles
+                ]
+            )
         return await self.get_detail(new_department.id)
 
-    async def update_department_with_relations(
+    async def update_with_relations(
         self, department_id: int, department: DepartmentUpdateForm
     ):
-        old_department = await self.get_by_id(department_id)
-
-        if not old_department:
-            raise NotFoundException(f"Отдел с id ={department_id} не найден.")
+        old = await self.get_by_id(department_id)
+        old = DepartmentBase.model_validate(old, from_attributes=True)
 
         if department.supervisor_id:
             user: UserInfo = await self.user_repository.get_user_role(
@@ -179,8 +179,8 @@ class DepartmentService(BaseService):
                     ]
                 )
 
-        new_department = await self.get_detail(department_id)
-        return DepartmentDetail.model_validate(new_department, from_attributes=True)
+        upd = await self.get_detail(department_id)
+        return upd, old
 
     async def remove_supervisor(self, department_id):
         department = await self.get_detail(department_id)

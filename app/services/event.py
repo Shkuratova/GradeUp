@@ -1,11 +1,10 @@
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.models.events import EventType, TargetType
 from db.repository import (
     EventRepository,
     UserRepository,
-    UserProfileRepository,
-    ProfileRepository,
 )
 from schemas.departments import (
     DepartmentDetail,
@@ -30,8 +29,7 @@ class EventService(BaseService):
         super().__init__(session)
         self.repository = EventRepository(session)
         self.user_repository = UserRepository(session)
-        self.profile_repository = ProfileRepository(session)
-        self.user_profile_repository = UserProfileRepository(session)
+
 
     async def get_events(self, filters: EventFilter):
         filter_dict = filters.model_dump(exclude_none=True)
@@ -68,15 +66,17 @@ class EventService(BaseService):
             "division_name": division.division_name,
             "supervisor_id": division.supervisor_id,
             "supervisor_name": division.supervisor.full_name(),
+            "supervisor_email": division.supervisor.email
         }
     @staticmethod
     def _department_payload(department):
         return {
-                "department_id": department.id,
-                "department_name": department.department_name,
-                "supervisor_id": department.supervisor_id,
-                "supervisor_name": department.supervisor.full_name(),
-            }
+            "department_id": department.id,
+            "department_name": department.department_name,
+            "supervisor_id": department.supervisor_id,
+            "supervisor_name": department.supervisor.full_name(),
+            "supervisor_email": department.supervisor.email,
+        }
 
     async def log_registration(self, user: UserInfo, current_user: UserInfo):
         payload = RegistrationPayload(
@@ -120,13 +120,17 @@ class EventService(BaseService):
     async def log_schedule(self, meeting, current_user: UserInfo):
         pass
 
+
+    async def log_meeting_changed(self, upd, current_user):
+        pass
+
     async def log_evaluate_stage(
         self, user_stage: UserStageBase, current_user: UserInfo
     ):
         pass
 
     async def log_set_division_supervisor(
-        self, division: DivisionDetail, current_user
+        self, division: DivisionDetail, current_user: UserInfo
     ):
         await self.log_event(
             actor_id=current_user.id,

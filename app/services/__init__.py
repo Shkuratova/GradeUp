@@ -8,4 +8,5 @@ from services.categories import CategoryRepository, SkillCategoryService
 from services.stages import StageService
 from services.user_profile import UserProfileService
 from services.user_stage import UserStageService
+from services.meetings import MeetingService
 from services.event import EventService

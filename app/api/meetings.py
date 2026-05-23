@@ -14,7 +14,7 @@ from schemas.meetings import (
 from schemas.users import (
     UserInfo,
 )
-from services.meetings import MeetingService
+from services import MeetingService, EventService
 from utils.roles import UserRole
 
 meeting_router = APIRouter(prefix="/meetings", tags=["Meetings"])
@@ -37,7 +37,9 @@ async def add(
     meeting: MeetingAddForm, current_user: UserInfo = Depends(get_current_user)
 ):
     async with unit_of_work() as uow:
-        return await MeetingService(uow.session).schedule_meeting(meeting, current_user)
+        new_meeting =  await MeetingService(uow.session).schedule_meeting(meeting, current_user)
+        await EventService(uow.session).log_schedule(meeting, current_user)
+        return new_meeting
 
 
 @meeting_router.get("/next")
@@ -54,9 +56,11 @@ async def update(
     meeting_id: int, meeting: MeetingUpdateForm, current_user=Depends(get_current_user)
 ):
     async with unit_of_work() as uow:
-        return await MeetingService(uow.session).update_meeting(
+        upd =  await MeetingService(uow.session).update_meeting(
             meeting_id, meeting, current_user
         )
+        await EventService(uow.session).log_meeting_changed(upd, current_user)
+        return upd
 
 
 @meeting_router.delete("/{meeting_id}")

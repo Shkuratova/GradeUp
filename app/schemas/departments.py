@@ -19,15 +19,15 @@ class DepartmentFilter(BaseModel):
 class DepartmentDetail(DepartmentBase):
     description: str | None = None
     supervisor: UserFIO | None = None
-    profiles: list[ProfileList] = []
+    profiles: list[ProfileList] | None = None
 
 class DepartmentAdd(BaseModel):
     department_name: str
     description: str | None = None
-    supervisor_id: int | None
+    supervisor_id: int | None = None
 
 class DepartmentAddForm(DepartmentAdd):
-    profiles: list[int] = []
+    profiles: list[int] | None = None
 
 
 class DepartmentUpdate(BaseModel):
@@ -36,7 +36,7 @@ class DepartmentUpdate(BaseModel):
     supervisor_id: int | None = None
 
 class DepartmentUpdateForm(DepartmentUpdate):
-    profiles: list[int] = []
+    profiles: list[int] | None = None
 
 
 
@@ -56,7 +56,7 @@ class DivisionAdd(BaseModel):
     description: str | None = None
 
 class DivisionAddForm(DivisionAdd):
-    departments: list[int] = []
+    departments: list[int]  | None = None
 
 class DivisionUpdate(BaseModel):
     division_name: str | None = None
@@ -66,8 +66,8 @@ class DivisionUpdate(BaseModel):
 class DivisionUpdateForm(DivisionUpdate):
     division_name: str | None = None
     supervisor_id: int | None = None
-    departments: list[int] = []
+    departments: list[int] | None = None
 
 class DivisionDetail(DivisionBase):
     supervisor: UserFIO | None = None
-    departments: list[DepartmentSchema]
+    departments: list[DepartmentSchema] | None = None

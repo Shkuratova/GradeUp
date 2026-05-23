@@ -74,12 +74,17 @@ async def update_by_id(
     current_user: UserInfo = Depends(get_current_user),
 ):
     async with unit_of_work() as uow:
-        upd_department = await DepartmentService(uow.session).update_department_with_relations(
+        upd, old = await DepartmentService(uow.session).update_with_relations(
             department_id, department
         )
-        if department.supervisor_id:
-            await EventService(uow.session).log_set_department_supervisor(upd_department, current_user)
-        return upd_department
+
+        if department.supervisor_id and upd.supervisor_id != old.supervisor_id:
+
+            await EventService(uow.session).log_set_department_supervisor(
+                department=upd, current_user=current_user
+            )
+
+        return upd
 
 
 @department_router.delete("/{department_id}")
