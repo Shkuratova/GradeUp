@@ -19,7 +19,7 @@ from schemas.user_profile import (
     UserProfileProgress,
     UserProfileSchema,
 )
-from schemas.users import SUser
+from schemas.users import SUser, UserFIO
 from services import BaseService, UserService, ProfileService
 
 
@@ -79,7 +79,7 @@ class UserProfileService(BaseService):
         )
         return UserProfileSchema(
             id=user_profile.id,
-            user=SUser.model_validate(user, from_attributes=True),
+            user=UserFIO.model_validate(user, from_attributes=True),
             profile=ProfileList.model_validate(profile, from_attributes=True),
         )
 
@@ -210,4 +210,3 @@ class UserProfileService(BaseService):
 
     async def delete(self, user_id: int):
         await self.repository.delete_by_user_id(user_id)
-

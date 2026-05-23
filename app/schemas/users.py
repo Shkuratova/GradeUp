@@ -188,6 +188,7 @@ class UserFIO(BaseModel):
     first_name: str
     last_name: str
     patronymic: str | None = None
+    department_id: int | None = Field(None, exclude=True)
     email: EmailStr
 
     def full_name(self) -> str:

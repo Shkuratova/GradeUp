@@ -8,8 +8,7 @@ from pydantic import (
 
 from db.models import ConfirmationTypes
 from schemas.profiles import ProfileList
-from schemas.users import SUser
-
+from schemas.users import SUser, UserFIO
 
 class UserProfileBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -36,14 +35,14 @@ class UserProfileTitle(UserProfileBase):
 class UserProfileSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    user: SUser
+    user: UserFIO
     profile: ProfileList
 
 
 class UserProfileProgressList(BaseModel):
     id: int
     user_id: int
-    profile_id: int 
+    profile_id: int
     first_name: str
     last_name: str
     patronymic: str

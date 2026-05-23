@@ -118,10 +118,10 @@ class EventService(BaseService):
         self, user_profile: UserProfileSchema, current_user: UserInfo
     ):
         profile_payload = SetProfilePayload(
-            user_id=user_profile.user_id,
+            user_id=user_profile.user.id,
             email=user_profile.user.email,
             full_name=user_profile.user.full_name(),
-            profile_id=user_profile.profile_id,
+            profile_id=user_profile.profile.id,
             title=user_profile.profile.title,
             department_id=user_profile.user.department_id,
         )
