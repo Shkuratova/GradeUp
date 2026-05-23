@@ -6,7 +6,11 @@ from db.repository import (
     UserLevelRepository,
     UserSkillRepository,
 )
-from exceptions.common import NotFoundException, DataValidationError
+from exceptions.common import (
+    NotFoundException,
+    DataValidationError,
+    AlreadyExistException,
+)
 from schemas.profiles import ProfileList
 from schemas.user_profile import (
     UserProfileAdd,
@@ -57,6 +61,8 @@ class UserProfileService(BaseService):
     async def create(self, model: UserProfileAdd):
         profile = await ProfileService(self.session).get_by_id(model.profile_id)
         user = await UserService(self.session).get_by_id(model.user_id)
+        if await self.repository.get_profile(model.user_id) is not None:
+            raise AlreadyExistException("Пользователю уже назначен профиль.")
         current_lvl = await self.level_repository.get_last_level_by_num(
             profile_id=model.profile_id, level_num=1
         )
@@ -201,3 +207,7 @@ class UserProfileService(BaseService):
             user_profile.id, {"current_level_id": next_lvl.profile_level_id}
         )
         return await self.get_by_id(user_profile.id)
+
+    async def delete(self, user_id: int):
+        await self.repository.delete_by_user_id(user_id)
+

@@ -30,9 +30,10 @@ async def add(
     user_profile: UserProfileAdd, current_user: UserInfo = Depends(get_current_user)
 ):
     async with unit_of_work() as uow:
-        await AccessService(uow.session).can_manage_user(
-            user_profile.user_id, current_user
-        )
+        access_service = AccessService(uow.session)
+        await access_service.can_manage_user(user_profile.user_id, current_user)
+        await access_service.can_get_profile(user_profile.profile_id, current_user)
+
         new_user_profile = await UserProfileService(uow.session).create(user_profile)
         await EventService(uow.session).log_set_user_profile(
             new_user_profile, current_user
@@ -41,11 +42,11 @@ async def add(
 
 
 user_profile_detail_router = APIRouter(
-    prefix="/profiles/{profile_id}", tags=["ProfileProgress"]
+    prefix="/profile", tags=["ProfileProgress"]
 )
 
 
-@user_profile_detail_router.get("")
+@user_profile_detail_router.get("/")
 @exception_handler
 async def get_by_id(
     user_id: int, profile_id: int, current_user: UserInfo = Depends(get_current_user)
@@ -54,6 +55,14 @@ async def get_by_id(
         await AccessService(uow.session).can_get_user_profile(user_id, current_user)
         return await UserProfileService(uow.session).status(user_id, profile_id)
 
+@user_profile_detail_router.delete("")
+@check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
+@exception_handler
+async def delete_by_id(user_id: int, current_user = Depends(get_current_user)):
+    async with unit_of_work() as uow:
+        await AccessService(uow.session).can_get_user_profile(user_id, current_user)
+        await UserProfileService(uow.session).delete(user_id)
+    return {"detail": "Профиль откреплен от пользователя."}
 
 @user_profile_detail_router.post("/grade-up")
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])

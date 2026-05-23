@@ -1,4 +1,4 @@
-from sqlalchemy import select, func, and_, exists, insert, literal
+from sqlalchemy import select, func, and_, exists, insert, literal, delete
 from sqlalchemy.orm import joinedload, selectinload, with_loader_criteria
 
 from db.models.skills import StageVersion
@@ -232,6 +232,10 @@ class UserProfileRepository(BaseRepository):
 
         return result.scalar_one_or_none() is not None
 
+    async def delete_by_user_id(self, user_id: int):
+        stmt = delete(UserProfile).where(UserProfile.user_id == user_id)
+        res = await self._session.execute(stmt)
+        return res.rowcount
 
 class UserLevelRepository(BaseRepository):
     model = UserLevel
