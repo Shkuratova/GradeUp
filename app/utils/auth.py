@@ -1,7 +1,7 @@
 from fastapi import Response
 import jwt
 from datetime import datetime, timedelta, timezone
-from config import settings
+from core.config import settings
 
 class AuthUtils:
     @staticmethod

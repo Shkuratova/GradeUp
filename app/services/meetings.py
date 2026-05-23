@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+import logging
+logger = logging.getLogger(__name__)
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,8 +24,10 @@ from schemas.meetings import (
     MeetingFilters,
     MeetingUpdateForm,
     MeetingDetail,
+    MeetingAddResult,
 )
-from schemas.users import UserInfo
+from schemas.users import UserInfo, UserBase
+from services import AccessService
 from services.base import BaseService
 from services.department import DepartmentService
 from services.user import UserService
@@ -41,6 +44,13 @@ class MeetingService(BaseService):
         self.stage_version_repository = StageVersionRepository(session)
         self.user_stage_service = UserStageService(session)
         self.user_service = UserService(session)
+        self.user_profile_repository = UserProfileRepository(session)
+
+    async def get_meeting_by_id(self, meeting_id: int):
+        meeting = await self.repository.get_meeting({'id':meeting_id})
+        if meeting is None:
+            raise NotFoundException(f"Встреча с id={meeting_id} не найдена.")
+        return MeetingDetail.model_validate(meeting, from_attributes=True)
 
     async def get_meeting_by_filters(self, filters: MeetingFilters):
         filter_dict = filters.model_dump(exclude_none=True)
@@ -59,18 +69,23 @@ class MeetingService(BaseService):
             return {"detail": "У пользователя нет запланированных встреч"}
         return MeetingDetail.model_validate(res, from_attributes=True)
 
-
+    async def get_meeting_student_id(self, meeting_id: int):
+        student_id =  await self.participant_repository.get_student(meeting_id)
+        if student_id is None:
+            raise NotFoundException(f'Не найдена встреча для аттестуемого с meeting_id={meeting_id}')
+        return student_id
 
     async def _validate_participants(
         self, student_id: int, examiner_id: int, current_user: UserInfo
     ):
         user_service = UserService(self.session)
-        student = await user_service.get_by_id(student_id)
-        examiner = await user_service.get_by_id(examiner_id)
-        department_ids = await DepartmentService(
+        student = await user_service.get_user_role(UserBase(id=student_id))
+        examiner = await user_service.get_user_role(UserBase(id=examiner_id))
+        department_ids = await AccessService(
             self.session
-        ).get_accessible_departments(current_user)
-        if department_ids is not None:
+        ).get_managed_departments(current_user)
+        logging.info('Доступных отделов: %s', len(department_ids) )
+        if department_ids is not None and current_user.role_name != UserRole.ADMIN:
             if student.department_id not in department_ids or (
                 examiner.department_id not in department_ids
                 and examiner.id != current_user.id
@@ -86,8 +101,7 @@ class MeetingService(BaseService):
             user_id=meeting.student_id,
             user_role=CertificationRole.student,
             status=CertificationStatus.planned,
-            start_date=meeting.started_at,
-            end_date=datetime.now(tz=timezone.utc),
+            start_date=meeting.started_at
         )
         meetings = await self.repository.get_meeting(filters.model_dump(exclude_none=True))
         if meetings is not None:
@@ -119,7 +133,8 @@ class MeetingService(BaseService):
             },
         ]
         await self.participant_repository.add_list(participants)
-        return await self.repository.get_meeting({"id": new_meeting.id})
+
+        return await self.get_meeting_by_id(new_meeting.id)
 
     async def update_meeting(
         self, meeting_id: int, meeting: MeetingUpdateForm, current_user: UserInfo
@@ -137,23 +152,16 @@ class MeetingService(BaseService):
             exclude={"id", "student_id", "examiner_id", "stage_id"}
         )
 
-        student_changed = (
-            old_meeting.student.user_id != meeting.student_id and meeting.student_id
-        )
         examiner_changed = (
             old_meeting.examiner.user_id != meeting.examiner_id and meeting.examiner_id
         )
         stage_changed = old_meeting.stage_id != meeting.stage_id
 
-        if student_changed:
-            await self.participant_repository.update_by_id(
-                old_meeting.student.id, {"user_id": meeting.student_id}
-            )
         if examiner_changed:
             await self.participant_repository.update_by_id(
                 old_meeting.examiner.id, {"user_id": meeting.examiner_id}
             )
-        if student_changed or stage_changed:
+        if  stage_changed:
             user_stage = await self.user_stage_service.ensure_user_stage(meeting.student_id, meeting.stage_id)
             upd_meeting["user_stage_id"] = user_stage.id
 
@@ -178,9 +186,9 @@ class MeetingService(BaseService):
 
         student = await self.user_service.get_by_id(meeting.student.id)
 
-        department_ids = await DepartmentService(
+        department_ids = await AccessService(
             self.session
-        ).get_accessible_departments(current_user)
+        ).get_managed_departments(current_user)
 
         if student.department_id not in department_ids:
             raise ForbiddenException("Отказано в доступе.")

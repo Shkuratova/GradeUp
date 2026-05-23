@@ -28,13 +28,13 @@ class UserProfileService(BaseService):
         self.user_level_repository = UserLevelRepository(self.session)
         self.user_skill_repository = UserSkillRepository(session)
 
-    async def get_profile(self, user_id: int, profile_id: int):
+    async def get_profile(self, user_id: int):
         profile = await self.repository.get_one_by_filter(
-            {"user_id": user_id, "profile_id": profile_id}
+            {"user_id": user_id}
         )
         if profile is None:
             raise NotFoundException(
-                f"Сотруднику с id = {user_id} не назначен профиль с id = {profile_id}"
+                f"Сотруднику с id = {user_id} не назначен профиль."
             )
         return profile
 
@@ -78,7 +78,7 @@ class UserProfileService(BaseService):
         )
 
     async def status(self, user_id: int, profile_id: int):
-        user_profile = await self.repository.get_profile(user_id, profile_id)
+        user_profile = await self.repository.get_profile(user_id)
         if user_profile is None:
             raise NotFoundException(f"Профиль пользователя не найден.")
         user_profile_model = UserProfileTitle.model_validate(user_profile)
@@ -173,8 +173,8 @@ class UserProfileService(BaseService):
         skills = await self.repository.get_available_skills(user_id)
         return ProfileAvailableSkills.model_validate(skills, from_attributes=True)
 
-    async def gradeup(self, user_id: int, profile_id: int):
-        user_profile = await self.get_profile(user_id, profile_id)
+    async def gradeup(self, user_id: int):
+        user_profile = await self.get_profile(user_id)
         current_level = await self.user_level_repository.get_current_lvl(
             user_profile.user_id, user_profile.current_level_id
         )

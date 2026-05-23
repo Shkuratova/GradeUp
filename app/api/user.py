@@ -11,7 +11,7 @@ from schemas.users import (
     UserBase,
     UserUpdateAdmin,
 )
-from services import DepartmentService
+from services import DepartmentService, EventService
 from services.access import AccessService
 from services.user import UserService
 from utils.roles import UserRole
@@ -35,7 +35,7 @@ async def get_all(
 
         if filters.departments_id:
             filters.departments_id = await auth_service.get_department_filter(
-                filters.departments_id, current_user
+                 current_user, filters.departments_id
             )
         if filters.only_subordinates:
             filters.departments_id = await auth_service.get_managed_departments(
@@ -56,7 +56,7 @@ async def get_by_id(
     user_id: int, current_user: UserInfo = Depends(get_current_user)
 ) -> UserInfo:
     async with unit_of_work() as uow:
-        await AccessService(uow.session).can_manage_user(user_id, current_user)
+        await AccessService(uow.session).can_get_user(user_id, current_user)
         return await UserService(uow.session).get_user_role(UserBase(id=user_id))
 
 
@@ -69,6 +69,8 @@ async def update_user(
     current_user: UserInfo = Depends(get_current_user),
 ):
     async with unit_of_work() as uow:
-        await AccessService(uow.session).can_manage_user(user_id, current_user)
         user_service = UserService(uow.session)
-        return await user_service.update(user_id, user_data, current_user)
+        upd, old =  await user_service.update(user_id, user_data, current_user)
+        if upd.role_id != old.role_id:
+            await EventService(uow.session).log_set_user_role(old.role, upd, current_user)
+        return upd

@@ -9,7 +9,7 @@ from sqlalchemy.orm import (
     DeclarativeBase,
     declared_attr,
 )
-from config import settings
+from core.config import settings
 
 
 class Base(DeclarativeBase, AsyncAttrs):

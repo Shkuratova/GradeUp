@@ -5,9 +5,7 @@ from db import Base
 
 
 class UserProfile(Base):
-    __table_args__ = (UniqueConstraint('user_id','profile_id'), )
-
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True)
     profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id"))
     current_level_id: Mapped[int] = mapped_column(ForeignKey("profile_levels.id"))
 

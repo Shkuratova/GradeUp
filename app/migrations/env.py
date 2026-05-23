@@ -6,7 +6,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-from config import settings
+from core.config import settings
 from db import Base
 from db.models.users import User
 from db.models.departments import Role, Department, Division, DepartmentProfile
@@ -22,9 +22,6 @@ from db.models.skills import (
     StageQuestion,
 )
 
-from db.models.user_profiles import UserLevel, UserSkill, UserStage
-from db.models.meetings import Meeting, MeetingParticipant
-from db.models.events import Event
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

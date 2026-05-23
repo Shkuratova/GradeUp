@@ -1,6 +1,4 @@
-
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from db.models.events import EventType, TargetType
 from db.repository import (
     EventRepository,
@@ -16,8 +14,9 @@ from schemas.event import (
     SetProfilePayload,
     EventAdd,
 )
+from schemas.meetings import MeetingAddForm, MeetingAddResult, MeetingDetail
 from schemas.user_profile import UserStageBase, UserProfileSchema
-from schemas.users import UserInfo
+from schemas.users import UserInfo, SRole
 from services.base import BaseService
 from utils.roles import UserRole
 
@@ -65,7 +64,7 @@ class EventService(BaseService):
             "division_id": division.id,
             "division_name": division.division_name,
             "supervisor_id": division.supervisor_id,
-            "supervisor_name": division.supervisor.full_name(),
+            "full_name": division.supervisor.full_name(),
             "supervisor_email": division.supervisor.email
         }
     @staticmethod
@@ -74,7 +73,7 @@ class EventService(BaseService):
             "department_id": department.id,
             "department_name": department.department_name,
             "supervisor_id": department.supervisor_id,
-            "supervisor_name": department.supervisor.full_name(),
+            "full_name": department.supervisor.full_name(),
             "supervisor_email": department.supervisor.email,
         }
 
@@ -83,7 +82,7 @@ class EventService(BaseService):
             user_id=user.id,
             email=user.email,
             full_name=user.full_name(),
-            department_id=user.department.id,
+            department_id=user.department_id,
         )
         await self.log_event(
             actor_id=current_user.id,
@@ -93,6 +92,27 @@ class EventService(BaseService):
             event_type=EventType.REGISTRATION,
             payload=payload.model_dump()
         )
+
+    async def log_set_user_role(self, old_role: SRole, user_update: UserInfo, current_user: UserInfo):
+        payload = {
+            'user_id': user_update.id,
+            'email': user_update.email,
+            'department_id': user_update.department_id,
+            'full_name': user_update.full_name(),
+            'old_role_id': old_role.id,
+            'old_role': old_role.role_name,
+            'new_role_id': user_update.role_id,
+            'new_role': user_update.role_name
+        }
+        await self.log_event(
+            actor_id=current_user.id,
+            access_scope=UserRole.ADMIN,
+            target_id=user_update.id,
+            target_type=TargetType.USER,
+            event_type=EventType.ROLE_CHANGED,
+            payload=payload
+        )
+
 
     async def log_set_user_profile(
         self, user_profile: UserProfileSchema, current_user: UserInfo
@@ -114,11 +134,18 @@ class EventService(BaseService):
             payload=profile_payload.model_dump(),
         )
 
-    async def log_gradeup(self, user_id: int, profile_id: int, current_user: UserInfo):
+    async def log_gradeup(self, user_id: int,  current_user: UserInfo):
         pass
 
-    async def log_schedule(self, meeting, current_user: UserInfo):
-        pass
+    async def log_schedule(self, meeting: MeetingDetail, current_user: UserInfo):
+        await self.log_event(
+            actor_id=current_user.id,
+            access_scope=UserRole.SUPERVISOR,
+            target_id=meeting.id,
+            target_type=TargetType.MEETING,
+            event_type=EventType.SCHEDULE_MEETING,
+            payload=meeting.model_dump()
+        )
 
 
     async def log_meeting_changed(self, upd, current_user):

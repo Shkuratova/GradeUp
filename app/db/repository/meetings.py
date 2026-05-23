@@ -2,7 +2,7 @@ from sqlalchemy import select, exists, and_
 from sqlalchemy.orm import joinedload, selectinload
 
 from db.models.skills import StageVersion, Stage, Skill
-from db.models.types import CertificationStatus
+from db.models.types import CertificationStatus, CertificationRole
 from db.repository import BaseRepository
 from db.models import Meeting, MeetingParticipant, User, Department, UserStage
 from datetime import datetime, timezone
@@ -82,6 +82,7 @@ class MeetingRepository(BaseRepository):
                     User.last_name,
                     User.patronymic,
                     User.department_id,
+                    User.email
                 )
             ),
         )
@@ -122,6 +123,7 @@ class MeetingRepository(BaseRepository):
                         User.last_name,
                         User.patronymic,
                         User.department_id,
+                        User.email
                     )
                 ),
             )
@@ -141,6 +143,14 @@ class ParticipantsRepository(BaseRepository):
                 MeetingParticipant.meeting_id == meeting_id,
                 MeetingParticipant.user_id == user_id,
             )
+        )
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def get_student(self, meeting_id):
+        stmt = select(MeetingParticipant.user_id).where(
+            MeetingParticipant.meeting_id == meeting_id,
+            MeetingParticipant.role == CertificationRole.student
         )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()

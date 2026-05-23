@@ -43,6 +43,7 @@ class UserProfileSchema(BaseModel):
 class UserProfileProgressList(BaseModel):
     id: int
     user_id: int
+    profile_id: int 
     first_name: str
     last_name: str
     patronymic: str

@@ -48,6 +48,7 @@ class UserProfileRepository(BaseRepository):
                 func.coalesce(User.patronymic, "").label("patronymic"),
                 User.email.label("email"),
                 User.position.label("position"),
+                Profile.id.label("profile_id"),
                 Profile.title.label("profile_title"),
                 Department.id.label("department_id"),
                 Department.department_name.label("department_name"),
@@ -72,10 +73,10 @@ class UserProfileRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.all()
 
-    async def get_profile(self, user_id: int, profile_id: int):
+    async def get_profile(self, user_id: int):
         stmt = (
             select(UserProfile)
-            .where(UserProfile.user_id == user_id, UserProfile.profile_id == profile_id)
+            .where(UserProfile.user_id == user_id)
             .options(
                 joinedload(UserProfile.profile).load_only(Profile.id, Profile.title)
             )
@@ -235,16 +236,23 @@ class UserProfileRepository(BaseRepository):
 class UserLevelRepository(BaseRepository):
     model = UserLevel
 
-    async def get_current_lvl(self, user_id: int, profile_level_id: int):
+    async def get_current_lvl(self, user_id: int):
         stmt = (
             select(UserLevel)
-            .where(UserLevel.user_id == user_id, UserLevel.profile_level_id == profile_level_id)
+            .join(
+                UserProfile, UserProfile.current_level_id == UserLevel.profile_level_id
+            )
+            .where(UserProfile.user_id == user_id)
+            .where(UserLevel.user_id == user_id)
             .options(
                 joinedload(UserLevel.profile_level)
                 .selectinload(ProfileLevel.skills)
                 .load_only(LevelSkill.skill_id)
             )
         )
+
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
 
         res = await self._session.execute(stmt)
         return res.unique().scalar_one_or_none()

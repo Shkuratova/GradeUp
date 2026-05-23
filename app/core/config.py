@@ -21,6 +21,9 @@ class Settings(BaseSettings):
         env_nested_delimiter="__",
         env_file=BASE_DIR / ".env"
     )
+    root_path: str = '/api/v1'
+    app_name: str = "App"
+    debug: bool = True
     db: DBConfig
     jwt: JWTConfig
 

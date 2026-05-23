@@ -24,6 +24,7 @@ class UserInfo(UserBase, EmailModel):
     department: SDepartment | None = Field(None, exclude=True)
     managed_division: SDivision | None = Field(None, exclude=True)
     managed_department: SDepartment | None = Field(None, exclude=True)
+    role_id: int
     first_name: str
     last_name: str
     patronymic: str | None
@@ -115,7 +116,7 @@ class UserFullInfo(EmailModel, UserRoleName):
     first_name: str
     last_name: str
     patronymic: str | None
-    department_id: int
+    department_id: int | None = None
     department_name: str
 
 
@@ -187,7 +188,7 @@ class UserFIO(BaseModel):
     first_name: str
     last_name: str
     patronymic: str | None = None
-    email: EmailStr | None = None
+    email: EmailStr
 
     def full_name(self) -> str:
         patronymic = f"{self.patronymic[0] if self.patronymic else ''}"

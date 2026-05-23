@@ -1,10 +1,18 @@
 from datetime import datetime, timezone
 
-from pydantic import BaseModel, Field, ConfigDict, computed_field, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ConfigDict,
+    computed_field,
+    model_validator,
+    EmailStr,
+    field_serializer,
+)
 from db.models.types import CertificationStatus, CertificationRole, ConfirmationTypes
 from exceptions.common import DataValidationError
 from schemas.profiles import SkillList
-from schemas.users import UserFIO
+from schemas.users import UserFIO, UserBase, UserInfo
 
 
 class MeetingBase(BaseModel):
@@ -30,17 +38,12 @@ class Participant(ParticipantBase):
     user: UserFIO = Field(exclude=True)
 
     @computed_field
-    def first_name(self) -> str:
-        return self.user.first_name
+    def full_name(self) -> str:
+        return self.user.full_name()
 
     @computed_field
-    def last_name(self) -> str:
-        return self.user.last_name
-
-    @computed_field
-    def patronymic(self) -> str:
-        return self.user.patronymic
-
+    def email(self) -> EmailStr:
+        return self.user.email
 
 class MeetingStage(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -92,12 +95,10 @@ class MeetingDetail(BaseModel):
         return self.user_stage.stage_version.stage.skill.title
 
     @computed_field
-    def student(self) -> Participant | None:
+    def student(self) -> Participant:
         participant = next(
             (p for p in self.participants if p.role == CertificationRole.student), None
         )
-        if participant is None:
-            return None
         return participant
 
     @computed_field
@@ -108,6 +109,10 @@ class MeetingDetail(BaseModel):
         if participant is None:
             return None
         return participant
+
+    @field_serializer("started_at")
+    def serialize_started_at(self, value: datetime, _info):
+        return value.strftime("%Y-%m-%d %H:%M:%S")
 
 
 class MeetingAdd(BaseModel):
@@ -128,10 +133,14 @@ class MeetingAddForm(BaseModel):
     examiner_id: int
 
 
-class MeetingUpdateForm(MeetingAddForm):
+class MeetingUpdateForm(BaseModel):
     id: int
+    stage_id: int
+    started_at: datetime
+    location: str
+    duration: int = Field(..., gt=0)
+    description: str | None = None
     examiner_id: int | None = None
-    student_id: int | None = None
 
 
 class MeetingFilters(BaseModel):
@@ -144,7 +153,7 @@ class MeetingFilters(BaseModel):
     stage_id: int | None = None
     confirmation_type: ConfirmationTypes | None = None
     skill_id: int | None = None
-    department_ids: list[int] | None = None
+    departments_id: list[int] | None = None
 
     @model_validator(mode="after")
     def check_filters(self):
@@ -152,3 +161,7 @@ class MeetingFilters(BaseModel):
             if self.start_date > self.end_date:
                 raise ValueError("Дата начала не может быть больше даты окончания.")
         return self
+
+class MeetingAddResult(BaseModel):
+    meeting: MeetingDetail
+    student: UserInfo

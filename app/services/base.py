@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,6 +44,11 @@ class BaseService:
         if object_id is not None and object_exist.id == object_id:
             return
 
+        logger.warning(
+            "Нарушение уникальности для %s: %s",
+            self.entity_name,
+            filters,
+        )
         raise AlreadyExistException(
             f"{self.entity_name} с "
             f'{", ".join(f"{k}={v.__repr__()}" for k, v in filters.items())} '
@@ -50,7 +58,7 @@ class BaseService:
     async def get_by_id(self, object_id: int):
         instance = await self.repository.get_by_id(object_id)
         if instance is None:
-            raise NotFoundException(f"{self.entity_name} c id = {object_id} не найден.")
+            raise NotFoundException( f"{self.entity_name} с id={object_id} не найден.")
         return instance
 
     async def get_all(self, filter_model: BaseModel | None = None):
@@ -67,7 +75,6 @@ class BaseService:
             )
 
         if self.unique_fields:
-            print("SKILL UNIQUE", self.unique_fields)
             await self.check_unique_constraint(object_dict, object_id)
         res = await self.repository.update_by_id(object_id, object_dict)
         if not res:

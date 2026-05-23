@@ -6,6 +6,7 @@ from db.repository import (
     UserProfileRepository,
     UserRepository,
     SkillRepository,
+    ParticipantsRepository,
 )
 from exceptions.common import NotFoundException
 from exceptions.user import ForbiddenException
@@ -22,6 +23,7 @@ class AccessService(BaseService):
         self.profile_repository = ProfileRepository(session)
         self.user_profile_repository = UserProfileRepository(session)
         self.skill_repository = SkillRepository(session)
+        self.participant_repository = ParticipantsRepository(session)
 
     async def get_managed_departments(self, current_user: UserInfo):
 
@@ -100,15 +102,15 @@ class AccessService(BaseService):
         raise ForbiddenException("Нет доступа к выбранному пользователю")
 
     async def can_get_user_profile(
-        self, user_id: int, profile_id: int, current_user: UserInfo
+        self, user_id: int,  current_user: UserInfo
     ):
         user_profile = await self.user_profile_repository.get_one_by_filter(
-            {"user_id": user_id, "profile_id": profile_id}
+            {"user_id": user_id}
         )
 
         if user_profile is None:
             raise NotFoundException(
-                f"Профиль сотрудника с user_id = {user_id}, profile_id = {profile_id}  не найден"
+                f"Профиль сотрудника с user_id = {user_id}  не найден"
             )
 
         if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
@@ -162,3 +164,7 @@ class AccessService(BaseService):
             return event_type
 
         raise ForbiddenException("Отказано в доступе.")
+
+    async def can_manage_meeting(self, meeting_id: int, current_user: UserInfo):
+        student_id = await self.participant_repository.get_student(meeting_id)
+        return await self.can_manage_user(student_id, current_user)

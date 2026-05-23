@@ -1,9 +1,13 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 import bcrypt
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.repository import UserRepository, RoleRepository, DepartmentRepository
-from exceptions.common import NotFoundException
+from exceptions.common import NotFoundException, ConflictException
 from exceptions.user import (
     InvalidLoginException,
     PasswordDontMatchException,
@@ -41,6 +45,7 @@ class UserService(BaseService):
         user_model.password = self.hash_password(user_model.password)
 
         new_user = await super().add(user_model)
+        logger.info("Добавлен пользователь %s", user_model.email)
         return new_user
 
     async def get_users(self, filters: SUserFilter):
@@ -68,9 +73,20 @@ class UserService(BaseService):
         if user_data.role_id is not None:
             role = await self.role_repository.get_by_id(user_data.role_id)
             if role is None:
-                raise NotFoundException(
-                    f"Роль с id={user_data.role_id} не найдена"
-                )
-        await self.update_by_id(user_id, user_data)
-        return await self.get_user_role(UserBase(id=user_id))
+                raise NotFoundException(f"Роль с id={user_data.role_id} не найдена")
 
+        old = await self.get_user_role(UserBase(id=user_id))
+        if (
+            old.is_supervisor
+            and old.managed_division is None
+            and old.department_id != user_data.department_id
+        ):
+            raise ConflictException("Нельзя изменить отдел руководителя, пока он назначен руководителем этого отдела.")
+        if old.managed_division and user_data.department_id:
+            raise ConflictException("Руководитель направления не может быть привязан к отделу.")
+
+        user_dict = user_data.model_dump(exclude_none=True)
+        await self.check_unique_constraint(user_dict, user_id)
+        await self.repository.update_by_id(user_id, user_dict)
+
+        return await self.get_user_role(UserBase(id=user_id)), old

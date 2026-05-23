@@ -1,12 +1,23 @@
 from fastapi import FastAPI
 from api import routers
-from config import settings
+from core.config import settings
+from core.log import setup_logging
 
-app = FastAPI()
+
+def create_app() -> FastAPI:
+    setup_logging(debug=settings.debug)
 
 
-for router in routers:
-    app.include_router(router)
+    app = FastAPI(title=settings.app_name, debug=settings.debug)
+
+    for router in routers:
+        app.include_router(router)
+
+
+    return app
+
+
+app = create_app()
 
 @app.get("/")
 def check():
