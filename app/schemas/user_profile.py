@@ -54,6 +54,7 @@ class UserProfileProgressList(BaseModel):
     last_name: str
     patronymic: str
     email: EmailStr
+    position: str | None = None
     profile_title: str
     department_id: int | None = None
     department_name: str | None = None

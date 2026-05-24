@@ -81,6 +81,53 @@ class UserProfileService(BaseService):
             profile=ProfileList.model_validate(profile, from_attributes=True),
         )
 
+    async def get_skill_questions(self, user_id: int, skill_id: int):
+        # return await self.user_skill_repository.get_skill_detail_questions(user_id, skill_id)
+        skill_detail = await self.user_skill_repository.get_skill_detail_questions(user_id, skill_id)
+
+        if not skill_detail:
+            return None
+
+        first = skill_detail[0]
+
+        skill_data = {
+            "id": first["skill_id"],
+            "title": first["title"],
+            "description": first["description"],
+            "literature": first["literature"],
+            "stages": [],
+        }
+
+        stages_map = {}
+
+        for row in skill_detail:
+            stage_id = row["stage_id"]
+
+            if stage_id not in stages_map:
+                stages_map[stage_id] = {
+                    "id": stage_id,
+                    "confirmation_type": row["confirmation_type"],
+                    "user_stage_id": row["user_stage_id"],
+                    "is_accepted": row["is_accepted"],
+                    "comment": row["comment"],
+                    "updated_at": row["updated_at"],
+                    "questions": [],
+                }
+
+            stage = stages_map[stage_id]
+
+            if row["num"] is not None:
+                stage["questions"].append(
+                    {
+                        "num": row["num"],
+                        "question": row["question"],
+                        "answer": row["answer"],
+                    }
+                )
+
+        skill_data["stages"] = list(stages_map.values())
+
+        return skill_data
 
     async def get_skill_progress(self, user_id: int, skill_id: int):
         skill_detail = await self.user_skill_repository.get_skill_detail(

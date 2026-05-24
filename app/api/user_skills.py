@@ -3,10 +3,12 @@ from fastapi import APIRouter, Depends
 from api.decorators import exception_handler
 from db.uow import unit_of_work
 from dependencies import get_current_user
+from api.decorators import check_role
 from schemas.users import UserInfo
 from services.access import AccessService
 from services.user_profile import UserProfileService
 from services.user_progress import UserProgressService
+from utils.roles import UserRole
 
 user_skill_router = APIRouter(prefix="/skills", tags=["SkillProgress"])
 
@@ -28,6 +30,19 @@ async def get_user_skill_detail(
 ):
     async with unit_of_work() as uow:
         return await UserProfileService(uow.session).get_skill_progress(
+            user_id, skill_id
+        )
+
+
+@user_skill_router.get("/{skill_id}/questions")
+@check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
+@exception_handler
+async def get_user_skill_questions(
+    user_id: int, skill_id: int, current_user: UserInfo = Depends(get_current_user)
+):
+    async with unit_of_work() as uow:
+        await AccessService(uow.session).can_get_user_profile_questions(user_id, current_user)
+        return await UserProfileService(uow.session).get_skill_questions(
             user_id, skill_id
         )
 

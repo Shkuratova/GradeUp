@@ -1,7 +1,7 @@
 from sqlalchemy import select, insert, literal, and_, func, not_, exists
 from sqlalchemy.orm import selectinload, joinedload
 
-from db.models import Skill, Stage, ProfileLevel
+from db.models import Skill, Stage, ProfileLevel, StageQuestion
 from db.models.skills import StageVersion, LevelSkill
 from db.models.user_profiles import UserSkill, UserLevel, UserStage, UserProfile
 from db.repository import BaseRepository
@@ -48,6 +48,51 @@ class UserSkillRepository(BaseRepository):
                     UserLevel.user_id == user_id,
                 ),
             )
+            .outerjoin(
+                UserStage,
+                and_(
+                    UserStage.user_skill_id == UserSkill.id,
+                    UserStage.stage_version_id == StageVersion.id,
+                ),
+            )
+            .where(Skill.id == skill_id)
+        )
+        res = await self._session.execute(stmt)
+        return res.mappings().all()
+
+    async def get_skill_detail_questions(self, user_id: int, skill_id: int):
+        stmt = (
+            select(
+                Skill.id.label("skill_id"),
+                Skill.title,
+                Skill.description,
+                Skill.literature,
+                Stage.id.label("stage_id"),
+                Stage.confirmation_type,
+                UserStage.id.label("user_stage_id"),
+                UserStage.is_accepted,
+                UserStage.comment,
+                UserStage.updated_at,
+                StageQuestion.num,
+                StageQuestion.question,
+                StageQuestion.answer,
+            )
+            .select_from(Skill)
+            # skill → stage
+            .join(Stage, Stage.skill_id == Skill.id)
+            # фиксируем ОДНУ версию stage (иначе дубли вопросов)
+            .join(StageVersion, StageVersion.stage_id == Stage.id)
+            # вопросы
+            .join(StageQuestion, StageQuestion.stage_version_id == StageVersion.id)
+            # user skill (обязательно фильтр по user_id)
+            .outerjoin(
+                UserSkill,
+                and_(
+                    UserSkill.skill_id == Skill.id,
+                    UserSkill.user_id == user_id,
+                ),
+            )
+            # user stage (тоже строго по user)
             .outerjoin(
                 UserStage,
                 and_(
@@ -109,9 +154,7 @@ class UserSkillRepository(BaseRepository):
                 Stage.id.label("stage_id"),
                 Stage.confirmation_type,
             )
-            .join(
-                LevelSkill, LevelSkill.profile_level_id == ProfileLevel.id
-            )
+            .join(LevelSkill, LevelSkill.profile_level_id == ProfileLevel.id)
             .join(Skill, Skill.id == LevelSkill.skill_id)
             .join(Stage, Stage.skill_id == Skill.id)
             .where(

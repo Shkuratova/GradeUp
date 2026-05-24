@@ -140,6 +140,12 @@ class AccessService(BaseService):
                 return profile_id
         raise ForbiddenException("Нет доступа к выбранному профилю.")
 
+    async def can_get_user_profile_questions(self, user_id: int, current_user: UserInfo):
+        if user_id == current_user.id:
+            raise ForbiddenException("Откзано в доступе")
+        user = await self.user_repository.get_by_id(user_id)
+        await self.can_get_user(user, current_user)
+
     async def can_get_skill(self, skill_id: int, current_user: UserInfo):
 
         if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
