@@ -18,6 +18,7 @@ from schemas.profiles import (
     SLevelUpdate,
     LevelDetail,
     ProfileFilter,
+    ProfileStructure,
 )
 from services.base import BaseService
 
@@ -41,7 +42,9 @@ class ProfileService(BaseService):
 
     async def get_profile_levels(self, filters: ProfileFilter):
 
-        profiles = await self.repository.get_profiles_with_levels(departments_id=filters.departments_id)
+        profiles = await self.repository.get_profiles_with_levels(
+            departments_id=filters.departments_id
+        )
         return [ProfileDetail.model_validate(p) for p in profiles]
 
     async def get_with_details(self, profile_id: int):
@@ -71,7 +74,9 @@ class ProfileService(BaseService):
             new_levels.append(new_level)
             if lvl.skills:
                 for s in lvl.skills:
-                    level_skills.append({"profile_level_id": new_level.id, "skill_id": s})
+                    level_skills.append(
+                        {"profile_level_id": new_level.id, "skill_id": s}
+                    )
 
         if level_skills:
             await self.level_skill_repository.add_list(level_skills)
@@ -117,7 +122,8 @@ class ProfileService(BaseService):
                     new_skills = set(lvl.skills)
                     if add_skill := new_skills - old_skills:
                         level_skills += [
-                            {"profile_level_id": lvl.id, "skill_id": s} for s in add_skill
+                            {"profile_level_id": lvl.id, "skill_id": s}
+                            for s in add_skill
                         ]
                     if del_skill := old_skills - new_skills:
                         await self.level_skill_repository.delete_by_skill_ids(
@@ -126,3 +132,7 @@ class ProfileService(BaseService):
             if level_skills:
                 await self.level_skill_repository.add_list(level_skills)
         return await self.get_with_details(profile_id)
+
+    async def get_structure(self, profile_id):
+        res = await self.repository.get_profile_structure_by_id(profile_id)
+        return ProfileStructure.model_validate(res, from_attributes=True)

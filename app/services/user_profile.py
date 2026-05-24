@@ -18,7 +18,9 @@ from schemas.user_profile import (
     UserProfileTitle,
     UserProfileProgress,
     UserProfileSchema,
+    UserProfileFilter,
 )
+from schemas.user_progress import ProfileProgress
 from schemas.users import SUser, UserFIO
 from services import BaseService, UserService, ProfileService
 
@@ -33,17 +35,13 @@ class UserProfileService(BaseService):
         self.user_skill_repository = UserSkillRepository(session)
 
     async def get_profile(self, user_id: int):
-        profile = await self.repository.get_one_by_filter(
-            {"user_id": user_id}
-        )
+        profile = await self.repository.get_one_by_filter({"user_id": user_id})
         if profile is None:
-            raise NotFoundException(
-                f"Сотруднику с id = {user_id} не назначен профиль."
-            )
+            raise NotFoundException(f"Сотруднику с id = {user_id} не назначен профиль.")
         return profile
 
-    async def get_all_with_progress(self):
-        user_profiles = await self.repository.get_all_with_progress()
+    async def get_all_with_progress(self, filters: UserProfileFilter):
+        user_profiles = await self.repository.get_all_with_progress(filters.model_dump(exclude_none=True))
         return user_profiles
 
     async def _add_user_level(self, user_id: int, profile_id: int, level_num: int = 1):
@@ -83,58 +81,6 @@ class UserProfileService(BaseService):
             profile=ProfileList.model_validate(profile, from_attributes=True),
         )
 
-    async def status(self, user_id: int, profile_id: int):
-        user_profile = await self.repository.get_profile(user_id)
-        if user_profile is None:
-            raise NotFoundException(f"Профиль пользователя не найден.")
-        user_profile_model = UserProfileTitle.model_validate(user_profile)
-
-        user_progress = await self.repository.get_progress(
-            user_profile.user_id, user_profile.profile_id
-        )
-        profile_levels = {}
-
-        for row in user_progress:
-            level_id = row["profile_level_id"]
-
-            if level_id not in profile_levels:
-                profile_levels[level_id] = {
-                    "profile_level_id": level_id,
-                    "user_level_id": row["user_level_id"],
-                    "num": row["num"],
-                    "level_name": row["level_name"],
-                    "is_closed": row["is_closed"],
-                    "skills": {},
-                }
-
-            skills = profile_levels[level_id]["skills"]
-
-            skill_id = row["skill_id"]
-
-            if skill_id not in skills:
-                skills[skill_id] = {
-                    "skill_id": skill_id,
-                    "title": row["skill_title"],
-                    "stages": [],
-                }
-
-            skills[skill_id]["stages"].append(
-                {
-                    "stage_id": row["stage_id"],
-                    "confirmation_type": row["confirmation_type"],
-                    "stage_accepted": row["stage_accepted"],
-                }
-            )
-
-        response = {
-            **user_profile_model.model_dump(),
-            "profile_levels": [
-                {**level, "skills": list(level["skills"].values())}
-                for level in profile_levels.values()
-            ],
-        }
-
-        return UserProfileProgress(**response)
 
     async def get_skill_progress(self, user_id: int, skill_id: int):
         skill_detail = await self.user_skill_repository.get_skill_detail(
@@ -182,7 +128,7 @@ class UserProfileService(BaseService):
     async def gradeup(self, user_id: int):
         user_profile = await self.get_profile(user_id)
         current_level = await self.user_level_repository.get_current_lvl(
-            user_profile.user_id, user_profile.current_level_id
+            user_profile.user_id
         )
         accepted_skills = await self.user_skill_repository.get_accepted_count(
             current_level.id
@@ -210,3 +156,7 @@ class UserProfileService(BaseService):
 
     async def delete(self, user_id: int):
         await self.repository.delete_by_user_id(user_id)
+
+    async def progress(self, user_id):
+        res = await self.repository.get_profile_progress(user_id)
+        return ProfileProgress.model_validate(res, from_attributes=True)

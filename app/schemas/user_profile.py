@@ -10,6 +10,13 @@ from db.models import ConfirmationTypes
 from schemas.profiles import ProfileList
 from schemas.users import SUser, UserFIO
 
+
+class UserProfileFilter(BaseModel):
+    profile_id: int  | None = None
+    user_id: int | None = None
+    departments_id: list[int] | None = None
+    role_id: int | None = None
+
 class UserProfileBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -50,6 +57,8 @@ class UserProfileProgressList(BaseModel):
     profile_title: str
     department_id: int | None = None
     department_name: str | None = None
+    role_id: int
+    role_name: str
     total_cnt: int
     completed_cnt: int
 

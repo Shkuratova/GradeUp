@@ -3,6 +3,7 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from core.config import settings
 
+
 class AuthUtils:
     @staticmethod
     def encode_jwt(
@@ -50,16 +51,17 @@ class AuthUtils:
         )
 
     @classmethod
-    def create_refresh_token(cls, user: UserInfo) -> str:
-        token_data = {"sub": str(user.id), "token_type": "refresh"}
-        return cls.encode_jwt(
+    def create_refresh_token(cls, user) -> str:
+        token_data = {"sub": str(user.id), "role":user.role_name, "token_type": "refresh"}
+        token =  cls.encode_jwt(
             payload=token_data,
             expire_timedelta=timedelta(days=settings.jwt.expire_refresh_token_days),
         )
+        return token
 
     @classmethod
     def set_token(
-        cls, response: Response, user: UserInfo, token_type: str = "access_token"
+        cls, response: Response, user, token_type: str = "access_token"
     ):
         if token_type == "access_token":
             token = cls.create_access_token(user)

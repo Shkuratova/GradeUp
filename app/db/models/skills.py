@@ -24,7 +24,7 @@ class Skill(Base):
     categories: Mapped[list[Category]] = relationship(back_populates="skills", secondary="skill_categories")
 
     profile_levels: Mapped[list["LevelSkill"]] = relationship(back_populates="skill")
-
+    profile_level: Mapped["ProfileLevel"] = relationship(back_populates="skill_list", secondary="level_skills")
 class SkillCategory(Base):
     __tablename__ = "skill_categories"
     __table_args__ = (UniqueConstraint("skill_id", "category_id"), )

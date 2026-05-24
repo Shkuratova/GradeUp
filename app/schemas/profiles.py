@@ -7,6 +7,8 @@ from pydantic import (
     computed_field,
 )
 
+from db.models import ConfirmationTypes
+
 
 class ProfileBase(BaseModel):
     id: int
@@ -118,3 +120,28 @@ class ProfileDetail(ProfileBase):
     description: str | None = None
     levels: list[LevelDetail]
 
+
+
+class SkillStage(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    confirmation_type: ConfirmationTypes
+
+class SkillStructure(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
+    stages: list[SkillStage] | None = None
+
+class LevelStructure(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    num: int
+    level_name: str
+    skill_list: list[SkillStructure] | None  = None
+
+class ProfileStructure(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
+    levels: list[LevelStructure] | None = None

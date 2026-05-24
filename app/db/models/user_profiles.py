@@ -27,11 +27,15 @@ class UserLevel(Base):
 
 class UserSkill(Base):
     __table_args__ = (UniqueConstraint('user_level_id', 'skill_id'), )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    profile_level_id: Mapped[int] = mapped_column(ForeignKey("profile_levels.id", ondelete="SET NULL"), nullable=True)
     user_level_id: Mapped[int] = mapped_column(ForeignKey("user_levels.id"))
     skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"))
     is_accepted: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
 
     user_level: Mapped[UserLevel]  = relationship(back_populates="skills")
+    user: Mapped["User"] = relationship(back_populates="user_skills")
+    profile_level: Mapped["ProfileLevel"] = relationship(back_populates="user_skills")
     stages: Mapped[list["UserStage"]] = relationship(back_populates="user_skill")
 
 
@@ -44,6 +48,7 @@ class UserStage(Base):
     updated_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     user_skill: Mapped[UserSkill] = relationship(back_populates="stages")
+    stage: Mapped["Stage"] = relationship(secondary="stage_versions")
     stage_version: Mapped["StageVersion"] = relationship(back_populates="user_stages")
     meetings: Mapped["Meeting"] = relationship(back_populates="user_stage")
     supervisor: Mapped["User"] = relationship(back_populates="user_stages")

@@ -48,7 +48,7 @@ class StageRepository(BaseRepository):
         return res.first()
 
     @db_exception_handler
-    async def get_last_version_with_options(self, stage_id: int):
+    async def get_last_version(self, stage_id: int):
         last_version = self.last_version_subquery()
         stmt = (
             select(StageVersion)

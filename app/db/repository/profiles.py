@@ -3,7 +3,7 @@ from sqlalchemy.orm import selectinload, joinedload, contains_eager
 
 from db.models import Department, DepartmentProfile
 from db.models.profiles import Profile, ProfileLevel
-from db.models.skills import LevelSkill, Skill
+from db.models.skills import LevelSkill, Skill, Stage
 from db.repository.base import BaseRepository
 from db.repository.decorators import db_exception_handler
 
@@ -53,12 +53,18 @@ class ProfileRepository(BaseRepository):
         return res.scalar_one_or_none()
 
     @db_exception_handler
-    async def get_profiles_with_levels(self, profile_id: int | None = None, departments_id: list[int] | None = None):
+    async def get_profiles_with_levels(
+        self, profile_id: int | None = None, departments_id: list[int] | None = None
+    ):
         stmt = select(Profile).where(Profile.is_active.is_(True))
         if profile_id:
-            stmt = stmt.where(Profile.id == profile_id,)
+            stmt = stmt.where(
+                Profile.id == profile_id,
+            )
         if departments_id:
-            stmt = stmt.where(Profile.departments.has(Department.id.in_(departments_id)))
+            stmt = stmt.where(
+                Profile.departments.has(Department.id.in_(departments_id))
+            )
         stmt = (
             stmt.outerjoin(Profile.levels.and_(ProfileLevel.is_active.is_(True)))
             .outerjoin(ProfileLevel.skills)
@@ -76,6 +82,34 @@ class ProfileRepository(BaseRepository):
         if profile_id:
             return res.unique().scalar_one_or_none()
         return res.unique().scalars().all()
+
+    async def get_profile_structure_by_id(self, profile_id: int):
+        stmt = (
+            select(Profile)
+            .where(Profile.id == profile_id)
+            .options(
+                selectinload(Profile.levels)
+                .load_only(
+                    ProfileLevel.id,
+                    ProfileLevel.num,
+                    ProfileLevel.level_name,
+                )
+                .selectinload(ProfileLevel.skill_list)
+                .load_only(
+                    Skill.id,
+                    Skill.title,
+                )
+                .selectinload(Skill.stages)
+                .load_only(
+                    Stage.id,
+                    Stage.confirmation_type,
+                )
+            )
+        )
+
+        result = await self._session.execute(stmt)
+
+        return result.scalar_one_or_none()
 
 
 class LevelRepository(BaseRepository):
@@ -97,3 +131,16 @@ class LevelRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
+
+    async def get_level_structure(self, profile_level_id: int):
+        stmt = (
+            select(ProfileLevel)
+            .where(ProfileLevel.id == profile_level_id)
+            .options(
+                selectinload(ProfileLevel.skill_list).load_only(Skill.id, Skill.title)
+                .selectinload(Skill.stages).load_only(Stage.id, Stage.confirmation_type)
+            )
+        )
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
+

@@ -14,10 +14,18 @@ class DivisionRepository(BaseRepository):
             .where(Division.id == division_id)
             .options(
                 selectinload(Division.departments).load_only(
-                    Department.id, Department.department_name, Department.description, Department.supervisor_id
+                    Department.id,
+                    Department.department_name,
+                    Department.description,
+                    Department.supervisor_id,
                 ),
                 joinedload(Division.supervisor).load_only(
-                    User.id, User.first_name, User.last_name, User.patronymic, User.email
+                    User.id,
+                    User.first_name,
+                    User.last_name,
+                    User.patronymic,
+                    User.email,
+                    User.department_id
                 ),
             )
         )
@@ -34,7 +42,12 @@ class DepartmentRepository(BaseRepository):
             .where(Department.id == department_id)
             .options(
                 joinedload(Department.supervisor).load_only(
-                    User.id, User.first_name, User.last_name, User.patronymic, User.email
+                    User.id,
+                    User.first_name,
+                    User.last_name,
+                    User.patronymic,
+                    User.email,
+                    User.department_id,
                 ),
                 selectinload(Department.profiles).load_only(Profile.id, Profile.title),
             )
@@ -55,7 +68,12 @@ class DepartmentRepository(BaseRepository):
             stmt = stmt.where(Department.id.in_(departments_id))
         stmt = stmt.options(
             joinedload(Department.supervisor).load_only(
-                User.id, User.first_name, User.last_name, User.patronymic, User.email
+                User.id,
+                User.first_name,
+                User.last_name,
+                User.patronymic,
+                User.email,
+                User.department_id,
             ),
             selectinload(Department.profiles).load_only(Profile.id, Profile.title),
         )
@@ -64,7 +82,11 @@ class DepartmentRepository(BaseRepository):
         return res.scalars().all()
 
     async def get_supervisor(self, department_id: int):
-        stmt = select(Department).where(Department.id == department_id).options(joinedload(Department.supervisor).load_only(User.id))
+        stmt = (
+            select(Department)
+            .where(Department.id == department_id)
+            .options(joinedload(Department.supervisor).load_only(User.id))
+        )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 

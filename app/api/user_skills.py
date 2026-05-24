@@ -6,6 +6,7 @@ from dependencies import get_current_user
 from schemas.users import UserInfo
 from services.access import AccessService
 from services.user_profile import UserProfileService
+from services.user_progress import UserProgressService
 
 user_skill_router = APIRouter(prefix="/skills", tags=["SkillProgress"])
 

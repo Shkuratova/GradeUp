@@ -26,13 +26,9 @@ class UserStageService(BaseService):
         self.user_level_repository = UserLevelRepository(session)
         self.user_profile_repository = UserProfileRepository(session)
 
-    async def ensure_user_stage(
-        self, user_id: int, stage_id: int
-    ):
+    async def ensure_user_stage(self, user_id: int, stage_id: int):
 
-        stage_version = await self.stage_repository.get_last_version_with_options(
-            stage_id
-        )
+        stage_version = await self.stage_repository.get_last_version(stage_id)
 
         if stage_version is None:
             raise NotFoundException(f"Этап подтверждения с id = {stage_id} не найден.")
@@ -47,9 +43,8 @@ class UserStageService(BaseService):
         if not is_available:
             raise NotFoundException("Выбранный этап недоступен пользователю.")
 
-        current_level = await self.user_level_repository.get_current_lvl(user_id)
-
-        if current_level is None:
+        user_profile = await self.user_profile_repository.get_profile(user_id)
+        if user_profile.current_level_id is None:
             raise NotFoundException("У пользователя отсутствует текущий уровень.")
 
         user_skill = await self.user_skill_repository.get_by_user(
@@ -60,7 +55,9 @@ class UserStageService(BaseService):
         if user_skill is None:
             user_skill = await self.user_skill_repository.add(
                 {
-                    "user_level_id": current_level.id,
+                    # "user_level_id": current_level.id,
+                    "user_id": user_id,
+                    "profile_level_id": user_profile.current_level_id,
                     "skill_id": stage.skill_id,
                 }
             )

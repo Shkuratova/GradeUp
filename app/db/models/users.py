@@ -18,7 +18,7 @@ class User(Base):
     role: Mapped["Role"] = relationship(back_populates="users")
     department: Mapped["Department"] = relationship(back_populates="users", foreign_keys=[department_id])
 
-    managed_department: Mapped["Department"] = relationship(back_populates="supervisor", foreign_keys="[Department.supervisor_id]",)
+    managed_department: Mapped["Department"] = relationship(back_populates="supervisor", foreign_keys="[Department.supervisor_id]",uselist=False)
     managed_division: Mapped["Division"] = relationship(back_populates="supervisor")
 
     profile: Mapped["UserProfile"] = relationship(back_populates="user")
@@ -27,3 +27,4 @@ class User(Base):
 
     user_stages: Mapped[list["UserStage"]] = relationship(back_populates="supervisor")
     events: Mapped[list["Event"]] = relationship(back_populates="actor")
+    user_skills: Mapped[list["UserSkill"]] = relationship(back_populates="user")

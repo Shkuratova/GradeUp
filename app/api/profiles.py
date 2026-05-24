@@ -74,7 +74,6 @@ async def update_by_id(
         return await ProfileService(uow.session).update_by_id(profile_id, profile)
 
 
-
 @profile_router.delete("/{profile_id}")
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
@@ -82,3 +81,12 @@ async def delete_by_id(profile_id: int, current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
         await ProfileService(uow.session).soft_delete_by_id(profile_id)
     return {f"Профиль c id = {profile_id} был удален."}
+
+
+@profile_router.get("/{profile_id}/structure")
+@check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
+@exception_handler
+async def get_by_id(profile_id: int, current_user=Depends(get_current_user)):
+    async with unit_of_work() as uow:
+         await AccessService(uow.session).can_get_profile(profile_id, current_user)
+         return await ProfileService(uow.session).get_structure(profile_id)
