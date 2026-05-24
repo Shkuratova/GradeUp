@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from db.models.events import EventType, TargetType
 from dependencies import get_current_user
 from api.decorators import exception_handler, check_role
-from schemas.event import EventFilter
+from schemas.event import EventFilter, EventSchema
 from services.access import AccessService
 from services.event import EventService
 from utils.roles import UserRole
@@ -43,7 +43,7 @@ async def get_event_target(current_user: UserInfo = Depends(get_current_user)):
     return {i: v for i, v in enumerate(list(TargetType))}
 
 
-@admin_router.get("/events", summary="Журнал событий")
+@admin_router.get("/events", response_model=list[EventSchema], summary="Журнал событий")
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def get_events(

@@ -24,7 +24,7 @@ async def evaluate(
             user_stage.user_id, current_user
         )
         evaluation = await UserStageService(uow.session).evaluate(user_stage)
-        await EventService.log_evaluate_stage(user_stage, current_user)
+        await EventService(uow.session).log_evaluate_stage(user_stage, current_user)
         return evaluation
 
 

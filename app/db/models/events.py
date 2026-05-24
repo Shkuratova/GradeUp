@@ -31,6 +31,7 @@ class Event(Base):
     access_scope: Mapped[str]
     target_id: Mapped[int]
     target_type: Mapped[str]
+    message: Mapped[str | None]
     payload: Mapped[dict] = mapped_column(JSON)
 
     actor: Mapped["User"] = relationship(back_populates="events")

@@ -3,6 +3,7 @@ from db.models.departments import Role, Department,Division, DepartmentProfile
 from db.models.skills import (
     Stage,
     StageQuestion,
+    StageVersion,
     LevelSkill,
     ConfirmationTypes,
     Skill

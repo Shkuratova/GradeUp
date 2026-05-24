@@ -1,3 +1,4 @@
+from pyexpat.errors import messages
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models.events import EventType, TargetType
 from db.repository import (
@@ -15,7 +16,7 @@ from schemas.event import (
     EventAdd,
 )
 from schemas.meetings import MeetingAddForm, MeetingAddResult, MeetingDetail
-from schemas.user_profile import UserStageBase, UserProfileSchema
+from schemas.user_profile import UserStageBase, UserProfileSchema, GradeUpResult
 from schemas.users import UserInfo, SRole
 from services.base import BaseService
 from utils.roles import UserRole
@@ -29,13 +30,12 @@ class EventService(BaseService):
         self.repository = EventRepository(session)
         self.user_repository = UserRepository(session)
 
-
     async def get_events(self, filters: EventFilter):
         filter_dict = filters.model_dump(exclude_none=True)
         return await self.repository.get_events(filter_dict)
 
     async def get_employee(self, user_id: int):
-        user = await self.user_repository.get_user_role({'id': user_id})
+        user = await self.user_repository.get_user_role({"id": user_id})
         return UserInfo.model_validate(user, from_attributes=True)
 
     async def log_event(
@@ -46,6 +46,7 @@ class EventService(BaseService):
         target_id: int,
         target_type: TargetType,
         event_type: EventType,
+        message: str,
         payload: dict,
     ):
         event = EventAdd(
@@ -54,6 +55,7 @@ class EventService(BaseService):
             target_id=target_id,
             target_type=target_type,
             event_type=event_type,
+            message=message,
             payload=payload,
         )
         await self.repository.add(event.model_dump())
@@ -65,8 +67,9 @@ class EventService(BaseService):
             "division_name": division.division_name,
             "supervisor_id": division.supervisor_id,
             "full_name": division.supervisor.full_name(),
-            "supervisor_email": division.supervisor.email
+            "supervisor_email": division.supervisor.email,
         }
+
     @staticmethod
     def _department_payload(department):
         return {
@@ -78,6 +81,7 @@ class EventService(BaseService):
         }
 
     async def log_registration(self, user: UserInfo, current_user: UserInfo):
+        message = f"Зарегистрирован пользователь {user.name_with_email()}."
         payload = RegistrationPayload(
             user_id=user.id,
             email=user.email,
@@ -90,19 +94,24 @@ class EventService(BaseService):
             target_id=user.id,
             target_type=TargetType.USER,
             event_type=EventType.REGISTRATION,
-            payload=payload.model_dump()
+            message=message,
+            payload=payload.model_dump(),
         )
 
-    async def log_set_user_role(self, old_role: SRole, user_update: UserInfo, current_user: UserInfo):
+    async def log_set_user_role(
+        self, old_role: SRole, user_update: UserInfo, current_user: UserInfo
+    ):
+        message = (f"Изменена роль сотрудника {user_update.name_with_email()} "
+                   f"с {old_role.role_name.value} на {user_update.role_name.value}.")
         payload = {
-            'user_id': user_update.id,
-            'email': user_update.email,
-            'department_id': user_update.department_id,
-            'full_name': user_update.full_name(),
-            'old_role_id': old_role.id,
-            'old_role': old_role.role_name,
-            'new_role_id': user_update.role_id,
-            'new_role': user_update.role_name
+            "user_id": user_update.id,
+            "email": user_update.email,
+            "department_id": user_update.department_id,
+            "full_name": user_update.full_name(),
+            "old_role_id": old_role.id,
+            "old_role": old_role.role_name,
+            "new_role_id": user_update.role_id,
+            "new_role": user_update.role_name,
         }
         await self.log_event(
             actor_id=current_user.id,
@@ -110,13 +119,18 @@ class EventService(BaseService):
             target_id=user_update.id,
             target_type=TargetType.USER,
             event_type=EventType.ROLE_CHANGED,
-            payload=payload
+            message=message,
+            payload=payload,
         )
-
 
     async def log_set_user_profile(
         self, user_profile: UserProfileSchema, current_user: UserInfo
     ):
+        message = (
+            f"Сотруднику {user_profile.user.name_with_email()} "
+            f"назначен профиль {user_profile.profile.title}."
+        )
+
         profile_payload = SetProfilePayload(
             user_id=user_profile.user.id,
             email=user_profile.user.email,
@@ -131,22 +145,52 @@ class EventService(BaseService):
             target_id=user_profile.id,
             target_type=TargetType.USER_PROFILE,
             event_type=EventType.SET_PROFILE,
+            message=message,
             payload=profile_payload.model_dump(),
         )
 
-    async def log_gradeup(self, user_id: int,  current_user: UserInfo):
-        pass
+    async def log_gradeup(
+        self, user_id: int, gradeup: GradeUpResult, current_user: UserInfo
+    ):
+        user = await self.get_employee(user_id)
+        message = (
+            f"Профиль пользователя {user.name_with_email()} "
+            f"повышен с уровня {gradeup.old_level.level_name.__repr__()} "
+            f"до уровня {gradeup.new_level.level_name.__repr__()}."
+        )
+
+        await self.log_event(
+            actor_id=current_user.id,
+            access_scope=UserRole.SUPERVISOR,
+            target_id=user_id,
+            target_type=TargetType.USER,
+            event_type=EventType.GRADEUP,
+            message=message,
+            payload={
+                "user_id": user.id,
+                "email": user.email,
+                "full_name": user.full_name(),
+                "department_id": user.department_id,
+                **gradeup.model_dump(),
+            },
+        )
 
     async def log_schedule(self, meeting: MeetingDetail, current_user: UserInfo):
+        message = (
+            f"Сотруднику {meeting.student.user.name_with_email()} назначена встреча "
+            f"по этапу навыка {meeting.skill_title.__repr__()} ({meeting.confirmation_type}), "
+            f"на {meeting.started_at.strftime("%Y-%m-%d %H:%M:%S")}, "
+            f"Аттестующий - {meeting.examiner.user.name_with_email()})"
+        )
         await self.log_event(
             actor_id=current_user.id,
             access_scope=UserRole.SUPERVISOR,
             target_id=meeting.id,
             target_type=TargetType.MEETING,
             event_type=EventType.SCHEDULE_MEETING,
-            payload=meeting.model_dump()
+            message=message,
+            payload=meeting.model_dump(),
         )
-
 
     async def log_meeting_changed(self, upd, current_user):
         pass
@@ -159,49 +203,65 @@ class EventService(BaseService):
     async def log_set_division_supervisor(
         self, division: DivisionDetail, current_user: UserInfo
     ):
+        message = (
+            f"Назначен руководитель направления {division.division_name.__repr__()}: "
+            f"{division.supervisor.name_with_email()}"
+        )
         await self.log_event(
             actor_id=current_user.id,
             access_scope=UserRole.ADMIN,
             target_id=division.id,
             target_type=TargetType.DIVISION,
             event_type=EventType.SET_DIVISION_SUPERVISOR,
+            message=message,
             payload=self._division_payload(division),
         )
 
     async def log_set_department_supervisor(
-        self, department:DepartmentDetail, current_user: UserInfo
+        self, department: DepartmentDetail, current_user: UserInfo
     ):
+        message = (
+            f"Назначен руководитель отдела {department.department_name.__repr__()}: "
+            f"{department.supervisor.name_with_email()}"
+        )
         event = EventAdd(
             actor_id=current_user.id,
             access_scope=UserRole.ADMIN,
             target_id=department.id,
             target_type=TargetType.DEPARTMENT,
             event_type=EventType.SET_DEPARTMENT_SUPERVISOR,
-            payload=self._department_payload(department)
+            message=message,
+            payload=self._department_payload(department),
         )
         await self.repository.add(event.model_dump())
 
     async def log_remove_division_supervisor(
         self, division: DivisionDetail, current_user
     ):
+        message = (
+            f"Руководитель направления {division.division_name.__repr__()} был откреплён."
+        )
         await self.log_event(
             actor_id=current_user.id,
             access_scope=UserRole.ADMIN,
             target_id=division.id,
             target_type=TargetType.DIVISION,
             event_type=EventType.REMOVE_DIVISION_SUPERVISOR,
+            message=message,
             payload=self._division_payload(division),
         )
 
     async def log_department_supervisor_removed(
         self, department: DepartmentDetail, current_user: UserInfo
     ):
+        message = f"Руководитель отдела {department.department_name.__repr__()} был откреплён."
         event = EventAdd(
             actor_id=current_user.id,
             access_scope=UserRole.ADMIN,
             target_id=department.id,
             target_type=TargetType.DEPARTMENT,
             event_type=EventType.REMOVE_DEPARTMENT_SUPERVISOR,
+            message=message,
             payload=self._department_payload(department),
         )
         await self.repository.add(event.model_dump())

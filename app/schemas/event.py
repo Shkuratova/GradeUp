@@ -1,10 +1,11 @@
-from pydantic import BaseModel, Field, ConfigDict, computed_field, EmailStr
+from pydantic import BaseModel, Field, ConfigDict, computed_field, EmailStr, field_serializer
 from datetime import datetime
 from typing import Any
 
 from db.models import ConfirmationTypes
 from db.models.events import EventType, TargetType
-from schemas.users import UserInfo, UserFIO
+from schemas.users import UserFIO
+from utils.roles import UserRole
 
 
 class EventBase(BaseModel):
@@ -17,22 +18,33 @@ class EventBase(BaseModel):
     target_type: TargetType
     event_type: EventType
 
+    @field_serializer("created_at")
+    def serialize_created_at(self, value: datetime, _info):
+        return value.strftime("%Y-%m-%d %H:%M:%S")
+
+
+
 class EventAdd(BaseModel):
     actor_id: int
     access_scope: str
     target_id: int
     target_type: TargetType
     event_type: EventType
+    message: str
     payload: dict
 
 
 class EventSchema(EventBase):
-    actor_name: str
-    payload: dict[str, Any]
+    actor: UserFIO = Field(exclude=True)
+    message: str | None = None
+
+    @computed_field
+    def actor_name(self) -> str:
+        return self.actor.name_with_email()
 
 class EventFilter(BaseModel):
     actor_id: int | None = None
-    access_scope: str | None = None
+    access_scope: UserRole | None = None
     target_id: int | None = None
     target_type: TargetType | None = None
     event_type: EventType | None = None
@@ -89,4 +101,5 @@ class ScheduleMeetingPayload(UserPayloadBase):
 
 class ScheduleMeetingEvent(EventAdd):
     payload: ScheduleMeetingPayload
+
 
