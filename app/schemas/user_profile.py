@@ -47,26 +47,26 @@ class UserProfileSchema(BaseModel):
 
 
 class UserProfileProgressList(BaseModel):
-    id: int
     user_id: int
-    profile_id: int
+    profile_id: int | None = None
     first_name: str
     last_name: str
     patronymic: str
     email: EmailStr
     position: str | None = None
-    profile_title: str
+    profile_title: str | None = None
     department_id: int | None = None
     department_name: str | None = None
     role_id: int
     role_name: str
-    total_cnt: int
-    completed_cnt: int
+    total_cnt: int | None = None
+    completed_cnt: int | None = None
 
     @computed_field
     @property
-    def progress(self) -> float:
-        return self.completed_cnt / self.total_cnt if self.total_cnt else 0
+    def progress(self) -> float | None:
+        if self.total_cnt:
+            return self.completed_cnt / self.total_cnt if self.total_cnt else 0
 
 
 class Stage(BaseModel):

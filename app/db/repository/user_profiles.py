@@ -42,13 +42,13 @@ class UserProfileRepository(BaseRepository):
         )
         stmt = (
             select(
-                UserProfile.id.label("id"),
-                UserProfile.user_id.label("user_id"),
+                User.id.label("user_id"),
                 User.first_name.label("first_name"),
                 User.last_name.label("last_name"),
                 func.coalesce(User.patronymic, "").label("patronymic"),
                 User.email.label("email"),
                 User.position.label("position"),
+                UserProfile.id.label("id"),
                 Profile.id.label("profile_id"),
                 Profile.title.label("profile_title"),
                 Department.id.label("department_id"),
@@ -60,9 +60,9 @@ class UserProfileRepository(BaseRepository):
                     "completed_cnt"
                 ),
             )
-            .select_from(UserProfile)
-            .join(Profile, Profile.id == UserProfile.profile_id)
-            .join(User, User.id == UserProfile.user_id)
+            .select_from(User)
+            .outerjoin(UserProfile, UserProfile.user_id == User.id)
+            .outerjoin(Profile, Profile.id == UserProfile.profile_id)
             .outerjoin(Department, Department.id == User.department_id)
             .join(Role, Role.id == User.role_id)
             .outerjoin(
@@ -71,16 +71,9 @@ class UserProfileRepository(BaseRepository):
             )
             .outerjoin(
                 completed_levels,
-                completed_levels.c.user_id == UserProfile.user_id,
+                completed_levels.c.user_id == User.id,
             )
         )
-        if departments_id := filter_dict.pop("departments_id", None):
-            stmt = stmt.where(Department.id.in_(departments_id))
-        if profile_id := filter_dict.pop("profile_id", None):
-            stmt = stmt.where(Profile.id == profile_id)
-        if role_id := filter_dict.pop("role_id", None):
-            stmt = stmt.where(Role.id == role_id)
-        stmt = stmt.filter_by(**filter_dict)
 
         res = await self._session.execute(stmt)
         return res.all()
