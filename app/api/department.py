@@ -108,7 +108,7 @@ async def delete_by_id(
     department_id: int, current_user: UserInfo = Depends(get_current_user)
 ):
     async with unit_of_work() as uow:
-        await DepartmentService(uow.session).delete_by_id(department_id)
+        await DepartmentService(uow.session).delete(department_id)
     return {"detail": f"Департамент с id = {department_id} удален"}
 
 
