@@ -23,7 +23,9 @@ from utils.roles import UserRole
 skill_router = APIRouter(prefix="/skills", tags=["Skill"])
 
 
-@skill_router.get("/", response_model=list[SkillList])
+@skill_router.get(
+    "/", response_model=list[SkillList], summary="Получить список навыков"
+)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def get_all(
@@ -34,7 +36,11 @@ async def get_all(
         return await SkillService(uow.session).get_list(skill_filter)
 
 
-@skill_router.post("/")
+@skill_router.post(
+    "/",
+    response_model=SkillDetail,
+    summary="Добавить навык с этапами и вопросами этапов",
+)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def add(skill: SkillAddForm, current_user: UserInfo = Depends(get_current_user)):
@@ -42,7 +48,12 @@ async def add(skill: SkillAddForm, current_user: UserInfo = Depends(get_current_
         new_skill = await SkillService(uow.session).add_skill(skill)
         return new_skill
 
-@skill_router.get("/stages", response_model=list[SkillSchema])
+
+@skill_router.get(
+    "/stages",
+    response_model=list[SkillSchema],
+    summary="Получить список навыков с этапами",
+)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def get_all(
@@ -53,7 +64,11 @@ async def get_all(
         return await SkillService(uow.session).get_all_by_categories(skill_filter)
 
 
-@skill_router.get("/{skill_id}", response_model=SkillDetail)
+@skill_router.get(
+    "/{skill_id}",
+    response_model=SkillDetail,
+    summary="Получить навык с этапами и вопросами этапа по id",
+)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_by_id(skill_id: int, current_user: UserInfo = Depends(get_current_user)):
@@ -63,7 +78,11 @@ async def get_by_id(skill_id: int, current_user: UserInfo = Depends(get_current_
         return skill
 
 
-@skill_router.put("/{skill_id}")
+@skill_router.put(
+    "/{skill_id}",
+    response_model=SkillDetail,
+    summary="Обновить навык по id с этапами и списком вопросов этапа",
+)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def update(
@@ -74,19 +93,7 @@ async def update(
         return new_skill
 
 
-@skill_router.post("/{skill_id}")
-@check_role([UserRole.ADMIN, UserRole.SPO])
-@exception_handler
-async def add_stage(
-    skill_id: int, stage: StageAdd, current_user=Depends(get_current_user)
-):
-    stage.skill_id = skill_id
-    async with unit_of_work() as uow:
-        new_stage = await StageService(uow.session).add(stage)
-        return new_stage
-
-
-@skill_router.delete("/{skill_id}")
+@skill_router.delete("/{skill_id}", summary="Удалить навык по id")
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def delete_skill(skill_id: int, current_user=Depends(get_current_user)):

@@ -12,7 +12,7 @@ from utils.roles import UserRole
 evaluation_router = APIRouter(prefix="/evaluations", tags=["Evaluations"])
 
 
-@evaluation_router.post("/")
+@evaluation_router.post("/", summary="Оценить этап пользователя")
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def evaluate(user_stage: UserStageAdd, current_user: UserInfo = Depends(get_current_user)):
@@ -23,7 +23,7 @@ async def evaluate(user_stage: UserStageAdd, current_user: UserInfo = Depends(ge
         return evaluation
 
 
-@evaluation_router.get("/{user_stage_id}")
+@evaluation_router.get("/{user_stage_id}", summary="Получить оценку этапа пользователя")
 @exception_handler
 async def get(user_stage_id: int, current_user: UserInfo = Depends(get_current_user)):
     async with unit_of_work() as uow:

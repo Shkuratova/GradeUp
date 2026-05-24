@@ -19,7 +19,9 @@ from utils.roles import UserRole
 user_router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@user_router.get("/", response_model=list[UserInfo], response_model_exclude_none=False)
+@user_router.get(
+    "/", response_model=list[UserInfo], summary="Получить список пользователей"
+)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_all(
@@ -35,7 +37,7 @@ async def get_all(
 
         if filters.departments_id:
             filters.departments_id = await auth_service.get_department_filter(
-                 current_user, filters.departments_id
+                current_user, filters.departments_id
             )
         if filters.only_subordinates:
             filters.departments_id = await auth_service.get_managed_departments(
@@ -46,10 +48,12 @@ async def get_all(
         return list(res)
 
 
-
 user_detail_router = APIRouter(prefix="/{user_id}", tags=["Users", "UserDetail"])
 
-@user_detail_router.get("", response_model=UserInfo)
+
+@user_detail_router.get(
+    "", response_model=UserInfo, summary="Получить пользователя по id"
+)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_by_id(
@@ -60,7 +64,9 @@ async def get_by_id(
         return await UserService(uow.session).get_user_role(UserBase(id=user_id))
 
 
-@user_detail_router.patch("", response_model=UserInfo)
+@user_detail_router.patch(
+    "", response_model=UserInfo, summary="Обновить даннные пользователя по id"
+)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def update_user(
@@ -70,7 +76,9 @@ async def update_user(
 ):
     async with unit_of_work() as uow:
         user_service = UserService(uow.session)
-        upd, old =  await user_service.update(user_id, user_data, current_user)
+        upd, old = await user_service.update(user_id, user_data, current_user)
         if upd.role_id != old.role_id:
-            await EventService(uow.session).log_set_user_role(old.role, upd, current_user)
+            await EventService(uow.session).log_set_user_role(
+                old.role, upd, current_user
+            )
         return upd

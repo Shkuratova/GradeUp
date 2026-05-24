@@ -19,7 +19,7 @@ from utils.roles import UserRole
 department_router = APIRouter(prefix="/departments", tags=["Departments"])
 
 
-@department_router.post("/")
+@department_router.post("/", summary="Создать отдел")
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def add(
@@ -30,7 +30,9 @@ async def add(
     return instance
 
 
-@department_router.get("/", response_model=list[DepartmentSchema])
+@department_router.get(
+    "/", response_model=list[DepartmentSchema], summary="Получить список отделов"
+)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_all(
@@ -40,7 +42,11 @@ async def get_all(
         return await DepartmentService(uow.session).get_all()
 
 
-@department_router.get("/profiles", response_model=list[DepartmentDetail])
+@department_router.get(
+    "/profiles",
+    response_model=list[DepartmentDetail],
+    summary="Получить список отделов с доступными профилями",
+)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 async def get_all_with_profiles(current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
@@ -52,7 +58,11 @@ async def get_all_with_profiles(current_user=Depends(get_current_user)):
         )
 
 
-@department_router.get("/{department_id}", response_model=DepartmentDetail)
+@department_router.get(
+    "/{department_id}",
+    response_model=DepartmentDetail,
+    summary="Получить отдел по id с руководителем и списком доступных отделов",
+)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_department_detail(
@@ -65,7 +75,11 @@ async def get_department_detail(
         return await DepartmentService(uow.session).get_detail(department_id)
 
 
-@department_router.put("/{department_id}", response_model=DepartmentDetail)
+@department_router.put(
+    "/{department_id}",
+    response_model=DepartmentDetail,
+    summary="Обновление отдела с руководителем и списком профилей",
+)
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def update_by_id(
@@ -87,7 +101,7 @@ async def update_by_id(
         return upd
 
 
-@department_router.delete("/{department_id}")
+@department_router.delete("/{department_id}", summary="Удалить отдел по id")
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def delete_by_id(
@@ -98,7 +112,9 @@ async def delete_by_id(
     return {"detail": f"Департамент с id = {department_id} удален"}
 
 
-@department_router.delete("/{department_id}/supervisor")
+@department_router.delete(
+    "/{department_id}/supervisor", summary="Открепить руководителя от отдела"
+)
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def remove_supervisor(department_id: int, current_user=Depends(get_current_user)):

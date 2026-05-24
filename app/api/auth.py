@@ -19,7 +19,11 @@ from schemas.users import (
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@auth_router.post("/registration", response_model=UserInfo)
+@auth_router.post(
+    "/registration",
+    response_model=UserInfo,
+    summary="Регистрация нового пользователя (Только для Администраторов и СПО.",
+)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def registration(
@@ -28,13 +32,15 @@ async def registration(
 ):
     async with unit_of_work() as uow:
         user_service = UserService(uow.session)
-        new_user =await user_service.add(user_data)
+        new_user = await user_service.add(user_data)
         new_user = await user_service.get_user_role(UserBase(id=new_user.id))
-        await EventService(uow.session).log_registration(user=new_user, current_user=current_user)
+        await EventService(uow.session).log_registration(
+            user=new_user, current_user=current_user
+        )
         return new_user
 
 
-@auth_router.post("/login")
+@auth_router.post("/login", summary="Вход в систему")
 @exception_handler
 async def login(
     response: Response,
@@ -47,20 +53,22 @@ async def login(
     return {"detail": "Аутентификация прошла успешно"}
 
 
-@auth_router.post("/refresh")
+@auth_router.post("/refresh", summary="Обновление токена доступа")
 def refresh_token(response: Response, user: UserInfo = Depends(check_refresh_token)):
     AuthUtils.set_token(response=response, user=user, token_type="access_token")
     return {"detail": "Токен успешно обновлен"}
 
 
-@auth_router.post("/logout")
+@auth_router.post("/logout", summary="Выход из системы")
 def logout(response: Response):
     response.delete_cookie("access_token")
     response.delete_cookie("refresh_token")
     return {"detail": "Пользователь успешно вышел из системы"}
 
 
-@auth_router.get("/me", response_model=UserInfo)
+@auth_router.get(
+    "/me", response_model=UserInfo, summary="Получение текущего пользователя из токена"
+)
 @exception_handler
 async def get_current_user(user: UserInfo = Depends(get_current_user)):
     return user

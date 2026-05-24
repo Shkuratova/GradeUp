@@ -9,6 +9,7 @@ from schemas.user_profile import (
     UserProfileAdd,
     UserProfileProgressList,
     UserProfileFilter,
+    UserProfileSchema,
 )
 from schemas.users import UserInfo
 from services import EventService
@@ -22,7 +23,11 @@ user_profile_router = APIRouter(
 )
 
 
-@user_profile_router.get("/", response_model=list[UserProfileProgressList])
+@user_profile_router.get(
+    "/",
+    response_model=list[UserProfileProgressList],
+    summary="Получить список пользователей с назначенными профилями и прогрессом по уровням",
+)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_all(
@@ -36,7 +41,9 @@ async def get_all(
         return await UserProfileService(uow.session).get_all_with_progress(filters)
 
 
-@user_profile_router.post("/")
+@user_profile_router.post(
+    "/", response_model=UserProfileSchema, summary="Назначить профиль пользователю"
+)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def add(
@@ -57,7 +64,7 @@ async def add(
 user_profile_detail_router = APIRouter(prefix="/profile", tags=["ProfileProgress"])
 
 
-@user_profile_detail_router.get("/")
+@user_profile_detail_router.get("/", summary="Получить прогресс по профилю пользователя")
 @exception_handler
 async def get_by_id(user_id: int, current_user: UserInfo = Depends(get_current_user)):
     async with unit_of_work() as uow:
@@ -65,7 +72,7 @@ async def get_by_id(user_id: int, current_user: UserInfo = Depends(get_current_u
         return await UserProgressService(uow.session).get_profile_progress(user_id)
 
 
-@user_profile_detail_router.delete("")
+@user_profile_detail_router.delete("", summary="Открепить профиль от пользователя")
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def delete_by_id(user_id: int, current_user=Depends(get_current_user)):
@@ -75,7 +82,7 @@ async def delete_by_id(user_id: int, current_user=Depends(get_current_user)):
     return {"detail": "Профиль откреплен от пользователя."}
 
 
-@user_profile_detail_router.post("/grade-up")
+@user_profile_detail_router.post("/grade-up", summary="Повысить уровень профиля пользователя")
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def gradeup_user(

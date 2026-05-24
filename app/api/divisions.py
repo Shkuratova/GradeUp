@@ -17,7 +17,9 @@ from utils.roles import UserRole
 division_router = APIRouter(prefix="/divisions", tags=["Divisions"])
 
 
-@division_router.get("/", response_model=list[DivisionSchema])
+@division_router.get(
+    "/", response_model=list[DivisionSchema], summary="Получить список направлений"
+)
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def get_all(current_user=Depends(get_current_user)):
@@ -25,7 +27,7 @@ async def get_all(current_user=Depends(get_current_user)):
         return await DivisionService(uow.session).get_all()
 
 
-@division_router.post("/", response_model=DivisionDetail)
+@division_router.post("/", response_model=DivisionDetail, summary="Создать направление")
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def add(division: DivisionAddForm, current_user=Depends(get_current_user)):
@@ -33,14 +35,22 @@ async def add(division: DivisionAddForm, current_user=Depends(get_current_user))
         return await DivisionService(uow.session).add_with_relations(division)
 
 
-@division_router.get("/{division_id}", response_model=DivisionDetail)
+@division_router.get(
+    "/{division_id}",
+    response_model=DivisionDetail,
+    summary="Получить направление по id с руководителем и подчиненными отделами",
+)
 @exception_handler
 async def get_division_detail(division_id: int, current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
         return await DivisionService(uow.session).get_division_detail(division_id)
 
 
-@division_router.put("/{division_id}", response_model=DivisionDetail)
+@division_router.put(
+    "/{division_id}",
+    response_model=DivisionDetail,
+    summary="Обновить направление со списком подчиненных отделов и руководителем",
+)
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def update_by_id_with_departments(
@@ -62,7 +72,18 @@ async def update_by_id_with_departments(
         return upd
 
 
-@division_router.delete("/{division_id}/supervisor")
+@division_router.delete("/{division_id}", summary="Удалить направление по id")
+@check_role([UserRole.ADMIN])
+@exception_handler
+async def delete(division_id: int, current_user=Depends(get_current_user)):
+    async with unit_of_work() as uow:
+        await DivisionService(uow.session).delete_by_id(division_id)
+        return {"detail": f"Направление с id={division_id} удалено."}
+
+
+@division_router.delete(
+    "/{division_id}/supervisor", summary="Открепить руководителя от направления"
+)
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def remove_supervisor(

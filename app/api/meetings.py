@@ -20,7 +20,9 @@ from utils.roles import UserRole
 meeting_router = APIRouter(prefix="/meetings", tags=["Meetings"])
 
 
-@meeting_router.get("/", response_model=list[MeetingDetail])
+@meeting_router.get(
+    "/", response_model=list[MeetingDetail], summary="Получить список встреч"
+)
 @exception_handler
 async def get_all(
     filters: Annotated[MeetingFilters, Query()], current_user=Depends(get_current_user)
@@ -32,7 +34,7 @@ async def get_all(
         return await MeetingService(uow.session).get_meetings(filters)
 
 
-@meeting_router.post("/", )#response_model=MeetingDetail)
+@meeting_router.post("/", response_model=MeetingDetail, summary="Назначить встречу")
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def add(
@@ -46,14 +48,16 @@ async def add(
         return new_meeting
 
 
-@meeting_router.get("/next")
+@meeting_router.get("/next", summary="Получить ближайшую встречу текущего пользователя")
 @exception_handler
 async def get_user_next_meeting(current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
         return await MeetingService(uow.session).get_user_next_meeting(current_user.id)
 
 
-@meeting_router.put("/{meeting_id}", response_model=MeetingDetail)
+@meeting_router.put(
+    "/{meeting_id}", response_model=MeetingDetail, summary="Обновить встречу по id"
+)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def update(
@@ -68,7 +72,7 @@ async def update(
         return upd
 
 
-@meeting_router.delete("/{meeting_id}")
+@meeting_router.delete("/{meeting_id}", summary="Удалить встречу")
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def delete(meeting_id: int, current_user=Depends(get_current_user)):
@@ -78,7 +82,10 @@ async def delete(meeting_id: int, current_user=Depends(get_current_user)):
         return {"detail": f"Встреча с id = {meeting_id} была удалена."}
 
 
-@meeting_router.get("/{meeting_id}/questions")
+@meeting_router.get(
+    "/{meeting_id}/questions",
+    summary="Получить список вопросов встречи для Аттестующего",
+)
 @exception_handler
 async def get_questions(
     meeting_id: int, current_user: UserInfo = Depends(get_current_user)
