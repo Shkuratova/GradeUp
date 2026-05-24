@@ -48,6 +48,7 @@ class UserStage(Base):
     updated_by: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     user_skill: Mapped[UserSkill] = relationship(back_populates="stages")
+    skill: Mapped["Skill"] = relationship(secondary="user_skills")
     stage: Mapped["Stage"] = relationship(secondary="stage_versions")
     stage_version: Mapped["StageVersion"] = relationship(back_populates="user_stages")
     meetings: Mapped["Meeting"] = relationship(back_populates="user_stage")

@@ -23,7 +23,7 @@ class StageProgress(BaseModel):
         return self.stage_version.id
 
     @field_serializer("updated_at")
-    def serialize_started_at(self, value: datetime, _info):
+    def serialize_updated_at(self, value: datetime, _info):
         return value.strftime("%Y-%m-%d %H:%M:%S")
 
 

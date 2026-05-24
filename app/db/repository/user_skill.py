@@ -165,3 +165,8 @@ class UserSkillRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
         return res.mappings().all()
+
+    async def get_count_by_skill(self, skill_id):
+        stmt = select(func.count(UserSkill.user_id)).where(UserSkill.skill_id == skill_id)
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()

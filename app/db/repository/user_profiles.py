@@ -209,6 +209,13 @@ class UserProfileRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.rowcount
 
+    async def get_count(self, profile_id):
+        stmt = select(func.count(UserProfile.user_id)).where(
+            UserProfile.profile_id == profile_id
+        )
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
+
 
 class UserLevelRepository(BaseRepository):
     model = UserLevel
@@ -229,5 +236,12 @@ class UserLevelRepository(BaseRepository):
             )
         )
 
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def get_by_level_id(self, user_id: int, level_id: int):
+        stmt = select(UserLevel).where(
+            UserLevel.profile_level_id == level_id, UserLevel.user_id == user_id
+        )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()

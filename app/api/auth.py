@@ -12,7 +12,6 @@ from schemas.users import (
     UserAuth,
     UserInfo,
     UserRegistration,
-    SUser,
     UserBase,
 )
 

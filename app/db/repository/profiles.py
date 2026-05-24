@@ -144,3 +144,15 @@ class LevelRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    async def get_profile_count_by_skill(self, skill_id):
+        stmt = (
+            select(func.count(func.distinct(ProfileLevel.profile_id)))
+            .select_from(ProfileLevel)
+            .join(
+                LevelSkill,
+                LevelSkill.profile_level_id == ProfileLevel.id,
+            )
+            .where(LevelSkill.skill_id == skill_id)
+        )
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()

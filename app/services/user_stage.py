@@ -8,9 +8,8 @@ from db.repository import (
     UserLevelRepository,
 )
 from exceptions.common import NotFoundException, DataValidationError
+from schemas.evaluations import EvaluationSchema
 from schemas.user_profile import UserStageAdd
-from schemas.users import UserInfo
-from services.access import AccessService
 from services.base import BaseService
 
 
@@ -102,3 +101,7 @@ class UserStageService(BaseService):
             )
 
         return res
+
+    async def get_evaluation(self, user_stage_id: int):
+        evaluation =  await self.repository.get_evaluation(user_stage_id)
+        return EvaluationSchema.model_validate(evaluation, from_attributes=True)

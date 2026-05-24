@@ -92,6 +92,18 @@ class DivisionService(BaseService):
         await self.repository.update_by_id(division_id, {'supervisor_id': None})
         return division
 
+    async def delete(self, division_id):
+        division = await self.get_by_id(division_id)
+        if division.supervisor_id:
+            raise ConflictException("Нельзя удалить направление с назначенным руководителем.")
+        department_cnt = await self.repository.get_department_cnt(division_id)
+        if department_cnt:
+            raise ConflictException(f"Нельзя удалить направление с подчиненными отделами (Отделов в направлении: {department_cnt})")
+        await self.repository.delete_by_id(division_id)
+
+
+
+
 class DepartmentService(BaseService):
     entity_name = "Отдел"
     unique_fields = ["department_name"]
@@ -188,3 +200,13 @@ class DepartmentService(BaseService):
             raise ConflictException("У отдела нет руководителя.")
         await self.repository.update_by_id(department_id, {'supervisor_id': None})
         return DepartmentDetail.model_validate(department, from_attributes=True)
+
+    async def delete(self, department_id):
+        department = await self.get_by_id(department_id)
+        if department.supervisor_id is not None:
+            raise ConflictException("Нельзя удалить профиль с назначенным руководителем")
+        res = await self.repository.get_user_count(department_id)
+        if res:
+            raise ConflictException(f"Нельзя удалить отдел с сотрудниками (Сотрудников в отделе: {res})")
+        await self.repository.delete_by_id(department_id)
+

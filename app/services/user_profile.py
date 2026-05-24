@@ -72,9 +72,11 @@ class UserProfileService(BaseService):
         user_profile = await self.repository.add(
             {**data_dict, "current_level_id": current_lvl}
         )
-        user_level = await self.user_level_repository.add(
-            {"user_id": model.user_id, "profile_level_id": current_lvl}
-        )
+        user_level = await self.user_level_repository.get_by_level_id(model.user_id, current_lvl)
+        if user_level is None:
+            user_level = await self.user_level_repository.add(
+                {"user_id": model.user_id, "profile_level_id": current_lvl}
+            )
         return UserProfileSchema(
             id=user_profile.id,
             user=UserFIO.model_validate(user, from_attributes=True),

@@ -91,7 +91,7 @@ async def update_by_id(
 @exception_handler
 async def delete_by_id(profile_id: int, current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
-        await ProfileService(uow.session).soft_delete_by_id(profile_id)
+        await ProfileService(uow.session).delete(profile_id)
     return {f"Профиль c id = {profile_id} был удален."}
 
 

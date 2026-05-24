@@ -1,15 +1,13 @@
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from db.repository import QuestionRepository
+
 from db.repository import (
     SkillRepository,
-    CategoryRepository,
     LevelSkillRepository,
     SkillCategoryRepository,
-    StageVersionRepository,
-    StageRepository,
 )
-from exceptions.common import NotFoundException, DataValidationError
+from db.repository import UserSkillRepository, LevelRepository
+from exceptions.common import NotFoundException, ConflictException
 from schemas.skills import (
     SkillFilter,
     SkillDetail,
@@ -29,6 +27,8 @@ class SkillService(BaseService):
         super().__init__(session)
         self.repository = SkillRepository(session)
         self.skill_category_repository = SkillCategoryRepository(session)
+        self.user_skill_repository = UserSkillRepository(session)
+        self.level_repository = LevelRepository(session)
 
     async def get_list(self, filter_model: SkillFilter):
         res = await self.repository.get_list_by_categories(filter_model.categories)
@@ -72,11 +72,13 @@ class SkillService(BaseService):
 
         res = await self.update_by_id(skill_id, model.skill)
 
-        old_categories =old_skill.categories
+        old_categories = old_skill.categories
         new_cat_ids = set(model.categories)
         old_cat_ids = set(cat.id for cat in old_categories)
         if del_cat_id := old_cat_ids - new_cat_ids:
-            await self.skill_category_repository.delete_categories(skill_id, list(del_cat_id))
+            await self.skill_category_repository.delete_categories(
+                skill_id, list(del_cat_id)
+            )
         if add_cat_ids := new_cat_ids - old_cat_ids:
             await self.skill_category_repository.add_list(
                 [
@@ -93,6 +95,19 @@ class SkillService(BaseService):
 
     async def get_accessible_skills(self, current_user):
         pass
+
+    async def delete(self, skill_id):
+        user_count = await self.user_skill_repository.get_count_by_skill(skill_id)
+        if user_count:
+            raise ConflictException(
+                f"Нельзя удалить навык, по которому есть прогресс у пользователя (Пользователей, имеющих прогресс по навыку {user_count})."
+            )
+        profile_count = await self.level_repository.get_profile_count_by_skill(skill_id)
+        if profile_count:
+            raise ConflictException(
+                f"Нельзя удалить навык, который используется в профиле (Профилей, содержащих выбранный навык {profile_count})"
+            )
+        await self.delete_by_id(skill_id)
 
 
 class LevelSkillService(BaseService):

@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload, selectinload
 
 from db.repository.base import BaseRepository
@@ -29,6 +29,11 @@ class DivisionRepository(BaseRepository):
                 ),
             )
         )
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def get_department_cnt(self, division_id):
+        stmt = select(func.count(Department.division_id)).where(Department.division_id == division_id)
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
@@ -94,6 +99,11 @@ class DepartmentRepository(BaseRepository):
         stmt = select(Department.id).where(Department.division_id == division_id)
         res = await self._session.execute(stmt)
         return res.scalars().all()
+
+    async def get_user_count(self, department_id):
+        stmt = select(func.count(User.id)).where(User.department_id == department_id)
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
 
 
 class DepartmentProfileRepository(BaseRepository):

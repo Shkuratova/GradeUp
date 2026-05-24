@@ -77,7 +77,7 @@ async def update_by_id_with_departments(
 @exception_handler
 async def delete(division_id: int, current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
-        await DivisionService(uow.session).delete_by_id(division_id)
+        await DivisionService(uow.session).delete(division_id)
         return {"detail": f"Направление с id={division_id} удалено."}
 
 

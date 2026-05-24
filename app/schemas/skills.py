@@ -97,6 +97,11 @@ class StageBase(BaseModel):
     skill_id: int = Field(exclude=True)
     confirmation_type: ConfirmationTypes
 
+class StageList(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    confirmation_type: ConfirmationTypes
+
 
 class Question(BaseModel):
     model_config = ConfigDict(from_attributes=True)

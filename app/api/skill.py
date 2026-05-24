@@ -96,7 +96,7 @@ async def update(
 @skill_router.delete("/{skill_id}", summary="Удалить навык по id")
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
-async def delete_skill(skill_id: int, current_user=Depends(get_current_user)):
+async def delete(skill_id: int, current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
-        await SkillService(uow.session).soft_delete_by_id(skill_id)
+        await SkillService(uow.session).delete(skill_id)
         return {"detail": f"Навык с id = {skill_id} был удален."}

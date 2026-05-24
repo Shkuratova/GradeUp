@@ -1,6 +1,6 @@
 import sqlalchemy.ext.asyncio
 
-from db.repository import LevelSkillRepository
+from db.repository import LevelSkillRepository, UserProfileRepository
 from db.repository.profiles import (
     ProfileRepository,
     LevelRepository,
@@ -9,6 +9,7 @@ from db.repository.skill import SkillRepository
 from exceptions.common import (
     DataValidationError,
     NotFoundException,
+    ConflictException,
 )
 from schemas.profiles import (
     SProfileAdd,
@@ -34,6 +35,7 @@ class ProfileService(BaseService):
         self.level_repository = LevelRepository(session)
         self.level_skill_repository = LevelSkillRepository(session)
         self.skill_repository = SkillRepository(session)
+        self.user_profile_repository = UserProfileRepository(session)
 
     async def get_profile_list(self, filters: ProfileFilter):
         filter_dict = filters.model_dump(exclude_none=True)
@@ -136,3 +138,11 @@ class ProfileService(BaseService):
     async def get_structure(self, profile_id):
         res = await self.repository.get_profile_structure_by_id(profile_id)
         return ProfileStructure.model_validate(res, from_attributes=True)
+
+    async def delete(self, profile_id):
+        user_profile_cnt = await self.user_profile_repository.get_count(profile_id)
+        if user_profile_cnt:
+            raise ConflictException(
+                f"Нельзя удалить профиль, который назначен пользователю (Пользователей с выбранным профилем: {profile_id})"
+            )
+        return await self.repository.delete_by_id(profile_id)

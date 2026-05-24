@@ -25,12 +25,15 @@ class Skill(Base):
 
     profile_levels: Mapped[list["LevelSkill"]] = relationship(back_populates="skill")
     profile_level: Mapped["ProfileLevel"] = relationship(back_populates="skill_list", secondary="level_skills")
+
+
 class SkillCategory(Base):
     __tablename__ = "skill_categories"
     __table_args__ = (UniqueConstraint("skill_id", "category_id"), )
 
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
     skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"))
+
 
 class LevelSkill(Base):
     profile_level_id: Mapped[int] = mapped_column(ForeignKey("profile_levels.id", ondelete="CASCADE"))

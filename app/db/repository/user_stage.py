@@ -1,7 +1,7 @@
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload, selectinload
 
-from db.models import UserStage, Stage
+from db.models import UserStage, Stage, Skill
 from db.models.user_profiles import UserSkill, UserLevel
 from db.repository.base import BaseRepository
 from schemas.skills import StageVersion
@@ -44,6 +44,17 @@ class UserStageRepository(BaseRepository):
                     select(Stage.id).where(Stage.skill_id == skill_id)
                 ),
             )
+        )
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
+
+    async def get_evaluation(self, user_stage_id):
+        stmt = (
+            select(UserStage)
+            .where(UserStage.id == user_stage_id)
+            .options(joinedload(UserStage.skill).load_only(Skill.id, Skill.title),
+                     joinedload(UserStage.stage).load_only(Stage.id, Stage.confirmation_type))
+
         )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
