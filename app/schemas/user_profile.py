@@ -169,3 +169,14 @@ class UserLevelProgress(BaseModel):
 class UserProfileProgress(UserProfileBase):
     title: str
     profile_levels: list[UserLevelProgress]
+
+
+class Level(BaseModel):
+    id: int
+    num: int
+    level_name: str
+
+class GradeUpResult(BaseModel):
+    profile_id: int
+    old_level: Level
+    new_level: Level

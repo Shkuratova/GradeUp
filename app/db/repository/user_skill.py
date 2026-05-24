@@ -14,7 +14,7 @@ class UserSkillRepository(BaseRepository):
         stmt = select(UserSkill).where(
             and_(
                 UserSkill.skill_id == skill_id,
-                UserSkill.user_level.has(UserLevel.user_id == user_id),
+                UserSkill.user_id == user_id,
             )
         )
         res = await self._session.execute(stmt)
@@ -105,15 +105,12 @@ class UserSkillRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.mappings().all()
 
-    async def get_accepted_count(self, user_level_id: int) -> int:
+    async def get_accepted_count(self, user_id: int, profile_level_id: int) -> int:
         stmt = (
             select(func.count(UserSkill.id))
-            .join(
-                UserLevel,
-                UserSkill.user_level_id == UserLevel.id,
-            )
             .where(
-                UserLevel.id == user_level_id,
+                UserSkill.user_id == user_id,
+                UserSkill.profile_level_id == profile_level_id,
                 UserSkill.is_accepted.is_(True),
             )
         )

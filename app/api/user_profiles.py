@@ -61,7 +61,7 @@ async def add(
         return new_user_profile
 
 
-user_profile_detail_router = APIRouter(prefix="/profile", tags=["ProfileProgress"])
+user_profile_detail_router = APIRouter(prefix="/profile", tags=["UserProfileProgress"])
 
 
 @user_profile_detail_router.get("/", summary="Получить прогресс по профилю пользователя")
@@ -90,6 +90,7 @@ async def gradeup_user(
 ):
     async with unit_of_work() as uow:
         await AccessService(uow.session).can_get_user_profile(user_id, current_user)
-        await UserProfileService(uow.session).gradeup(user_id)
-        await EventService(uow.session).log_gradeup(user_id, current_user)
-        return {"detail": "Уровень пользователя повышен."}
+        res = await UserProfileService(uow.session).gradeup(user_id)
+        await EventService(uow.session).log_gradeup(user_id, res, current_user)
+        return res
+        # return {"detail": "Уровень пользователя повышен."}

@@ -10,7 +10,7 @@ from services.user_profile import UserProfileService
 from services.user_progress import UserProgressService
 from utils.roles import UserRole
 
-user_skill_router = APIRouter(prefix="/skills", tags=["SkillProgress"])
+user_skill_router = APIRouter(prefix="/skills", tags=["UserSkillProgress"])
 
 
 @user_skill_router.get(

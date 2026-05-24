@@ -226,7 +226,8 @@ class UserLevelRepository(BaseRepository):
             .where(UserProfile.user_id == user_id)
             .options(
                 joinedload(UserProfile.current_level)
-                .load_only(ProfileLevel.id)
+                .load_only(ProfileLevel.id, ProfileLevel.num, ProfileLevel.level_name),
+                joinedload(UserProfile.user)
                 .selectinload(User.user_skills)
                 .load_only(UserSkill.id, UserSkill.is_accepted)
                 .selectinload(UserSkill.stages)
@@ -250,3 +251,13 @@ class UserLevelRepository(BaseRepository):
         stmt = select(func.count(UserLevel.user_id)).where(UserLevel.profile_level_id.in_(levels_id))
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
+
+    async def delete_by_user(self, user_id):
+        stmt = delete(UserLevel).where(UserLevel.user_id == user_id)
+        res = await self._session.execute(stmt)
+        return res.rowcount
+
+    async def get_all_by_user(self, user_id: int):
+        stmt = select(UserLevel).where(UserLevel.user_id == user_id)
+        res = await self._session.execute(stmt)
+        return res.scalars().all()

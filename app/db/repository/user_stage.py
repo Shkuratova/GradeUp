@@ -1,10 +1,9 @@
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload, selectinload
 
-from db.models import UserStage, Stage, Skill
+from db.models import UserStage, Stage, Skill, StageVersion
 from db.models.user_profiles import UserSkill, UserLevel
 from db.repository.base import BaseRepository
-from schemas.skills import StageVersion
 
 
 class UserStageRepository(BaseRepository):

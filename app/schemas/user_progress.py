@@ -1,13 +1,15 @@
 from pydantic import BaseModel, Field, computed_field, ConfigDict, field_serializer
 from datetime import datetime
 
+from db.models import ConfirmationTypes
+
 
 class StageVersion(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     stage_id: int
 
-class StageProgress(BaseModel):
+class UserStageProgress(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     is_accepted: bool
@@ -27,21 +29,82 @@ class StageProgress(BaseModel):
         return value.strftime("%Y-%m-%d %H:%M:%S")
 
 
-class SkillProgress(BaseModel):
+class UserSkillProgress(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     skill_id: int
     is_accepted: bool
-    stages: list[StageProgress]
+    stages: list[UserStageProgress]
+
 
 class ProfileUser(BaseModel):
-    user_skills: list[SkillProgress]
+    user_skills: list[UserSkillProgress]
 
-class ProfileProgress(BaseModel):
+class UserProfileProgress(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     profile_id: int
     user_id: int
     current_level_id: int
     user: ProfileUser = Field(exclude=True)
     @computed_field
-    def skills(self) -> list[SkillProgress] | None:
+    def skills(self) -> list[UserSkillProgress] | None:
         return self.user.user_skills
+
+class StageProgress(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int | None = None
+    stage_id: int
+    stage_version_id: int | None = None
+    confirmation_type: ConfirmationTypes
+    is_accepted: bool | None = None
+    comment: str | None = None
+    updated_at: datetime | None = None
+    @field_serializer("updated_at")
+    def serialize_updated_at(self, value: datetime | None):
+        return value.strftime("%Y-%m-%d %H:%M:%S") if value else None
+
+
+class SkillProgress(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: str
+    is_accepted: bool | None = None
+    stages: list[StageProgress]
+    @computed_field
+    def level_progress(self) -> float:
+        accepted = sum(s.is_accepted for s in self.stages)
+        return accepted / len(self.stages) * 100
+
+
+class LevelProgress(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    num: int
+    level_name: str
+    is_closed: bool = False
+    skills: list[SkillProgress]
+
+    @computed_field
+    def level_progress(self) -> float:
+        accepted = sum(s.is_accepted for s in self.skills)
+        return accepted / len(self.skills) * 100
+
+
+class ProfileProgress(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    user_id: int
+    profile_id: int
+    title: str
+    current_level_id: int
+    levels: list[LevelProgress]
+
+    @computed_field
+    def profile_progress(self) -> float:
+        accepted = sum(l.is_closed for l in self.levels)
+        return accepted / len(self.levels) * 100
+
+    @computed_field
+    def ready_gradeup(self) -> bool:
+        current_lvl = next(l for l in self.levels if l.id == self.current_level_id)
+        if current_lvl.level_progress == 100:
+            return True
+        return False

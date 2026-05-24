@@ -100,7 +100,7 @@ class UserStageService(BaseService):
                 user_stage.user_skill_id, {"is_accepted": True}
             )
 
-        return res
+        return await self.get_evaluation(user_stage.id)
 
     async def get_evaluation(self, user_stage_id: int):
         evaluation =  await self.repository.get_evaluation(user_stage_id)

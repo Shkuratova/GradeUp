@@ -45,6 +45,7 @@ class Participant(ParticipantBase):
     def email(self) -> EmailStr:
         return self.user.email
 
+
 class MeetingStage(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     confirmation_type: ConfirmationTypes

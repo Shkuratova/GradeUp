@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.repository import LevelRepository, UserLevelRepository, UserSkillRepository
 from schemas.profiles import ProfileStructure, LevelStructure
-from schemas.user_progress import ProfileProgress
+from schemas.user_progress import UserProfileProgress, ProfileProgress, StageProgress
 from services.user_profile import UserProfileService
 from services.profile import ProfileService
 
@@ -20,9 +20,12 @@ class UserProgressService:
         profile: ProfileStructure = await self.profile_service.get_structure(
             user_profile.profile_id
         )
-        user_progress: ProfileProgress = await self.user_profile_service.progress(
+        user_progress: UserProfileProgress = await self.user_profile_service.progress(
             user_id
         )
+        user_levels = await self.user_level_repository.get_all_by_user(user_id)
+
+        user_level_map = {l.profile_level_id: l for l in user_levels}
 
         user_skill_map = {us.skill_id: us for us in user_progress.skills}
         stage_map = {}
@@ -32,6 +35,7 @@ class UserProgressService:
         result_levels = []
         for level in profile.levels:
             result_skills = []
+            user_level = user_level_map.get(level.id)
             for skill in level.skill_list:
                 user_skill = user_skill_map.get(skill.id)
 
@@ -56,6 +60,9 @@ class UserProgressService:
                             "comment": (
                                 user_stage.comment if user_stage is not None else None
                             ),
+                            "updated_at": (
+                                user_stage.updated_at if user_stage is not None else None
+                            ),
                         }
                     )
                 result_skills.append(
@@ -79,7 +86,8 @@ class UserProgressService:
         res = {
             "user_id": user_progress.user_id,
             "profile_id": profile.id,
+            "current_level_id": user_profile.current_level_id,
             "title": profile.title,
             "levels": result_levels,
         }
-        return res
+        return ProfileProgress.model_validate(res)

@@ -19,61 +19,6 @@ class EmailModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class UserInfo(UserBase, EmailModel):
-    role: SRole = Field(exclude=True)
-    department: SDepartment | None = Field(None, exclude=True)
-    managed_division: SDivision | None = Field(None, exclude=True)
-    managed_department: SDepartment | None = Field(None, exclude=True)
-    role_id: int
-    first_name: str
-    last_name: str
-    patronymic: str | None
-    position: str | None
-
-    password: str = Field(exclude=True)
-
-    @computed_field
-    def is_supervisor(self) -> bool:
-        return self.managed_division is not None or self.managed_department is not None
-
-    @computed_field
-    def roles(self) -> list[str]:
-        roles = {self.role.role_name}
-
-        if self.is_supervisor:
-            roles.add(UserRole.SUPERVISOR)
-
-        return list(roles)
-
-
-    @computed_field
-    def role_name(self) -> str:
-        return self.role.role_name
-
-    @computed_field
-    def department_id(self) -> int | None:
-        return self.department.id if self.department else None
-
-    @computed_field
-    def department_name(self) -> str | None:
-        return self.department.department_name if self.department else None
-
-    @computed_field
-    def division_id(self) -> int | None:
-        return self.managed_division.id if self.managed_division else None
-
-    @computed_field
-    def managed_division_id(self) -> str | None:
-        return self.managed_division.id if self.managed_division else None
-
-    @computed_field
-    def managed_division_name(self) -> str | None:
-        return self.managed_division.division_name if self.managed_division else None
-
-    def full_name(self) -> str:
-        patronymic = f"{self.patronymic[0] if self.patronymic else ''}"
-        return f'{self.last_name} {self.first_name[0]}. {patronymic}.'
-
 class UserAuth(EmailModel):
     password: str
 
@@ -190,3 +135,51 @@ class UserFIO(BaseModel):
     def full_name(self) -> str:
         patronymic = f"{self.patronymic[0] if self.patronymic else ''}"
         return f'{self.last_name} {self.first_name[0]}. {patronymic}.'
+
+    def name_with_email(self) ->str:
+        return f"{self.full_name()} ({self.email})"
+
+
+class UserInfo(UserFIO):
+    role: SRole = Field(exclude=True)
+    department: SDepartment | None = Field(None, exclude=True)
+    managed_division: SDivision | None = Field(None, exclude=True)
+    managed_department: SDepartment | None = Field(None, exclude=True)
+    role_id: int
+    position: str | None
+    password: str = Field(exclude=True)
+
+    @computed_field
+    def is_supervisor(self) -> bool:
+        return self.managed_division is not None or self.managed_department is not None
+
+    @computed_field
+    def roles(self) -> list[str]:
+        roles = {self.role.role_name}
+
+        if self.is_supervisor:
+            roles.add(UserRole.SUPERVISOR)
+
+        return list(roles)
+
+
+    @computed_field
+    def role_name(self) -> str:
+        return self.role.role_name
+
+    @computed_field
+    def department_name(self) -> str | None:
+        return self.department.department_name if self.department else None
+
+    @computed_field
+    def division_id(self) -> int | None:
+        return self.managed_division.id if self.managed_division else None
+
+    @computed_field
+    def managed_division_id(self) -> str | None:
+        return self.managed_division.id if self.managed_division else None
+
+    @computed_field
+    def managed_division_name(self) -> str | None:
+        return self.managed_division.division_name if self.managed_division else None
+

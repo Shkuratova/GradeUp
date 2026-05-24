@@ -1,7 +1,7 @@
 from sqlalchemy import select, func, and_
 from sqlalchemy.orm import selectinload, joinedload, contains_eager
 
-from db.models import Department, DepartmentProfile
+from db.models import Department, DepartmentProfile, UserProfile
 from db.models.profiles import Profile, ProfileLevel
 from db.models.skills import LevelSkill, Skill, Stage
 from db.repository.base import BaseRepository
@@ -117,7 +117,7 @@ class LevelRepository(BaseRepository):
 
     async def get_last_level_by_num(self, profile_id: int, level_num: int):
 
-        stmt = select(ProfileLevel.id).where(
+        stmt = select(ProfileLevel).where(
             ProfileLevel.profile_id == profile_id,
             ProfileLevel.is_active.is_(True),
             ProfileLevel.num == level_num,
@@ -156,3 +156,4 @@ class LevelRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
+
