@@ -31,6 +31,6 @@ class Division(Base):
 
 class DepartmentProfile(Base):
     __table_args__ = (UniqueConstraint("department_id", "profile_id"), )
-    department_id: Mapped[int] = mapped_column(ForeignKey("departments.id"))
-    profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id"))
+    department_id: Mapped[int] = mapped_column(ForeignKey("departments.id", ondelete="CASCADE"))
+    profile_id: Mapped[int] = mapped_column(ForeignKey("profiles.id", ondelete="CASCADE"))
 
