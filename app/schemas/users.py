@@ -87,15 +87,11 @@ class UserUpdateBase(BaseModel):
     last_name: str | None = None
     patronymic: str | None = None
     email: EmailStr | None = None
-
+    position: str | None = None
     model_config = ConfigDict(extra="forbid")
 
 
-class UserUpdateSupervisor(UserUpdateBase):
-    profile_id: int | None = None
-
-
-class UserUpdateAdmin(UserUpdateSupervisor):
+class UserUpdateAdmin(UserUpdateBase):
     role_id: int | None = None
     department_id: int | None = None
 
