@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi_pagination import  add_pagination
 from api import routers
 from core.config import settings
 from core.log import setup_logging
@@ -18,6 +19,7 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+add_pagination(app)
 
 @app.get("/")
 def check():

@@ -299,6 +299,46 @@ standard = ["email-validator (>=2.0.0)", "fastapi-cli[standard] (>=0.0.8)", "htt
 standard-no-fastapi-cloud-cli = ["email-validator (>=2.0.0)", "fastapi-cli[standard-no-fastapi-cloud-cli] (>=0.0.8)", "httpx (>=0.23.0,<1.0.0)", "jinja2 (>=3.1.5)", "pydantic-extra-types (>=2.0.0)", "pydantic-settings (>=2.0.0)", "python-multipart (>=0.0.18)", "uvicorn[standard] (>=0.12.0)"]
 
 [[package]]
+name = "fastapi-pagination"
+version = "0.15.13"
+description = "FastAPI pagination"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "fastapi_pagination-0.15.13-py3-none-any.whl", hash = "sha256:95c6733f7c93280ccfa551c3a76722ccea2ffb3ad6a5e4a733cbbf03df4c6b30"},
+    {file = "fastapi_pagination-0.15.13.tar.gz", hash = "sha256:2ed92e90085fdeb818fa88432e1b2d1b66aa3240b7c09f1eec7ba55e069a86ca"},
+]
+
+[package.dependencies]
+fastapi = ">=0.93.0"
+pydantic = ">=1.9.1"
+typing-extensions = ">=4.8.0"
+
+[package.extras]
+aiosqlite = ["aiosqlite (>=0.19.0,!=0.22.0,!=0.22.1)"]
+asyncpg = ["asyncpg (>=0.24.0)", "sqlalchemy (>=1.3.20)"]
+beanie = ["beanie (>=2.1.0)"]
+bunnet = ["bunnet (>=1.1.0)"]
+databases = ["databases (>=0.6.0)"]
+django = ["databases (>=0.6.0)", "django (<6.0.0)"]
+elasticsearch = ["elasticsearch-dsl (>=8.13.0)"]
+firestore = ["google-cloud-firestore (>=2.19.0)"]
+mongoengine = ["mongoengine (>=0.23.1)"]
+motor = ["motor (>=3.6.0)"]
+odmantic = ["odmantic (>=1.0.2)"]
+orm = ["databases (>=0.6.0)", "orm (>=0.3.1)"]
+ormar = ["ormar (>=0.21.0)"]
+peewee = ["aiosqlite (>=0.19.0,!=0.22.0,!=0.22.1)", "greenlet", "peewee (>=4.0)"]
+peewee-sync = ["peewee (>=4.0)"]
+piccolo = ["piccolo (>=0.89)"]
+psycopg = ["psycopg[binary] (>=3.3.2)"]
+scylla-driver = ["scylla-driver (>=3.25.6)"]
+sqlalchemy = ["sqlakeyset (>=2.0.1680321678)", "sqlalchemy (>=1.3.20)"]
+sqlmodel = ["sqlakeyset (>=2.0.1680321678)", "sqlmodel (>=0.0.22)"]
+tortoise = ["tortoise-orm (>=0.22.0)"]
+
+[[package]]
 name = "greenlet"
 version = "3.3.1"
 description = "Lightweight in-process concurrent programming"
@@ -943,4 +983,4 @@ dev = ["black (>=19.3b0) ; python_version >= \"3.6\"", "pytest (>=4.6.2)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.14, <4.0"
-content-hash = "ca5bc59ed9e09295f1a75784482f6a1eecfe2259a1a1c6b96a5b9eb25e50c00c"
+content-hash = "3f939c36c34ac1ca73d94dfbf49f30c65394e75792382c2256c6373f373d7768"

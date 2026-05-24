@@ -3,14 +3,14 @@ services:
     container_name: gradeup_backend
     build:
       context: .
-    command: uvicorn main:app --host 0.0.0.0 --reload
+    working_dir: /backend/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       - db
     ports:
       - "5442:8000"
     volumes:
-      - ./app:/backend
-
+      - .:/backend
 
   db:
     image: postgres:17
