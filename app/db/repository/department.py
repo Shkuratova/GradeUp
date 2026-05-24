@@ -25,7 +25,7 @@ class DivisionRepository(BaseRepository):
                     User.last_name,
                     User.patronymic,
                     User.email,
-                    User.department_id
+                    User.department_id,
                 ),
             )
         )
@@ -33,9 +33,31 @@ class DivisionRepository(BaseRepository):
         return res.scalar_one_or_none()
 
     async def get_department_cnt(self, division_id):
-        stmt = select(func.count(Department.division_id)).where(Department.division_id == division_id)
+        stmt = select(func.count(Department.division_id)).where(
+            Department.division_id == division_id
+        )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
+
+    async def get_with_departments(self):
+        stmt = select(Division).options(
+            selectinload(Division.departments).load_only(
+                Department.id,
+                Department.department_name,
+                Department.description,
+                Department.supervisor_id,
+            ),
+            joinedload(Division.supervisor).load_only(
+                User.id,
+                User.first_name,
+                User.last_name,
+                User.patronymic,
+                User.email,
+                User.department_id,
+            ),
+        )
+        res = await self._session.execute(stmt)
+        return res.scalars().all()
 
 
 class DepartmentRepository(BaseRepository):

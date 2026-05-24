@@ -175,7 +175,7 @@ class SUserFilter(BaseModel):
     division_id: int | None = None
     role_id: int | None = None
     position: str | None = None
-    only_subordinates: bool = Field(False, exclude=True)
+    only_subordinates: bool | None = Field(None, exclude=True)
 
 
 class UserFIO(BaseModel):

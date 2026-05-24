@@ -42,6 +42,7 @@ async def get_all(
         return await DepartmentService(uow.session).get_all()
 
 
+
 @department_router.get(
     "/profiles",
     response_model=list[DepartmentDetail],

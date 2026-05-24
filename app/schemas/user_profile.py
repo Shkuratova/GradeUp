@@ -66,7 +66,7 @@ class UserProfileProgressList(BaseModel):
     @property
     def progress(self) -> float | None:
         if self.total_cnt:
-            return self.completed_cnt / self.total_cnt if self.total_cnt else 0
+            return self.completed_cnt / self.total_cnt * 100 if self.total_cnt else 0
 
 
 class Stage(BaseModel):
