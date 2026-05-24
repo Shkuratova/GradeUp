@@ -36,6 +36,7 @@ class SkillCategory(Base):
 
 
 class LevelSkill(Base):
+    __table_args__ = (UniqueConstraint("profile_level_id", "skill_id"),)
     profile_level_id: Mapped[int] = mapped_column(ForeignKey("profile_levels.id", ondelete="CASCADE"))
     skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id", ondelete="CASCADE"))
 

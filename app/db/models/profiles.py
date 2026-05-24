@@ -16,6 +16,8 @@ class Profile(Base):
 
 
 class ProfileLevel(Base):
+    __table_args__ = (UniqueConstraint("profile_id", "level_name"),
+                      UniqueConstraint("profile_id", "num"), )
     profile_id: Mapped[int] = mapped_column(
         ForeignKey("profiles.id", ondelete="CASCADE")
     )

@@ -245,3 +245,8 @@ class UserLevelRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
+
+    async def get_level_count(self, levels_id: list[int]):
+        stmt = select(func.count(UserLevel.user_id)).where(UserLevel.profile_level_id.in_(levels_id))
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()
