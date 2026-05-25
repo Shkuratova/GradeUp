@@ -30,7 +30,9 @@ async def get_all(current_user=Depends(get_current_user)) -> list[CategoryBase]:
         return await CategoryService(uow.session).get_all()
 
 
-@category_router.post("/skills", summary="Прикрепить навык к категории")
+@category_router.post(
+    "/skills", response_model=CategoryBase, summary="Прикрепить навык к категории"
+)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def add_skill_category(
@@ -41,7 +43,9 @@ async def add_skill_category(
         return res
 
 
-@category_router.get("/{category_id}", summary="Получить категорию по id")
+@category_router.get(
+    "/{category_id}", response_model=CategoryBase, summary="Получить категорию по id"
+)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def get_by_id(
@@ -51,7 +55,9 @@ async def get_by_id(
         return await CategoryService(uow.session).get_by_id(category_id)
 
 
-@category_router.post("/{category_id}", summary="Изменить название категории")
+@category_router.post(
+    "/{category_id}", response_model=CategoryBase, summary="Изменить название категории"
+)
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def update_by_id(
@@ -60,8 +66,7 @@ async def update_by_id(
     current_user=Depends(get_current_user),
 ):
     async with unit_of_work() as uow:
-        await CategoryService(uow.session).update_by_id(category_id, category)
-    return {"detail": "Категория успешно обновлена"}
+        return await CategoryService(uow.session).update_by_id(category_id, category)
 
 
 @category_router.delete("/{category_id}", summary="Удалить категорию по id")

@@ -1,13 +1,15 @@
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from db.repository.base import BaseRepository
 from db.models import Event, User
+from db.repository.base import BaseRepository
+from db.repository.decorators import db_exception_handler
 
 
 class EventRepository(BaseRepository):
     model = Event
 
+    @db_exception_handler
     async def get_events(self, filter_dict: dict):
         start_date = filter_dict.pop("start_date", None)
         end_date = filter_dict.pop("end_date", None)

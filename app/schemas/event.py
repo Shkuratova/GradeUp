@@ -1,10 +1,8 @@
 from pydantic import BaseModel, Field, ConfigDict, computed_field, EmailStr, field_serializer
 from datetime import datetime
-from typing import Any
 
-from db.models import ConfirmationTypes
-from db.models.events import EventType, TargetType
-from schemas.users import UserFIO
+from db.models.types import EventType, TargetType, ConfirmationTypes
+from schemas.users import UserSchema
 from utils.roles import UserRole
 
 
@@ -35,7 +33,7 @@ class EventAdd(BaseModel):
 
 
 class EventSchema(EventBase):
-    actor: UserFIO = Field(exclude=True)
+    actor: UserSchema = Field(exclude=True)
     message: str | None = None
 
     @computed_field
@@ -73,33 +71,6 @@ class SetProfilePayload(UserPayloadBase):
 class SetProfileEvent(EventAdd):
     payload: SetProfilePayload
 
-class EvaluatePayload(UserPayloadBase):
-    user_stage_id: int
-    skill_id: int
-    stage_id: int
-    confirmation_type: ConfirmationTypes
-    is_accepted: bool
 
-class EvaluateEvent(EventAdd):
-    payload: EvaluatePayload
-
-class GradeUpPayload(UserPayloadBase):
-    user_profile_id: int
-    old_profile_level_id: int
-    new_profile_level_id: int
-
-class GradeUpEvent(EventAdd):
-    payload: GradeUpPayload
-
-class ScheduleMeetingPayload(UserPayloadBase):
-    examiner_id: int
-    examiner_email: EmailStr
-    stage_id: int
-    started_at: datetime
-    location: str
-    duration: int
-
-class ScheduleMeetingEvent(EventAdd):
-    payload: ScheduleMeetingPayload
 
 

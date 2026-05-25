@@ -3,12 +3,11 @@ from pydantic import (
     Field,
     ConfigDict,
     computed_field,
-    EmailStr,
 )
 
 from db.models import ConfirmationTypes
 from schemas.profiles import ProfileList
-from schemas.users import SUser, UserFIO
+from schemas.users import  UserSchema
 from utils.roles import UserRole
 
 
@@ -32,48 +31,32 @@ class UserProfileAdd(BaseModel):
     profile_id: int
 
 
-class UserProfileTitle(UserProfileBase):
-    profile: ProfileList = Field(exclude=True)
-
-    @computed_field
-    def title(self) -> str:
-        return self.profile.title
-
 
 class UserProfileSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    user: UserFIO
+    user: UserSchema
     profile: ProfileList
 
-
-class UserProfileProgressList(BaseModel):
-    user_id: int
-    profile_id: int | None = None
-    first_name: str
-    last_name: str
-    patronymic: str
-    email: EmailStr
-    position: str | None = None
-    profile_title: str | None = None
-    department_id: int | None = None
-    department_name: str | None = None
-    role_id: int
+class UserProgressList(UserSchema):
     role_name: str
-    total_cnt: int | None = Field(None, exclude=True)
-    completed_cnt: int | None = Field(None, exclude=True)
 
-    division_name: str | None
-    managed_division_id: int | None
-    managed_department_id: int | None
+    department_name: str | None = None
 
-    @computed_field
-    @property
-    def progress(self) -> float | None:
-        if self.total_cnt:
-            return self.completed_cnt / self.total_cnt * 100 if self.total_cnt else 0
+    managed_department_id: int | None = Field(None, exclude=True)
+    managed_department_name: str | None = Field(None, exclude=True)
 
-    @computed_field
+    managed_division_id: int | None = None
+    managed_division_name: str | None = None
+
+    profile_id: int | None = None
+    title: str | None = None
+    level_name: str | None = None
+    level_cnt: int | None = Field(None, exclude=True)
+    closed_levels_cnt: int | None = Field(None, exclude=True)
+    skill_cnt: int | None = Field(None, exclude=True)
+    accepted_cnt: int | None = Field(None, exclude=True)
+
     def is_supervisor(self) -> bool:
         if self.managed_division_id or self.managed_department_id:
             return True
@@ -81,10 +64,23 @@ class UserProfileProgressList(BaseModel):
 
     @computed_field
     def roles(self) -> list[str]:
-        roles = [self.role_name]
+        roles = {self.role_name}
         if self.is_supervisor:
-            roles.append(UserRole.SUPERVISOR)
-        return roles
+            roles.add(UserRole.SUPERVISOR)
+        return list(roles)
+
+    @computed_field
+    @property
+    def progress(self) -> float | None:
+        return self.closed_levels_cnt / self.level_cnt * 100 if self.level_cnt else 0
+
+    @computed_field
+    @property
+    def ready_gradeup(self) -> bool:
+        if self.skill_cnt and self.skill_cnt == self.accepted_cnt:
+           return True
+        return False
+
 
 
 class Stage(BaseModel):

@@ -61,7 +61,7 @@ class DivisionService(BaseService):
         old = DivisionBase.model_validate(old)
         if division.supervisor_id and division.supervisor_id != old.supervisor_id:
 
-            user: UserInfo = await self.user_repository.get_user_role(
+            user: UserInfo = await self.user_repository.get_user_info(
                 {"id": division.supervisor_id}
             )
             if (
@@ -155,7 +155,7 @@ class DepartmentService(BaseService):
         old = DepartmentBase.model_validate(old, from_attributes=True)
 
         if department.supervisor_id:
-            user: UserInfo = await self.user_repository.get_user_role(
+            user: UserInfo = await self.user_repository.get_user_info(
                 {"id": department.supervisor_id}
             )
             if (

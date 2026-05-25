@@ -6,7 +6,7 @@ from api.decorators import exception_handler, check_role
 from db.uow import unit_of_work
 from dependencies import get_current_user
 from schemas.users import (
-    SUserFilter,
+    UserFilter,
     UserInfo,
     UserBase,
     UserUpdateAdmin,
@@ -25,7 +25,7 @@ user_router = APIRouter(prefix="/users", tags=["Users"])
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_all(
-    filters: Annotated[SUserFilter, Query()],
+    filters: Annotated[UserFilter, Query()],
     current_user: UserInfo = Depends(get_current_user),
 ) -> list[UserInfo]:
     async with unit_of_work() as uow:
@@ -60,7 +60,7 @@ async def get_by_id(
 ) -> UserInfo:
     async with unit_of_work() as uow:
         await AccessService(uow.session).can_get_user(user_id, current_user)
-        return await UserService(uow.session).get_user_role(UserBase(id=user_id))
+        return await UserService(uow.session).get_user_info(user_id=user_id)
 
 
 @user_detail_router.patch(

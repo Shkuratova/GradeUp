@@ -1,6 +1,7 @@
-from db import Base
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import mapped_column, Mapped, relationship
-from sqlalchemy import ForeignKey, text, UniqueConstraint
+
+from db import Base
 
 
 class Role(Base):

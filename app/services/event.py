@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models.events import EventType, TargetType
+from db.models.types import EventType, TargetType
 from db.repository import (
     EventRepository,
     UserRepository,
@@ -19,7 +19,7 @@ from schemas.event import (
 )
 from schemas.meetings import MeetingDetail
 from schemas.user_profile import UserProfileSchema, GradeUpResult
-from schemas.users import UserInfo, SRole
+from schemas.users import UserInfo, RoleSchema
 from services.base import BaseService
 from utils.roles import UserRole
 
@@ -37,7 +37,7 @@ class EventService(BaseService):
         return await self.repository.get_events(filter_dict)
 
     async def get_employee(self, user_id: int):
-        user = await self.user_repository.get_user_role({"id": user_id})
+        user = await self.user_repository.get_user_info({"id": user_id})
         return UserInfo.model_validate(user, from_attributes=True)
 
     async def log_event(
@@ -101,7 +101,7 @@ class EventService(BaseService):
         )
 
     async def log_set_user_role(
-        self, old_role: SRole, user_update: UserInfo, current_user: UserInfo
+        self, old_role: RoleSchema, user_update: UserInfo, current_user: UserInfo
     ):
         message = (
             f"Изменена роль сотрудника {user_update.name_with_email()} "

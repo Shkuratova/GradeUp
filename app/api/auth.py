@@ -21,7 +21,7 @@ auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 @auth_router.post(
     "/registration",
     response_model=UserInfo,
-    summary="Регистрация нового пользователя (Только для Администраторов и СПО.",
+    summary="Регистрация нового пользователя (Только для Администраторов и СПО).",
 )
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
@@ -32,7 +32,7 @@ async def registration(
     async with unit_of_work() as uow:
         user_service = UserService(uow.session)
         new_user = await user_service.add(user_data)
-        new_user = await user_service.get_user_role(UserBase(id=new_user.id))
+        new_user = await user_service.get_user_info(user_id=new_user.id)
         await EventService(uow.session).log_registration(
             user=new_user, current_user=current_user
         )

@@ -11,14 +11,14 @@ from utils.roles import UserRole
 from db.repository import RoleRepository
 from db.uow import unit_of_work
 
-from schemas.users import UserInfo, SRole
+from schemas.users import UserInfo, RoleSchema
 
 admin_router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 @admin_router.get(
     "/roles",
-    response_model=list[SRole],
+    response_model=list[RoleSchema],
     summary="Список доступных ролей для назначения",
 )
 @check_role([UserRole.ADMIN])

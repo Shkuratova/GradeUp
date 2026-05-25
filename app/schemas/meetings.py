@@ -12,7 +12,7 @@ from pydantic import (
 from db.models.types import CertificationStatus, CertificationRole, ConfirmationTypes
 from exceptions.common import DataValidationError
 from schemas.profiles import SkillList
-from schemas.users import UserFIO, UserBase, UserInfo
+from schemas.users import UserSchema, UserBase, UserInfo
 
 
 class MeetingBase(BaseModel):
@@ -35,7 +35,7 @@ class ParticipantBase(BaseModel):
 
 class Participant(ParticipantBase):
 
-    user: UserFIO = Field(exclude=True)
+    user: UserSchema = Field(exclude=True)
 
     @computed_field
     def full_name(self) -> str:

@@ -1,13 +1,12 @@
 from fastapi import APIRouter, Depends
 
+from api.decorators import check_role
 from api.decorators import exception_handler
 from db.uow import unit_of_work
 from dependencies import get_current_user
-from api.decorators import check_role
 from schemas.users import UserInfo
 from services.access import AccessService
 from services.user_profile import UserProfileService
-from services.user_progress import UserProgressService
 from utils.roles import UserRole
 
 user_skill_router = APIRouter(prefix="/skills", tags=["UserSkillProgress"])

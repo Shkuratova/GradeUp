@@ -1,11 +1,19 @@
-from sqlalchemy import select, exists, and_
+from datetime import datetime
+
+from sqlalchemy import select, and_
 from sqlalchemy.orm import joinedload, selectinload
 
-from db.models.skills import StageVersion, Stage, Skill
+from db.models import (
+    Meeting,
+    MeetingParticipant,
+    User,
+    UserStage,
+    StageVersion,
+    Stage,
+)
 from db.models.types import CertificationStatus, CertificationRole
 from db.repository import BaseRepository
-from db.models import Meeting, MeetingParticipant, User, Department, UserStage
-from datetime import datetime, timezone
+from db.repository.decorators import db_exception_handler
 
 
 class MeetingRepository(BaseRepository):
@@ -83,23 +91,26 @@ class MeetingRepository(BaseRepository):
                     User.last_name,
                     User.patronymic,
                     User.department_id,
-                    User.email
+                    User.email,
                 )
             ),
         )
 
         return stmt
 
+    @db_exception_handler
     async def get_meeting_list(self, filter_dict: dict):
         stmt = self._get_meeting_query(filter_dict)
         res = await self._session.execute(stmt)
         return res.scalars().all()
 
+    @db_exception_handler
     async def get_meeting(self, filter_dict: dict):
         stmt = self._get_meeting_query(filter_dict)
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    @db_exception_handler
     async def get_next_meeting(self, user_id):
         stmt = (
             select(Meeting)
@@ -124,7 +135,7 @@ class MeetingRepository(BaseRepository):
                         User.last_name,
                         User.patronymic,
                         User.department_id,
-                        User.email
+                        User.email,
                     )
                 ),
             )
@@ -138,6 +149,7 @@ class MeetingRepository(BaseRepository):
 class ParticipantsRepository(BaseRepository):
     model = MeetingParticipant
 
+    @db_exception_handler
     async def get_participant_role(self, meeting_id: int, user_id: int):
         stmt = select(MeetingParticipant.role).where(
             and_(
@@ -148,10 +160,11 @@ class ParticipantsRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    @db_exception_handler
     async def get_student(self, meeting_id):
         stmt = select(MeetingParticipant.user_id).where(
             MeetingParticipant.meeting_id == meeting_id,
-            MeetingParticipant.role == CertificationRole.student
+            MeetingParticipant.role == CertificationRole.student,
         )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()

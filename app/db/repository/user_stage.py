@@ -1,14 +1,15 @@
 from sqlalchemy import select, func
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload
 
-from db.models import UserStage, Stage, Skill, StageVersion
-from db.models.user_profiles import UserSkill, UserLevel
+from db.models import UserStage, Stage, Skill, StageVersion, UserSkill
 from db.repository.base import BaseRepository
+from db.repository.decorators import db_exception_handler
 
 
 class UserStageRepository(BaseRepository):
     model = UserStage
 
+    @db_exception_handler
     async def get_by_version_id(self, user_id: int, stage_version_id: int):
         stmt = (
             select(UserStage)
@@ -21,6 +22,7 @@ class UserStageRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    @db_exception_handler
     async def get_by_stage_id(self, stage_id: int):
         stmt = (
             select(UserStage)
@@ -32,6 +34,7 @@ class UserStageRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    @db_exception_handler
     async def accepted_count(self, skill_id: int, user_skill_id: int):
         stmt = (
             select(func.count(UserStage.id))
@@ -47,6 +50,7 @@ class UserStageRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    @db_exception_handler
     async def get_evaluation(self, user_stage_id):
         stmt = (
             select(UserStage)

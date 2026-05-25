@@ -9,68 +9,24 @@ from pydantic import (
 from utils.roles import UserRole
 
 
-class UserBase(BaseModel):
-    id: int
+class RoleSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+    id: int
+    role_name: UserRole
+
+
+class UserBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
 
 
 class EmailModel(BaseModel):
-    email: EmailStr
     model_config = ConfigDict(from_attributes=True)
+    email: EmailStr
 
 
 class UserAuth(EmailModel):
     password: str
-
-
-class UserRoleName(UserBase):
-    role_name: str
-
-
-class UserUpdateBase(BaseModel):
-    first_name: str | None = None
-    last_name: str | None = None
-    patronymic: str | None = None
-    email: EmailStr | None = None
-    position: str | None = None
-    model_config = ConfigDict(extra="forbid")
-
-
-class UserUpdateAdmin(UserUpdateBase):
-    role_id: int | None = None
-    department_id: int | None = None
-
-
-class SUser(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    email: EmailStr
-    first_name: str
-    last_name: str
-    patronymic: str | None
-    role_id: int
-    position: str | None
-    department_id: int | None = None
-
-
-class UserFullInfo(EmailModel, UserRoleName):
-    first_name: str
-    last_name: str
-    patronymic: str | None
-    department_id: int | None = None
-    department_name: str
-
-
-class UserFilter(BaseModel):
-    email: EmailStr | None
-    department_id: int | None
-    role_id: int | None
-    position: str | None
-
-
-class SetUserRole(BaseModel):
-    id: int = Field(exclude=True)
-    role_id: int
 
 
 class UserAdd(BaseModel):
@@ -95,42 +51,28 @@ class UserRegistration(BaseModel):
     confirm_password: str = Field(exclude=True)
 
 
-class SRole(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    role_name: UserRole
-
-
-class SDepartment(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    department_name: str
-
-
-class SDivision(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    division_name: str
-
-
-class SUserFilter(BaseModel):
-    id: int | None = None
+class UserUpdateBase(BaseModel):
+    first_name: str | None = None
+    last_name: str | None = None
+    patronymic: str | None = None
     email: EmailStr | None = None
-    departments_id: list[int] | None = None
-    division_id: int | None = None
-    role_id: int | None = None
     position: str | None = None
-    only_subordinates: bool | None = Field(None, exclude=True)
+    model_config = ConfigDict(extra="forbid")
 
 
-class UserFIO(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
+class UserUpdateAdmin(UserUpdateBase):
+    role_id: int | None = None
+    department_id: int | None = None
+
+
+class UserSchema(UserBase):
+    email: EmailStr
     first_name: str
     last_name: str
     patronymic: str | None = None
-    department_id: int | None = Field(None, exclude=True)
-    email: EmailStr
+    role_id: int
+    position: str | None = None
+    department_id: int | None = None
 
     def full_name(self) -> str:
         patronymic = f"{self.patronymic[0] if self.patronymic else ''}"
@@ -140,20 +82,39 @@ class UserFIO(BaseModel):
         return f"{self.full_name()} ({self.email})"
 
 
-class UserInfo(UserFIO):
-    role: SRole = Field(exclude=True)
-    department: SDepartment | None = Field(None, exclude=True)
-    managed_division: SDivision | None = Field(None, exclude=True)
-    managed_department: SDepartment | None = Field(None, exclude=True)
+class UserFilter(BaseModel):
+    id: int | None = None
+    email: EmailStr | None = None
+    departments_id: list[int] | None = None
+    division_id: int | None = None
+    role_id: int | None = None
+    position: str | None = None
+    only_subordinates: bool | None = Field(None, exclude=True)
+
+
+class DepartmentSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    department_name: str
+
+class DivisionSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    division_name: str
+
+class UserInfo(UserSchema):
+    role: RoleSchema = Field(exclude=True)
+    department: DepartmentSchema | None = Field(None, exclude=True)
+    managed_division: DivisionSchema | None = Field(None, exclude=True)
+    managed_department: DepartmentSchema | None = Field(None, exclude=True)
     role_id: int
     position: str | None
-    password: str = Field(exclude=True)
 
-    @computed_field
     def is_supervisor(self) -> bool:
         return self.managed_division is not None or self.managed_department is not None
 
     @computed_field
+    @property
     def roles(self) -> list[str]:
         roles = {self.role.role_name}
 
@@ -182,4 +143,3 @@ class UserInfo(UserFIO):
     @computed_field
     def managed_division_name(self) -> str | None:
         return self.managed_division.division_name if self.managed_division else None
-

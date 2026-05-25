@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict
 
 from schemas.profiles import ProfileList
-from schemas.users import UserFIO
+from schemas.users import UserSchema
 
 
 class DepartmentBase(BaseModel):
@@ -18,7 +18,7 @@ class DepartmentFilter(BaseModel):
 
 class DepartmentDetail(DepartmentBase):
     description: str | None = None
-    supervisor: UserFIO | None = None
+    supervisor: UserSchema | None = None
     profiles: list[ProfileList] | None = None
 
 class DepartmentAdd(BaseModel):
@@ -43,11 +43,11 @@ class DepartmentUpdateForm(DepartmentUpdate):
 class DivisionBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    supervisor_id: int | None = None
     division_name: str
 
 
 class DivisionSchema(DivisionBase):
+    supervisor_id: int | None = None
     description: str | None = None
 
 
@@ -69,5 +69,5 @@ class DivisionUpdateForm(DivisionUpdate):
     departments: list[int] | None = None
 
 class DivisionDetail(DivisionBase):
-    supervisor: UserFIO | None = None
+    supervisor: UserSchema | None = None
     departments: list[DepartmentSchema] | None = None

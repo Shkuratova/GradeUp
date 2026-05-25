@@ -79,8 +79,8 @@ class MeetingService(BaseService):
         self, student_id: int, examiner_id: int, current_user: UserInfo
     ):
         user_service = UserService(self.session)
-        student = await user_service.get_user_role(UserBase(id=student_id))
-        examiner = await user_service.get_user_role(UserBase(id=examiner_id))
+        student = await user_service.get_user_info(user_id=student_id)
+        examiner = await user_service.get_user_info(user_id=examiner_id)
         department_ids = await AccessService(
             self.session
         ).get_managed_departments(current_user)

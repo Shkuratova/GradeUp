@@ -1,9 +1,6 @@
-from sqlalchemy import select, func, and_, exists, insert, literal, delete
-from sqlalchemy.orm import joinedload, selectinload, with_loader_criteria
+from sqlalchemy import select, func, and_, exists, delete
+from sqlalchemy.orm import joinedload, with_loader_criteria, aliased
 
-from db.models.skills import StageVersion
-from db.models.user_profiles import UserSkill
-from db.repository import BaseRepository
 from db.models import (
     UserProfile,
     User,
@@ -15,86 +12,144 @@ from db.models import (
     Skill,
     Stage,
     LevelSkill,
+    StageVersion,
+    UserSkill,
     Role,
     Division,
 )
-from schemas.skills import SkillStages
+from db.repository import BaseRepository
+from db.repository.decorators import db_exception_handler
 
 
 class UserProfileRepository(BaseRepository):
     model = UserProfile
 
+    @db_exception_handler
     async def get_all_with_progress(self, filter_dict: dict):
 
-        departments_id = filter_dict.pop("departments_id", None)
-
-        total_lvl_subq = (
+        profile_progress = (
             select(
-                ProfileLevel.profile_id, func.count(ProfileLevel.id).label("total_cnt")
+                UserProfile.user_id,
+                UserProfile.profile_id,
+                func.count(ProfileLevel.id).label("level_cnt"),
+                func.count(UserLevel.id).label("closed_levels_cnt"),
             )
-            .where(ProfileLevel.is_active == True)
-            .group_by(ProfileLevel.profile_id)
-            .subquery()
-        )
-
-        completed_levels = (
-            select(UserLevel.user_id, func.count(UserLevel.id).label("completed_cnt"))
-            .where(UserLevel.is_closed == True)
-            .group_by(UserLevel.user_id)
-            .subquery()
-        )
-        managed_department = (
-            select(Department.id.label("managed_department_id"), Department.supervisor_id)
-            .join(User, User.id == Department.supervisor_id)
-            .subquery()
-        )
-
-        stmt = (
-            select(
-                User.id.label("user_id"),
-                User.first_name.label("first_name"),
-                User.last_name.label("last_name"),
-                func.coalesce(User.patronymic, "").label("patronymic"),
-                User.email.label("email"),
-                User.position.label("position"),
-                UserProfile.id.label("id"),
-                Profile.id.label("profile_id"),
-                Profile.title.label("profile_title"),
-                Department.id.label("department_id"),
-                Department.department_name.label("department_name"),
-                Division.id.label("managed_division_id"),
-                Division.division_name.label("division_name"),
-                Division.division_name.label("division_name"),
-                managed_department.c.managed_department_id,
-                Role.id.label("role_id"),
-                Role.role_name,
-                total_lvl_subq.c.total_cnt,
-                func.coalesce(completed_levels.c.completed_cnt, 0).label(
-                    "completed_cnt"
+            .join(ProfileLevel, ProfileLevel.profile_id == UserProfile.profile_id)
+            .outerjoin(
+                UserLevel,
+                and_(
+                    UserLevel.profile_level_id == ProfileLevel.id,
+                    UserLevel.is_closed.is_(True),
                 ),
             )
-            .select_from(User)
-            .outerjoin(UserProfile, UserProfile.user_id == User.id)
-            .outerjoin(Profile, Profile.id == UserProfile.profile_id)
-            .outerjoin(Department, Department.id == User.department_id)
-            .outerjoin(Division, Division.supervisor_id == User.id)
-            .outerjoin(managed_department, managed_department.c.supervisor_id == User.id)
-            .join(Role, Role.id == User.role_id)
-            .outerjoin(
-                total_lvl_subq,
-                total_lvl_subq.c.profile_id == UserProfile.profile_id,
-            )
-            .outerjoin(
-                completed_levels,
-                completed_levels.c.user_id == User.id,
-            )
+            .group_by(UserProfile.user_id, UserProfile.profile_id)
+            .cte("profile_progress")
         )
+        current_skills = (
+            select(
+                UserProfile.user_id,
+                UserProfile.profile_id,
+                UserProfile.current_level_id.label("profile_level_id"),
+                func.count(LevelSkill.skill_id).label("skill_cnt"),
+                func.count(UserSkill.skill_id).label("accepted_cnt"),
+            )
+            .join(
+                LevelSkill, LevelSkill.profile_level_id == UserProfile.current_level_id
+            )
+            .outerjoin(
+                UserSkill,
+                and_(
+                    UserSkill.skill_id == LevelSkill.skill_id,
+                    UserSkill.is_accepted.is_(True),
+                ),
+            )
+            .group_by(
+                UserProfile.user_id,
+                UserProfile.profile_id,
+                UserProfile.current_level_id,
+            )
+            .cte("current_skills")
+        )
+
+        user_profile_info = (
+            select(
+                Profile.title,
+                current_skills.c.profile_id,
+                current_skills.c.user_id,
+                current_skills.c.profile_level_id,
+                ProfileLevel.level_name,
+                profile_progress.c.level_cnt,
+                profile_progress.c.closed_levels_cnt,
+                current_skills.c.skill_cnt,
+                current_skills.c.accepted_cnt,
+            )
+            .join(Profile, Profile.id == current_skills.c.profile_id)
+            .join(ProfileLevel, ProfileLevel.id == current_skills.c.profile_level_id)
+            .join(
+                profile_progress,
+                and_(
+                    profile_progress.c.user_id == current_skills.c.user_id,
+                    profile_progress.c.profile_id == current_skills.c.profile_id,
+                ),
+            )
+        ).cte("user_profile_info")
+
+        managed_department = aliased(Department)
+        user_info = (
+            select(
+                User.id,
+                User.first_name,
+                User.last_name,
+                User.patronymic,
+                User.position,
+                User.email,
+                Department.id.label("department_id"),
+                Department.department_name,
+                managed_department.id.label("managed_department_id"),
+                managed_department.department_name.label("managed_department_name"),
+                Division.id.label("managed_division_id"),
+                Division.division_name.label("managed_division_name"),
+                Role.id.label("role_id"),
+                Role.role_name,
+            )
+            .outerjoin(Department, Department.id == User.department_id)
+            .outerjoin(managed_department, managed_department.supervisor_id == User.id)
+            .outerjoin(Division, Division.supervisor_id == User.id)
+            .join(Role, Role.id == User.role_id)
+        )
+        departments_id = filter_dict.pop("departments_id", None)
         if departments_id:
-            stmt = stmt.where(Department.id.in_(departments_id))
+            user_info = user_info.where(Department.id.in_(departments_id))
+        user_info = user_info.cte("user_info")
+
+        stmt = select(
+            user_info.c.id,
+            user_info.c.first_name,
+            user_info.c.last_name,
+            user_info.c.patronymic,
+            user_info.c.email,
+            user_info.c.position,
+            user_info.c.role_id,
+            user_info.c.role_name,
+            user_info.c.department_id,
+            user_info.c.department_name,
+            user_info.c.managed_department_id,
+            user_info.c.managed_department_name,
+            user_info.c.managed_division_id,
+            user_info.c.managed_division_name,
+            user_profile_info.c.profile_id,
+            user_profile_info.c.title,
+            user_profile_info.c.level_name,
+            user_profile_info.c.level_cnt,
+            user_profile_info.c.closed_levels_cnt,
+            user_profile_info.c.skill_cnt,
+            user_profile_info.c.accepted_cnt,
+        ).outerjoin(user_profile_info, user_profile_info.c.user_id == user_info.c.id)
 
         res = await self._session.execute(stmt)
-        return res.all()
+        return res.mappings().all()
 
+    @db_exception_handler
     async def get_profile(self, user_id: int):
         stmt = (
             select(UserProfile)
@@ -106,6 +161,7 @@ class UserProfileRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    @db_exception_handler
     async def get_profile_progress(self, user_id: int):
         stmt = (
             select(UserProfile)
@@ -129,6 +185,7 @@ class UserProfileRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    @db_exception_handler
     async def get_available_skills(self, user_id: int):
         stmt = (
             select(UserProfile)
@@ -199,6 +256,7 @@ class UserProfileRepository(BaseRepository):
 
         return res.scalar_one_or_none()
 
+    @db_exception_handler
     async def has_available_stage(self, user_id: int, stage_id: int) -> bool:
         stmt = (
             select(Stage.id)
@@ -217,11 +275,13 @@ class UserProfileRepository(BaseRepository):
 
         return result.scalar_one_or_none() is not None
 
+    @db_exception_handler
     async def delete_by_user_id(self, user_id: int):
         stmt = delete(UserProfile).where(UserProfile.user_id == user_id)
         res = await self._session.execute(stmt)
         return res.rowcount
 
+    @db_exception_handler
     async def get_count(self, profile_id):
         stmt = select(func.count(UserProfile.user_id)).where(
             UserProfile.profile_id == profile_id
@@ -233,6 +293,7 @@ class UserProfileRepository(BaseRepository):
 class UserLevelRepository(BaseRepository):
     model = UserLevel
 
+    @db_exception_handler
     async def get_current_lvl(self, user_id: int):
         stmt = (
             select(UserProfile)
@@ -254,6 +315,7 @@ class UserLevelRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    @db_exception_handler
     async def get_by_level_id(self, user_id: int, level_id: int):
         stmt = select(UserLevel).where(
             UserLevel.profile_level_id == level_id, UserLevel.user_id == user_id
@@ -261,6 +323,7 @@ class UserLevelRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    @db_exception_handler
     async def get_level_count(self, levels_id: list[int]):
         stmt = select(func.count(UserLevel.user_id)).where(
             UserLevel.profile_level_id.in_(levels_id)
@@ -268,11 +331,13 @@ class UserLevelRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    @db_exception_handler
     async def delete_by_user(self, user_id):
         stmt = delete(UserLevel).where(UserLevel.user_id == user_id)
         res = await self._session.execute(stmt)
         return res.rowcount
 
+    @db_exception_handler
     async def get_all_by_user(self, user_id: int):
         stmt = select(UserLevel).where(UserLevel.user_id == user_id)
         res = await self._session.execute(stmt)

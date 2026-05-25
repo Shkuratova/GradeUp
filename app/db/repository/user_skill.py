@@ -1,15 +1,23 @@
-from sqlalchemy import select, insert, literal, and_, func, not_, exists
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy import select, and_, func, not_, exists
 
-from db.models import Skill, Stage, ProfileLevel, StageQuestion
-from db.models.skills import StageVersion, LevelSkill
-from db.models.user_profiles import UserSkill, UserLevel, UserStage, UserProfile
+from db.models import (
+    Skill,
+    Stage,
+    ProfileLevel,
+    StageQuestion,
+    StageVersion,
+    LevelSkill,
+    UserSkill,
+    UserStage,
+)
 from db.repository import BaseRepository
+from db.repository.decorators import db_exception_handler
 
 
 class UserSkillRepository(BaseRepository):
     model = UserSkill
 
+    @db_exception_handler
     async def get_by_user(self, user_id: int, skill_id: int):
         stmt = select(UserSkill).where(
             and_(
@@ -20,6 +28,7 @@ class UserSkillRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    @db_exception_handler
     async def get_skill_detail(self, user_id: int, skill_id: int):
         stmt = (
             select(
@@ -39,10 +48,7 @@ class UserSkillRepository(BaseRepository):
             .join(StageVersion, StageVersion.stage_id == Stage.id)
             .outerjoin(
                 UserSkill,
-                and_(
-                    UserSkill.skill_id == Skill.id,
-                    UserSkill.user_id == user_id
-                ),
+                and_(UserSkill.skill_id == Skill.id, UserSkill.user_id == user_id),
             )
             .outerjoin(
                 UserStage,
@@ -56,6 +62,7 @@ class UserSkillRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.mappings().all()
 
+    @db_exception_handler
     async def get_skill_detail_questions(self, user_id: int, skill_id: int):
         stmt = (
             select(
@@ -74,13 +81,9 @@ class UserSkillRepository(BaseRepository):
                 StageQuestion.answer,
             )
             .select_from(Skill)
-            # skill → stage
             .join(Stage, Stage.skill_id == Skill.id)
-            # фиксируем ОДНУ версию stage (иначе дубли вопросов)
             .join(StageVersion, StageVersion.stage_id == Stage.id)
-            # вопросы
             .join(StageQuestion, StageQuestion.stage_version_id == StageVersion.id)
-            # user skill (обязательно фильтр по user_id)
             .outerjoin(
                 UserSkill,
                 and_(
@@ -88,7 +91,6 @@ class UserSkillRepository(BaseRepository):
                     UserSkill.user_id == user_id,
                 ),
             )
-            # user stage (тоже строго по user)
             .outerjoin(
                 UserStage,
                 and_(
@@ -101,20 +103,19 @@ class UserSkillRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.mappings().all()
 
+    @db_exception_handler
     async def get_accepted_count(self, user_id: int, profile_level_id: int) -> int:
-        stmt = (
-            select(func.count(UserSkill.id))
-            .where(
-                UserSkill.user_id == user_id,
-                UserSkill.profile_level_id == profile_level_id,
-                UserSkill.is_accepted.is_(True),
-            )
+        stmt = select(func.count(UserSkill.id)).where(
+            UserSkill.user_id == user_id,
+            UserSkill.profile_level_id == profile_level_id,
+            UserSkill.is_accepted.is_(True),
         )
 
         res = await self._session.execute(stmt)
 
         return res.scalar_one()
 
+    @db_exception_handler
     async def get_progress_by_level(self, user_id: int, profile_level_id: int):
         stage_exists = (
             select(1)
@@ -159,7 +160,10 @@ class UserSkillRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.mappings().all()
 
+    @db_exception_handler
     async def get_count_by_skill(self, skill_id):
-        stmt = select(func.count(UserSkill.user_id)).where(UserSkill.skill_id == skill_id)
+        stmt = select(func.count(UserSkill.user_id)).where(
+            UserSkill.skill_id == skill_id
+        )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()

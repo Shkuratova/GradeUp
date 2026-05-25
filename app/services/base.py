@@ -81,6 +81,7 @@ class BaseService:
             raise NotFoundException(
                 f"{self.entity_name} c id = {object_id} не найден."
             )
+        return self.get_by_id(object_id)
 
     async def delete_by_id(self, object_id: int):
         res = await self.repository.delete_by_id(object_id)

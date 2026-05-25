@@ -1,9 +1,10 @@
-from sqlalchemy.orm import contains_eager, selectinload, with_loader_criteria, aliased
 from sqlalchemy import select, delete, func
+from sqlalchemy.orm import contains_eager, selectinload
 
-from db.models import ProfileLevel, Profile, DepartmentProfile
-from db.repository.base import BaseRepository
-from db.models.skills import (
+from db.models import (
+    ProfileLevel,
+    Profile,
+    DepartmentProfile,
     Skill,
     Category,
     SkillCategory,
@@ -12,6 +13,7 @@ from db.models.skills import (
     StageVersion,
     StageQuestion,
 )
+from db.repository.base import BaseRepository
 from db.repository.decorators import db_exception_handler
 
 
@@ -20,24 +22,30 @@ class SkillRepository(BaseRepository):
 
     @db_exception_handler
     async def get_list_by_categories(self, categories: list[int]):
-        stmt = (
-            select(Skill)
-            .where(Skill.is_active.is_(True))
-        )
+        stmt = select(Skill).where(Skill.is_active.is_(True))
         if categories:
-            stmt = stmt.join(SkillCategory, SkillCategory.skill_id == Skill.id).where(SkillCategory.category_id.in_(categories))
+            stmt = stmt.join(SkillCategory, SkillCategory.skill_id == Skill.id).where(
+                SkillCategory.category_id.in_(categories)
+            )
         res = await self._session.execute(stmt)
         return res.unique().scalars().all()
+
     @db_exception_handler
     async def get_all_by_categories(self, categories: list[int] | None = None):
 
-        stmt = select(Skill).where(Skill.is_active.is_(True)).options(selectinload(Skill.stages))
+        stmt = (
+            select(Skill)
+            .where(Skill.is_active.is_(True))
+            .options(selectinload(Skill.stages))
+        )
         if categories:
             stmt = stmt.join(Skill.categories.in_(categories)).options(
-                contains_eager(Skill.categories).load_only(Category.id, Category.category_name)
+                contains_eager(Skill.categories).load_only(
+                    Category.id, Category.category_name
+                )
             )
         else:
-            stmt = stmt.options( selectinload(Skill.categories))
+            stmt = stmt.options(selectinload(Skill.categories))
         res = await self._session.execute(stmt)
         return res.unique().scalars().all()
 
@@ -184,6 +192,7 @@ class CategoryRepository(BaseRepository):
 class SkillCategoryRepository(BaseRepository):
     model = SkillCategory
 
+    @db_exception_handler
     async def delete_categories(self, skill_id: int, data_ids: list[int]):
         stmt = delete(SkillCategory).where(
             SkillCategory.skill_id == skill_id, SkillCategory.category_id.in_(data_ids)

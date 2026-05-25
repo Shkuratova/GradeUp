@@ -13,7 +13,7 @@ from exceptions.user import (
     PasswordDontMatchException,
     ForbiddenException,
 )
-from schemas.users import UserAuth, EmailModel, SUserFilter, UserUpdateBase, UserBase
+from schemas.users import UserAuth, EmailModel, UserFilter, UserUpdateBase, UserBase
 from schemas.users import UserInfo
 from services.base import BaseService
 from utils.roles import UserRole
@@ -48,19 +48,22 @@ class UserService(BaseService):
         logger.info("Добавлен пользователь %s", user_model.email)
         return new_user
 
-    async def get_users(self, filters: SUserFilter):
+    async def get_users(self, filters: UserFilter):
         filter_dict = filters.model_dump(exclude_none=True)
         return await self.repository.get_all(filter_dict)
 
-    async def get_user_role(self, filters: BaseModel) -> UserInfo:
-        filter_dict = filters.model_dump(exclude_none=True)
-        user = await self.repository.get_user_role(filter_dict)
+    async def get_user_info(
+        self, user_id: int | None = None, email: str | None = None
+    ) -> UserInfo:
+        if user_id is None and email is None:
+            raise ValueError("Необходимо передать либо user_id либо email")
+        user = await self.repository.get_user_info(user_id, email)
         if user is None:
             raise NotFoundException("Пользователь не найден")
         return UserInfo.model_validate(user)
 
     async def authenticate_user(self, user_data: UserAuth):
-        user = await self.get_user_role(EmailModel(email=user_data.email))
+        user = await self.get_user_info(email=user_data.email)
         if user is None or not self.validate_password(
             user_data.password, user.password
         ):
@@ -75,18 +78,22 @@ class UserService(BaseService):
             if role is None:
                 raise NotFoundException(f"Роль с id={user_data.role_id} не найдена")
 
-        old = await self.get_user_role(UserBase(id=user_id))
+        old = await self.get_user_info(user_id=user_id)
         if (
             old.is_supervisor
             and old.managed_division is None
             and old.department_id != user_data.department_id
         ):
-            raise ConflictException("Нельзя изменить отдел руководителя, пока он назначен руководителем этого отдела.")
+            raise ConflictException(
+                "Нельзя изменить отдел руководителя, пока он назначен руководителем этого отдела."
+            )
         if old.managed_division and user_data.department_id:
-            raise ConflictException("Руководитель направления не может быть привязан к отделу.")
+            raise ConflictException(
+                "Руководитель направления не может быть привязан к отделу."
+            )
 
         user_dict = user_data.model_dump(exclude_none=True)
         await self.check_unique_constraint(user_dict, user_id)
         await self.repository.update_by_id(user_id, user_dict)
 
-        return await self.get_user_role(UserBase(id=user_id)), old
+        return await self.get_user_info(user_id=user_id), old

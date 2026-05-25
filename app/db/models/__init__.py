@@ -6,9 +6,11 @@ from db.models.skills import (
     StageVersion,
     LevelSkill,
     ConfirmationTypes,
-    Skill
+    Skill,
+    Category,
+    SkillCategory
 )
 from db.models.profiles import Profile,  ProfileLevel
-from db.models.user_profiles import UserProfile, UserLevel, UserStage
+from db.models.user_profiles import UserProfile, UserLevel, UserStage, UserSkill
 from db.models.meetings import Meeting, MeetingParticipant
 from db.models.events import Event

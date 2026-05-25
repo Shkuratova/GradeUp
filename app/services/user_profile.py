@@ -15,7 +15,6 @@ from schemas.profiles import ProfileList
 from schemas.user_profile import (
     UserProfileAdd,
     ProfileAvailableSkills,
-    UserProfileTitle,
     UserProfileProgress,
     UserProfileSchema,
     UserProfileFilter,
@@ -23,7 +22,7 @@ from schemas.user_profile import (
     Level,
 )
 from schemas.user_progress import UserProfileProgress
-from schemas.users import SUser, UserFIO
+from schemas.users import  UserSchema
 from services import BaseService, UserService, ProfileService
 
 
@@ -85,7 +84,7 @@ class UserProfileService(BaseService):
             )
         return UserProfileSchema(
             id=user_profile.id,
-            user=UserFIO.model_validate(user, from_attributes=True),
+            user=UserSchema.model_validate(user, from_attributes=True),
             profile=ProfileList.model_validate(profile, from_attributes=True),
         )
 

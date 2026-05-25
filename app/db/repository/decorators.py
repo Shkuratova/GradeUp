@@ -1,6 +1,7 @@
+from functools import wraps
+
 from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from functools import wraps
 
 def db_exception_handler(func):
     @wraps(func)

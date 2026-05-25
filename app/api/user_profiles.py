@@ -7,9 +7,9 @@ from db.uow import unit_of_work
 from dependencies import get_current_user
 from schemas.user_profile import (
     UserProfileAdd,
-    UserProfileProgressList,
     UserProfileFilter,
     UserProfileSchema,
+    UserProgressList,
 )
 from schemas.users import UserInfo
 from services import EventService
@@ -25,7 +25,7 @@ user_profile_router = APIRouter(
 
 @user_profile_router.get(
     "/",
-    response_model=list[UserProfileProgressList],
+    response_model=list[UserProgressList],
     summary="Получить список пользователей с назначенными профилями и прогрессом по уровням",
 )
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
