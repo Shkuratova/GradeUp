@@ -184,3 +184,14 @@ class AccessService(BaseService):
         if current_user.managed_division_id and current_user.managed_division_id == division_id:
             return
         raise ForbiddenException("Нет доступа к выбранному направлению")
+
+    @classmethod
+    async def get_managed_division(cls, current_user: UserInfo) -> int | None:
+        if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
+            return None
+        if current_user.is_supervisor and current_user.managed_division_id is not None:
+            return current_user.managed_division_id
+
+        raise ForbiddenException("Нет доступа к направлениям")
+
+

@@ -101,7 +101,10 @@ class DivisionService(BaseService):
             raise ConflictException(f"Нельзя удалить направление с подчиненными отделами (Отделов в направлении: {department_cnt})")
         await self.repository.delete_by_id(division_id)
 
-    async def get_with_departments(self):
+    async def get_with_departments(self, division_id: int | None = None):
+        if division_id:
+            res =  await self.repository.get_division_detail(division_id)
+            return [res]
         return await self.repository.get_with_departments()
 
 

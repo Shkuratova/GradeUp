@@ -31,11 +31,12 @@ async def get_all(current_user=Depends(get_current_user)):
     response_model=list[DivisionDetail],
     summary="Получить список направлений с отделами"
 )
-@check_role([UserRole.ADMIN])
+@check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_division_departments(current_user= Depends(get_current_user)):
     async with unit_of_work() as uow:
-        return await DivisionService(uow.session).get_with_departments()
+        division_id = await AccessService.get_managed_division(current_user)
+        return await DivisionService(uow.session).get_with_departments(division_id)
 
 @division_router.post("/", response_model=DivisionDetail, summary="Создать направление")
 @check_role([UserRole.ADMIN])
