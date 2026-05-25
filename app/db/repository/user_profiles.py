@@ -16,6 +16,7 @@ from db.models import (
     Stage,
     LevelSkill,
     Role,
+    Division,
 )
 from schemas.skills import SkillStages
 
@@ -42,6 +43,12 @@ class UserProfileRepository(BaseRepository):
             .group_by(UserLevel.user_id)
             .subquery()
         )
+        managed_department = (
+            select(Department.id.label("managed_department_id"), Department.supervisor_id)
+            .join(User, User.id == Department.supervisor_id)
+            .subquery()
+        )
+
         stmt = (
             select(
                 User.id.label("user_id"),
@@ -55,6 +62,10 @@ class UserProfileRepository(BaseRepository):
                 Profile.title.label("profile_title"),
                 Department.id.label("department_id"),
                 Department.department_name.label("department_name"),
+                Division.id.label("managed_division_id"),
+                Division.division_name.label("division_name"),
+                Division.division_name.label("division_name"),
+                managed_department.c.managed_department_id,
                 Role.id.label("role_id"),
                 Role.role_name,
                 total_lvl_subq.c.total_cnt,
@@ -66,6 +77,8 @@ class UserProfileRepository(BaseRepository):
             .outerjoin(UserProfile, UserProfile.user_id == User.id)
             .outerjoin(Profile, Profile.id == UserProfile.profile_id)
             .outerjoin(Department, Department.id == User.department_id)
+            .outerjoin(Division, Division.supervisor_id == User.id)
+            .outerjoin(managed_department, managed_department.c.supervisor_id == User.id)
             .join(Role, Role.id == User.role_id)
             .outerjoin(
                 total_lvl_subq,
@@ -225,15 +238,16 @@ class UserLevelRepository(BaseRepository):
             select(UserProfile)
             .where(UserProfile.user_id == user_id)
             .options(
-                joinedload(UserProfile.current_level)
-                .load_only(ProfileLevel.id, ProfileLevel.num, ProfileLevel.level_name),
+                joinedload(UserProfile.current_level).load_only(
+                    ProfileLevel.id, ProfileLevel.num, ProfileLevel.level_name
+                ),
                 joinedload(UserProfile.user)
                 .selectinload(User.user_skills)
                 .load_only(UserSkill.id, UserSkill.is_accepted)
                 .selectinload(UserSkill.stages)
                 .load_only(UserStage.stage_version_id, UserStage.is_accepted)
                 .joinedload(UserStage.stage_version)
-                .load_only(StageVersion.stage_id)
+                .load_only(StageVersion.stage_id),
             )
         )
 
@@ -248,7 +262,9 @@ class UserLevelRepository(BaseRepository):
         return res.scalar_one_or_none()
 
     async def get_level_count(self, levels_id: list[int]):
-        stmt = select(func.count(UserLevel.user_id)).where(UserLevel.profile_level_id.in_(levels_id))
+        stmt = select(func.count(UserLevel.user_id)).where(
+            UserLevel.profile_level_id.in_(levels_id)
+        )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 

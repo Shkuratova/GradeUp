@@ -39,13 +39,9 @@ class UserSkillRepository(BaseRepository):
             .join(StageVersion, StageVersion.stage_id == Stage.id)
             .outerjoin(
                 UserSkill,
-                UserSkill.skill_id == Skill.id,
-            )
-            .outerjoin(
-                UserLevel,
                 and_(
-                    UserLevel.id == UserSkill.user_level_id,
-                    UserLevel.user_id == user_id,
+                    UserSkill.skill_id == Skill.id,
+                    UserSkill.user_id == user_id
                 ),
             )
             .outerjoin(

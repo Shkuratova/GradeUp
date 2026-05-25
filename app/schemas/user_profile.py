@@ -9,6 +9,7 @@ from pydantic import (
 from db.models import ConfirmationTypes
 from schemas.profiles import ProfileList
 from schemas.users import SUser, UserFIO
+from utils.roles import UserRole
 
 
 class UserProfileFilter(BaseModel):
@@ -59,14 +60,31 @@ class UserProfileProgressList(BaseModel):
     department_name: str | None = None
     role_id: int
     role_name: str
-    total_cnt: int | None = None
-    completed_cnt: int | None = None
+    total_cnt: int | None = Field(None, exclude=True)
+    completed_cnt: int | None = Field(None, exclude=True)
+
+    division_name: str | None
+    managed_division_id: int | None
+    managed_department_id: int | None
 
     @computed_field
     @property
     def progress(self) -> float | None:
         if self.total_cnt:
             return self.completed_cnt / self.total_cnt * 100 if self.total_cnt else 0
+
+    @computed_field
+    def is_supervisor(self) -> bool:
+        if self.managed_division_id or self.managed_department_id:
+            return True
+        return False
+
+    @computed_field
+    def roles(self) -> list[str]:
+        roles = [self.role_name]
+        if self.is_supervisor:
+            roles.append(UserRole.SUPERVISOR)
+        return roles
 
 
 class Stage(BaseModel):
