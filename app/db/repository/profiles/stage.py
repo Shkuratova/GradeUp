@@ -1,7 +1,7 @@
 from sqlalchemy import select, insert, func
 from sqlalchemy.orm import joinedload, contains_eager, selectinload
 
-from db.models import Skill, Stage, StageVersion, StageQuestion
+from db.models import Stage, StageVersion, StageQuestion
 from db.repository.base import BaseRepository
 from db.repository.decorators import db_exception_handler
 
@@ -86,21 +86,8 @@ class StageRepository(BaseRepository):
         return res.unique().scalar_one_or_none()
 
     @db_exception_handler
-    async def get_skill(self, stage_id):
-        stmt = (
-            select(Stage)
-            .where(Stage.id == stage_id)
-            .options(joinedload(Stage.skill).load_only(Skill.id, Skill.title))
-        )
-        res = await self._session.execute(stmt)
-        return res.scalar_one_or_none()
-
-    @db_exception_handler
     async def stage_count(self, skill_id):
-        stmt = (
-            select(func.count(Stage.id))
-            .where(Stage.skill_id == skill_id)
-        )
+        stmt = select(func.count(Stage.id)).where(Stage.skill_id == skill_id)
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
@@ -134,3 +121,7 @@ class StageVersionRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
         return res.scalars().all()
+
+
+class QuestionRepository(BaseRepository):
+    model = StageQuestion

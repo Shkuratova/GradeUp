@@ -4,12 +4,10 @@ from db.repository import (
     LevelSkillRepository,
     UserProfileRepository,
     UserLevelRepository,
-)
-from db.repository.profiles import (
     ProfileRepository,
+    SkillRepository,
     LevelRepository,
 )
-from db.repository.skill import SkillRepository
 from exceptions.common import (
     DataValidationError,
     NotFoundException,
@@ -41,7 +39,6 @@ class ProfileService(BaseService):
         self.skill_repository = SkillRepository(session)
         self.user_profile_repository = UserProfileRepository(session)
         self.user_level_repository = UserLevelRepository(session)
-
 
     async def get_profile_list(self, filters: ProfileFilter):
         filter_dict = filters.model_dump(exclude_none=True)
@@ -112,9 +109,13 @@ class ProfileService(BaseService):
         upd_levels = {lvl.id: lvl for lvl in profile.levels if lvl.id in old_levels}
 
         if del_levels := set(old_levels.keys()) - set(upd_levels.keys()):
-            user_cnt = await self.user_level_repository.get_level_count(list(del_levels))
+            user_cnt = await self.user_level_repository.get_level_count(
+                list(del_levels)
+            )
             if user_cnt:
-                raise ConflictException("Нельзя удалить уровень, по которому есть прогресс пользователя.")
+                raise ConflictException(
+                    "Нельзя удалить уровень, по которому есть прогресс пользователя."
+                )
             await self.level_repository.delete_list(list(del_levels))
 
         if add_levels := [lvl for lvl in profile.levels if lvl.id is None]:

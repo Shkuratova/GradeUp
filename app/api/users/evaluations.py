@@ -6,8 +6,7 @@ from dependencies import get_current_user
 from schemas.evaluations import EvaluationSchema
 from schemas.user_profile import UserStageAdd
 from schemas.users import UserInfo
-from services import AccessService, EventService
-from services.user_stage import UserStageService
+from services import AccessService, EventService, UserStageService
 from utils.roles import UserRole
 
 evaluation_router = APIRouter(prefix="/evaluations", tags=["Evaluations"])

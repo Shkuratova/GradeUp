@@ -23,7 +23,9 @@ from schemas.user_profile import (
 )
 from schemas.user_progress import UserProfileProgress
 from schemas.users import  UserSchema
-from services import BaseService, UserService, ProfileService
+from services.base import BaseService
+from services.users.user import UserService
+from services.profiles import ProfileService
 
 
 class UserProfileService(BaseService):

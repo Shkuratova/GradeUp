@@ -8,12 +8,9 @@ from dependencies import get_current_user
 from schemas.users import (
     UserFilter,
     UserInfo,
-    UserBase,
     UserUpdateAdmin,
 )
-from services import DepartmentService, EventService
-from services.access import AccessService
-from services.user import UserService
+from services import DepartmentService, EventService, AccessService, UserService
 from utils.roles import UserRole
 
 user_router = APIRouter(prefix="/users", tags=["Users"])
@@ -36,8 +33,8 @@ async def get_all(
             ).get_id_by_division(filters.division_id)
 
         filters.departments_id = await auth_service.get_department_filter(
-                current_user, filters.departments_id
-            )
+            current_user, filters.departments_id
+        )
         if filters.only_subordinates:
             filters.departments_id = await auth_service.get_managed_departments(
                 current_user

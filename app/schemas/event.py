@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field, ConfigDict, computed_field, EmailStr, field_serializer
 from datetime import datetime
 
-from db.models.types import EventType, TargetType, ConfirmationTypes
+from pydantic import BaseModel, Field, ConfigDict, computed_field, EmailStr, field_serializer
+
+from db.models.types import EventType, TargetType
 from schemas.users import UserSchema
 from utils.roles import UserRole
 

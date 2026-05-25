@@ -3,10 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.repository import (
     SkillRepository,
-    LevelSkillRepository,
     SkillCategoryRepository,
+    UserSkillRepository,
+    LevelRepository,
 )
-from db.repository import UserSkillRepository, LevelRepository
 from exceptions.common import NotFoundException, ConflictException
 from schemas.skills import (
     SkillFilter,
@@ -15,7 +15,7 @@ from schemas.skills import (
     SkillAddForm,
 )
 from services.base import BaseService
-from services.stages import StageService
+from services.profiles.stage import StageService
 
 
 class SkillService(BaseService):
@@ -108,11 +108,3 @@ class SkillService(BaseService):
                 f"Нельзя удалить навык, который используется в профиле (Профилей, содержащих выбранный навык {profile_count})"
             )
         await self.delete_by_id(skill_id)
-
-
-class LevelSkillService(BaseService):
-    unique_fields = ["skill_id", "profile_level_id"]
-
-    def __init__(self, session: AsyncSession):
-        super().__init__(session)
-        self.repository = LevelSkillRepository(session)

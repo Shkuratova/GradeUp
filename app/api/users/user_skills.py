@@ -5,8 +5,7 @@ from api.decorators import exception_handler
 from db.uow import unit_of_work
 from dependencies import get_current_user
 from schemas.users import UserInfo
-from services.access import AccessService
-from services.user_profile import UserProfileService
+from services import AccessService, UserProfileService
 from utils.roles import UserRole
 
 user_skill_router = APIRouter(prefix="/skills", tags=["UserSkillProgress"])

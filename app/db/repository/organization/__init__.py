@@ -1,0 +1,2 @@
+from db.repository.organization.department import DepartmentRepository, DepartmentProfileRepository
+from db.repository.organization.division import DivisionRepository

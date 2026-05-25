@@ -1,17 +1,29 @@
 from db.repository.base import BaseRepository
-from db.repository.user import UserRepository, RoleRepository
-from db.repository.department import DepartmentRepository, DivisionRepository, DepartmentProfileRepository
-from db.repository.profiles import ProfileRepository, LevelRepository
-from db.repository.skill import (
+from db.repository.users import (
+    UserRepository,
+    RoleRepository,
+    UserRepository,
+    UserProfileRepository,
+    UserLevelRepository,
+    UserSkillRepository,
+    UserStageRepository,
+)
+
+from db.repository.organization import (
+    DepartmentRepository,
+    DivisionRepository,
+    DepartmentProfileRepository,
+)
+from db.repository.profiles import (
+    ProfileRepository,
+    LevelRepository,
     SkillRepository,
     LevelSkillRepository,
+    StageRepository,
+    StageVersionRepository,
     QuestionRepository,
     SkillCategoryRepository,
     CategoryRepository,
 )
-from db.repository.stage import StageRepository, StageVersionRepository
-from db.repository.user_profiles import UserProfileRepository, UserLevelRepository
-from db.repository.user_skill import UserSkillRepository
-from db.repository.user_stage import UserStageRepository
-from db.repository.meetings import MeetingRepository, ParticipantsRepository
+from db.repository.meeting import MeetingRepository, ParticipantsRepository
 from db.repository.event import EventRepository

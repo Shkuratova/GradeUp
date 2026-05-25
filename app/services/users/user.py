@@ -1,5 +1,4 @@
 import logging
-
 logger = logging.getLogger(__name__)
 
 import bcrypt
@@ -11,9 +10,8 @@ from exceptions.common import NotFoundException, ConflictException
 from exceptions.user import (
     InvalidLoginException,
     PasswordDontMatchException,
-    ForbiddenException,
 )
-from schemas.users import UserAuth, EmailModel, UserFilter, UserUpdateBase, UserBase
+from schemas.users import UserAuth, UserFilter, UserUpdateBase
 from schemas.users import UserInfo
 from services.base import BaseService
 from utils.roles import UserRole
@@ -63,7 +61,7 @@ class UserService(BaseService):
         return UserInfo.model_validate(user)
 
     async def authenticate_user(self, user_data: UserAuth):
-        user = await self.get_user_info(email=user_data.email)
+        user = await self.get_user_info(email=str(user_data.email))
         if user is None or not self.validate_password(
             user_data.password, user.password
         ):

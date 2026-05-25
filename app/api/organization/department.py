@@ -11,9 +11,7 @@ from schemas.departments import (
     DepartmentUpdateForm,
 )
 from schemas.users import UserInfo
-from services import EventService
-from services.access import AccessService
-from services.department import DepartmentService
+from services import AccessService, EventService, DepartmentService
 from utils.roles import UserRole
 
 department_router = APIRouter(prefix="/departments", tags=["Departments"])
@@ -39,9 +37,10 @@ async def get_all(
     current_user: UserInfo = Depends(get_current_user),
 ) -> list[DepartmentSchema]:
     async with unit_of_work() as uow:
-        departments_id = await AccessService(uow.session).get_managed_departments(current_user)
+        departments_id = await AccessService(uow.session).get_managed_departments(
+            current_user
+        )
         return await DepartmentService(uow.session).get_list(departments_id)
-
 
 
 @department_router.get(

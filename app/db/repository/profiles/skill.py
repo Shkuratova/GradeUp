@@ -1,4 +1,4 @@
-from sqlalchemy import select, delete, func
+from sqlalchemy import select, func
 from sqlalchemy.orm import contains_eager, selectinload
 
 from db.models import (
@@ -154,48 +154,7 @@ class SkillRepository(BaseRepository):
         return list(res.scalars().all())
 
 
-class LevelSkillRepository(BaseRepository):
-    model = LevelSkill
-
-    @db_exception_handler
-    async def delete_by_skill_ids(self, level_id: int, skills: list[int]):
-        stmt = delete(LevelSkill).where(
-            LevelSkill.profile_level_id == level_id, LevelSkill.skill_id.in_(skills)
-        )
-        return await self._session.execute(stmt)
 
 
-class QuestionRepository(BaseRepository):
-    model = StageQuestion
-
-    @db_exception_handler
-    async def get_all(self, filter_dict: dict):
-        stmt = (
-            select(StageQuestion)
-            .options(contains_eager(StageQuestion.stage))
-            .filter_by(**filter_dict)
-        )
-        res = await self._session.execute(stmt)
-        return res.unique().scalars().all()
-
-    @db_exception_handler
-    async def get_questions_id(self, stage_id: int):
-        stmt = select(self.model.id).where(self.model.stage_id == stage_id)
-        res = await self._session.execute(stmt)
-        return res.scalars().all()
 
 
-class CategoryRepository(BaseRepository):
-    model = Category
-
-
-class SkillCategoryRepository(BaseRepository):
-    model = SkillCategory
-
-    @db_exception_handler
-    async def delete_categories(self, skill_id: int, data_ids: list[int]):
-        stmt = delete(SkillCategory).where(
-            SkillCategory.skill_id == skill_id, SkillCategory.category_id.in_(data_ids)
-        )
-        res = await self._session.execute(stmt)
-        return res

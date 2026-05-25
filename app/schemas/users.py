@@ -109,6 +109,7 @@ class UserInfo(UserSchema):
     managed_department: DepartmentSchema | None = Field(None, exclude=True)
     role_id: int
     position: str | None
+    password: str = Field(None, exclude=True)
 
     def is_supervisor(self) -> bool:
         return self.managed_division is not None or self.managed_department is not None

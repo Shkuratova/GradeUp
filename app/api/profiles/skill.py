@@ -10,14 +10,12 @@ from schemas.profiles import SkillList
 from schemas.skills import (
     SkillSchema,
     SkillFilter,
-    StageAdd,
     SkillDetail,
     SkillAddForm,
     SkillUpdateForm,
 )
 from schemas.users import UserInfo
-from services.access import AccessService
-from services.skill import SkillService, StageService
+from services import AccessService, SkillService
 from utils.roles import UserRole
 
 skill_router = APIRouter(prefix="/skills", tags=["Skill"])

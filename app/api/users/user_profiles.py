@@ -12,10 +12,12 @@ from schemas.user_profile import (
     UserProgressList,
 )
 from schemas.users import UserInfo
-from services import EventService
-from services.access import AccessService
-from services.user_profile import UserProfileService
-from services.user_progress import UserProgressService
+from services import (
+    AccessService,
+    EventService,
+    UserProfileService,
+    UserProgressService,
+)
 from utils.roles import UserRole
 
 user_profile_router = APIRouter(
@@ -64,7 +66,9 @@ async def add(
 user_profile_detail_router = APIRouter(prefix="/profile", tags=["UserProfileProgress"])
 
 
-@user_profile_detail_router.get("/", summary="Получить прогресс по профилю пользователя")
+@user_profile_detail_router.get(
+    "/", summary="Получить прогресс по профилю пользователя"
+)
 @exception_handler
 async def get_by_id(user_id: int, current_user: UserInfo = Depends(get_current_user)):
     async with unit_of_work() as uow:
@@ -82,7 +86,9 @@ async def delete_by_id(user_id: int, current_user=Depends(get_current_user)):
     return {"detail": "Профиль откреплен от пользователя."}
 
 
-@user_profile_detail_router.post("/grade-up", summary="Повысить уровень профиля пользователя")
+@user_profile_detail_router.post(
+    "/grade-up", summary="Повысить уровень профиля пользователя"
+)
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def gradeup_user(

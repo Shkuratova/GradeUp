@@ -2,10 +2,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from dependencies.auth import get_current_user
 from api.decorators import check_role, exception_handler
-from services.access import AccessService
+from services import AccessService, ProfileService
 from utils.roles import UserRole
 from db.uow import unit_of_work
-from services.profile import ProfileService
 from schemas.users import UserInfo
 from schemas.profiles import (
     SProfileAdd,

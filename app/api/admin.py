@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
-from db.models.events import EventType, TargetType
+from db.models.types import EventType, TargetType
 from dependencies import get_current_user
 from api.decorators import exception_handler, check_role
 from schemas.event import EventFilter, EventSchema

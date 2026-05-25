@@ -7,15 +7,10 @@ from db.models.types import CertificationRole, CertificationStatus
 from db.repository import (
     MeetingRepository,
     ParticipantsRepository,
-    StageRepository,
-    UserStageRepository,
-    UserSkillRepository,
-    UserLevelRepository,
     StageVersionRepository, UserProfileRepository,
 )
 from exceptions.common import (
     NotFoundException,
-    DataValidationError,
     AlreadyExistException,
 )
 from exceptions.user import ForbiddenException
@@ -24,14 +19,12 @@ from schemas.meetings import (
     MeetingFilters,
     MeetingUpdateForm,
     MeetingDetail,
-    MeetingAddResult,
 )
-from schemas.users import UserInfo, UserBase
+from schemas.users import UserInfo
 from services import AccessService
 from services.base import BaseService
-from services.department import DepartmentService
-from services.user import UserService
-from services.user_stage import UserStageService
+from services.users.user import UserService
+from services.users.user_stage import UserStageService
 from utils.roles import UserRole
 
 

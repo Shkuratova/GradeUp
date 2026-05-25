@@ -10,8 +10,7 @@ from schemas.departments import (
     DivisionSchema,
 )
 from schemas.users import UserInfo
-from services import EventService, AccessService
-from services.department import DivisionService
+from services import EventService, AccessService, DivisionService
 from utils.roles import UserRole
 
 division_router = APIRouter(prefix="/divisions", tags=["Divisions"])

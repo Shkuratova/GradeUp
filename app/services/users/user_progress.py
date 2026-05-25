@@ -1,10 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.repository import LevelRepository, UserLevelRepository, UserSkillRepository
-from schemas.profiles import ProfileStructure, LevelStructure
-from schemas.user_progress import UserProfileProgress, ProfileProgress, StageProgress
-from services.user_profile import UserProfileService
-from services.profile import ProfileService
+from schemas.profiles import ProfileStructure
+from schemas.user_progress import UserProfileProgress, ProfileProgress
+from services.users.user_profile import UserProfileService
+from services.profiles import ProfileService
 
 
 class UserProgressService:

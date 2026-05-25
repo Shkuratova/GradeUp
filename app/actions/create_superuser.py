@@ -8,7 +8,7 @@ sys.path.insert(0, str(root_dir))
 import asyncio
 from os import getenv
 from schemas.users import UserAdd
-from services.user import UserService
+from services.users.user import UserService
 from db.uow import unit_of_work
 
 default_email = getenv("DEFAULT_EMAIL", "admin@example.com")

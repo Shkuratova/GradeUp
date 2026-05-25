@@ -1,12 +1,12 @@
-from fastapi import Request, Depends, HTTPException, status, Query
+from fastapi import Request, Depends, HTTPException, status
 from jwt.exceptions import PyJWTError, ExpiredSignatureError
 
 from db.uow import unit_of_work
 from exceptions.user import (
     InvalidTokenException,
 )
-from schemas.users import UserBase, UserInfo
-from services.user import UserService
+from schemas.users import UserInfo
+from services.users.user import UserService
 from utils import AuthUtils
 
 
@@ -26,7 +26,7 @@ async def get_user_from_token(token: str)-> UserInfo:
         if not (user_id := payload.get("sub")) or not (role := payload.get("role")):
             raise InvalidTokenException("Некорректный токен.")
         async with unit_of_work() as uow:
-            user = await UserService(uow.session).get_user_info(user_id=user_id)
+            user = await UserService(uow.session).get_user_info(user_id=int(user_id))
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден.")
         return UserInfo.model_validate(user)

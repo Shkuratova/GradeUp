@@ -27,14 +27,9 @@ class UserRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalars().all()
 
-    @db_exception_handler
-    async def get_user_role(self, user_id: int):
-        stmt = select(User).where(User.id == user_id).options(joinedload(User.role))
-        res = await self._session.execute(stmt)
-        return res.scalar_one_or_none()
 
     @db_exception_handler
-    async def get_user_info(self, user_id: int | None, email: int | None):
+    async def get_user_info(self, user_id: int | None, email: str | None):
         stmt = select(User)
 
         if user_id is not None:

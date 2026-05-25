@@ -24,5 +24,5 @@ class MeetingParticipant(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     role: Mapped[CertificationRole] = mapped_column(default=CertificationRole.student, server_default=CertificationRole.student)
 
-    meeting: Mapped[Meeting] = relationship(back_populates="participants")
+    meeting: Mapped["Meeting"] = relationship(back_populates="participants")
     user: Mapped["User"] = relationship(back_populates="meetings")
