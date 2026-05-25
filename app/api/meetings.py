@@ -1,4 +1,6 @@
 from typing import Annotated
+import logging
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, Query
 
@@ -53,6 +55,17 @@ async def add(
 async def get_user_next_meeting(current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
         return await MeetingService(uow.session).get_user_next_meeting(current_user.id)
+
+
+@meeting_router.get(
+    "/{meeting_id}", response_model=MeetingDetail, summary="Получить встречу по id"
+)
+@check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
+@exception_handler
+async def get_by_id(meeting_id: int, current_user=Depends(get_current_user)):
+    async with unit_of_work() as uow:
+        await AccessService(uow.session).can_get_meeting(meeting_id, current_user)
+        return await MeetingService(uow.session).get_meeting_by_id(meeting_id)
 
 
 @meeting_router.put(

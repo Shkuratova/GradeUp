@@ -11,7 +11,8 @@ from datetime import datetime, timezone
 class MeetingRepository(BaseRepository):
     model = Meeting
 
-    def _get_meeting_query(self, filter_dict: dict):
+    @staticmethod
+    def _get_meeting_query(filter_dict: dict):
         stmt = select(Meeting)
 
         if meeting_id := filter_dict.pop("id", None):
@@ -61,7 +62,7 @@ class MeetingRepository(BaseRepository):
             if skill_id:
                 stmt = stmt.where(Stage.skill_id == skill_id)
 
-        if department_ids := filter_dict.pop("department_ids", None):
+        if department_ids := filter_dict.pop("departments_id", None):
             stmt = stmt.where(
                 Meeting.participants.any(
                     MeetingParticipant.user.has(User.department_id.in_(department_ids))

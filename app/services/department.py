@@ -67,7 +67,7 @@ class DivisionService(BaseService):
             if (
                 user.managed_division is not None
                 and user.managed_division.id != division_id
-                or user.managed_department is not None
+                or user.managed_department_id is not None
             ):
                 raise DataValidationError(
                     "Сотрудник может быть руководителем только внутри одного направления или отдела"

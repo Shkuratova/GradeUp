@@ -92,7 +92,6 @@ class AccessService(BaseService):
 
     async def can_get_user(self, user_id: int, current_user: UserInfo):
         user = await self.user_repository.get_by_id(user_id)
-        logger.warning("CAN GET USER %s", current_user.role_name)
         if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
             return
         elif current_user.is_supervisor:
@@ -175,7 +174,17 @@ class AccessService(BaseService):
 
     async def can_manage_meeting(self, meeting_id: int, current_user: UserInfo):
         student_id = await self.participant_repository.get_student(meeting_id)
-        return await self.can_manage_user(student_id, current_user)
+        try:
+            await self.can_manage_user(student_id, current_user)
+        except ForbiddenException as error:
+            raise ForbiddenException(f"Нет доступа к выбранной встрече.")
+
+    async def can_get_meeting(self, meeting_id: int, current_user: UserInfo):
+        student_id = await self.participant_repository.get_student(meeting_id)
+        try:
+            await self.can_get_user(student_id, current_user)
+        except ForbiddenException as error:
+            raise ForbiddenException(f"Нет доступа к выбранной встрече.")
 
     @classmethod
     async def can_get_division(cls, division_id, current_user):
