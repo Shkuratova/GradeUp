@@ -34,7 +34,7 @@ async def get_user_skill_detail(
     user_id: int, skill_id: int, current_user: UserInfo = Depends(get_current_user)
 ):
     async with unit_of_work() as uow:
-        return await UserProfileService(uow.session).get_skill_progress(
+        return await UserProfileService(uow.session).get_skill_questions(
             user_id, skill_id
         )
 
@@ -53,5 +53,5 @@ async def get_user_skill_questions(
             user_id, current_user
         )
         return await UserProfileService(uow.session).get_skill_questions(
-            user_id, skill_id
+            user_id, skill_id, questions=True
         )

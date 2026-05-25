@@ -89,8 +89,7 @@ class UserProfileService(BaseService):
             profile=ProfileList.model_validate(profile, from_attributes=True),
         )
 
-    async def get_skill_questions(self, user_id: int, skill_id: int):
-        # return await self.user_skill_repository.get_skill_detail_questions(user_id, skill_id)
+    async def get_skill_questions(self, user_id: int, skill_id: int, questions: bool = False):
         skill_detail = await self.user_skill_repository.get_skill_detail_questions(
             user_id, skill_id
         )
@@ -126,7 +125,7 @@ class UserProfileService(BaseService):
 
             stage = stages_map[stage_id]
 
-            if row["num"] is not None:
+            if row["num"] is not None and questions:
                 stage["questions"].append(
                     {
                         "num": row["num"],
@@ -139,44 +138,6 @@ class UserProfileService(BaseService):
 
         return skill_data
 
-    async def get_skill_progress(self, user_id: int, skill_id: int):
-        skill_detail = await self.user_skill_repository.get_skill_detail(
-            user_id, skill_id
-        )
-
-        if not skill_detail:
-            return None
-
-        skill_data = {
-            "id": skill_detail[0]["skill_id"],
-            "title": skill_detail[0]["title"],
-            "description": skill_detail[0]["description"],
-            "literature": skill_detail[0]["literature"],
-            "stages": [],
-        }
-
-        stages_map = {}
-
-        for row in skill_detail:
-            stage_id = row["stage_id"]
-
-            if stage_id not in stages_map:
-                stages_map[stage_id] = {
-                    "id": stage_id,
-                    "confirmation_type": row["confirmation_type"],
-                }
-
-            if row["user_stage_id"] is not None:
-                stages_map[stage_id]["user_stage_id"] = row["user_stage_id"]
-                stages_map[stage_id]["is_accepted"] = row["is_accepted"]
-                stages_map[stage_id]["comment"] = row["comment"]
-                stages_map[stage_id]["updated_at"] = row["updated_at"]
-            else:
-                stages_map[stage_id]["user_stage_id"] = None
-
-        skill_data["stages"] = list(stages_map.values())
-
-        return skill_data
 
     async def get_available_skills(self, user_id):
         skills = await self.repository.get_available_skills(user_id)
