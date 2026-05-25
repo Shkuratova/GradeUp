@@ -29,7 +29,7 @@ class AccessService(BaseService):
     async def get_managed_departments(self, current_user: UserInfo):
 
         departments = []
-        if current_user.role_name == UserRole.ADMIN:
+        if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
             departments = await self.department_repository.get_departments_id()
         elif current_user.is_supervisor:
             if current_user.managed_division_id is not None:
@@ -176,3 +176,11 @@ class AccessService(BaseService):
     async def can_manage_meeting(self, meeting_id: int, current_user: UserInfo):
         student_id = await self.participant_repository.get_student(meeting_id)
         return await self.can_manage_user(student_id, current_user)
+
+    @classmethod
+    async def can_get_division(cls, division_id, current_user):
+        if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
+            return
+        if current_user.managed_division_id and current_user.managed_division_id == division_id:
+            return
+        raise ForbiddenException("Нет доступа к выбранному направлению")

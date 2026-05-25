@@ -127,6 +127,14 @@ class DepartmentRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    async def get_by_ids(self, departments_id: list[int] | None):
+        stmt = select(Department)
+        if departments_id:
+            stmt = stmt.where(Department.id.in_(departments_id))
+
+        res = await self._session.execute(stmt)
+        return res.scalars().all()
+
 
 class DepartmentProfileRepository(BaseRepository):
     model = DepartmentProfile

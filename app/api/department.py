@@ -39,7 +39,8 @@ async def get_all(
     current_user: UserInfo = Depends(get_current_user),
 ) -> list[DepartmentSchema]:
     async with unit_of_work() as uow:
-        return await DepartmentService(uow.session).get_all()
+        departments_id = await AccessService(uow.session).get_managed_departments(current_user)
+        return await DepartmentService(uow.session).get_list(departments_id)
 
 
 

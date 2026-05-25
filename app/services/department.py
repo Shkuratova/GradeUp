@@ -211,3 +211,6 @@ class DepartmentService(BaseService):
             raise ConflictException(f"Нельзя удалить отдел с сотрудниками (Сотрудников в отделе: {res})")
         await self.repository.delete_by_id(department_id)
 
+    async def get_list(self, departments_id: list[int] | None = None):
+        return await self.repository.get_by_ids(departments_id)
+

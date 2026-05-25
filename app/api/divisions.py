@@ -10,7 +10,7 @@ from schemas.departments import (
     DivisionSchema,
 )
 from schemas.users import UserInfo
-from services import EventService
+from services import EventService, AccessService
 from services.department import DivisionService
 from utils.roles import UserRole
 
@@ -53,6 +53,7 @@ async def add(division: DivisionAddForm, current_user=Depends(get_current_user))
 @exception_handler
 async def get_division_detail(division_id: int, current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
+        await AccessService.can_get_division(division_id, current_user)
         return await DivisionService(uow.session).get_division_detail(division_id)
 
 
