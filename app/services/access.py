@@ -37,6 +37,7 @@ class AccessService(BaseService):
                 departments = await self.department_repository.get_departments_id(
                     current_user.managed_division.id
                 )
+                logger.warning("Доступные департаменты для пользователя %s: %s", current_user.name_with_email(), departments)
                 if not departments:
                     raise ForbiddenException(
                         "Нет доступных отделов в вашем подразделении."
@@ -89,16 +90,17 @@ class AccessService(BaseService):
             raise ForbiddenException("Отказано в доступе.")
         return user
 
-    async def can_get_user(self, user, current_user: UserInfo):
-
+    async def can_get_user(self, user_id: int, current_user: UserInfo):
+        user = await self.user_repository.get_by_id(user_id)
+        logger.warning("CAN GET USER %s", current_user.role_name)
         if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
             return
-        elif current_user.role_name == UserRole.EMPLOYEE:
-            if current_user.id == user.id:
-                return
-        else:
+        elif current_user.is_supervisor:
             departments_id = await self.get_managed_departments(current_user)
             if user.department_id in departments_id:
+                return
+        elif current_user.role_name == UserRole.EMPLOYEE:
+            if current_user.id == user.id:
                 return
 
         raise ForbiddenException("Нет доступа к выбранному пользователю")
@@ -122,8 +124,7 @@ class AccessService(BaseService):
             return user_profile
 
         if current_user.is_supervisor:
-            user = await self.user_repository.get_by_id(user_profile.user_id)
-            await self.can_get_user(user, current_user)
+            await self.can_get_user(user_profile.user_id, current_user)
             return user_profile
 
         raise ForbiddenException("Нет доступа к профилю пользователя")
@@ -145,8 +146,7 @@ class AccessService(BaseService):
     async def can_get_user_profile_questions(self, user_id: int, current_user: UserInfo):
         if user_id == current_user.id:
             raise ForbiddenException("Откзано в доступе")
-        user = await self.user_repository.get_by_id(user_id)
-        await self.can_get_user(user, current_user)
+        await self.can_get_user(user_id, current_user)
 
     async def can_get_skill(self, skill_id: int, current_user: UserInfo):
 
@@ -193,5 +193,3 @@ class AccessService(BaseService):
             return current_user.managed_division_id
 
         raise ForbiddenException("Нет доступа к направлениям")
-
-

@@ -70,7 +70,7 @@ class SkillProgress(BaseModel):
     is_accepted: bool | None = None
     stages: list[StageProgress] | None = None
     @computed_field
-    def level_progress(self) -> float:
+    def skill_progress(self) -> float:
         if self.stages:
             accepted = sum(s.is_accepted for s in self.stages)
             return accepted / len(self.stages) * 100
