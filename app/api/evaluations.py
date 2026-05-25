@@ -13,7 +13,7 @@ from utils.roles import UserRole
 evaluation_router = APIRouter(prefix="/evaluations", tags=["Evaluations"])
 
 
-@evaluation_router.post("/", summary="Оценить этап пользователя")
+@evaluation_router.post("/", response_model=EvaluationSchema, summary="Оценить этап пользователя")
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def evaluate(
@@ -24,7 +24,7 @@ async def evaluate(
             user_stage.user_id, current_user
         )
         evaluation = await UserStageService(uow.session).evaluate(user_stage)
-        await EventService(uow.session).log_evaluate_stage(user_stage, current_user)
+        await EventService(uow.session).log_evaluate_stage(user_stage.user_id, user_stage, current_user)
         return evaluation
 
 

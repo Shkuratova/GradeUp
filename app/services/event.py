@@ -1,5 +1,6 @@
-from pyexpat.errors import messages
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from db.models.events import EventType, TargetType
 from db.repository import (
     EventRepository,
@@ -9,14 +10,15 @@ from schemas.departments import (
     DepartmentDetail,
     DivisionDetail,
 )
+from schemas.evaluations import EvaluationSchema
 from schemas.event import (
     RegistrationPayload,
     EventFilter,
     SetProfilePayload,
     EventAdd,
 )
-from schemas.meetings import MeetingAddForm, MeetingAddResult, MeetingDetail
-from schemas.user_profile import UserStageBase, UserProfileSchema, GradeUpResult
+from schemas.meetings import MeetingDetail
+from schemas.user_profile import UserProfileSchema, GradeUpResult
 from schemas.users import UserInfo, SRole
 from services.base import BaseService
 from utils.roles import UserRole
@@ -101,8 +103,10 @@ class EventService(BaseService):
     async def log_set_user_role(
         self, old_role: SRole, user_update: UserInfo, current_user: UserInfo
     ):
-        message = (f"Изменена роль сотрудника {user_update.name_with_email()} "
-                   f"с {old_role.role_name.value} на {user_update.role_name.value}.")
+        message = (
+            f"Изменена роль сотрудника {user_update.name_with_email()} "
+            f"с {old_role.role_name.value} на {user_update.role_name.value}."
+        )
         payload = {
             "user_id": user_update.id,
             "email": user_update.email,
@@ -196,9 +200,22 @@ class EventService(BaseService):
         pass
 
     async def log_evaluate_stage(
-        self, user_stage: UserStageBase, current_user: UserInfo
+        self, user_id: int, user_stage: EvaluationSchema, current_user: UserInfo
     ):
-        pass
+        employee = await self.get_employee(user_id)
+        message = (f"Оценен этап пользователя {employee.name_with_email()} "
+                   f"{user_stage.skill.title} ({user_stage.confirmation_type}) c оценкой"
+                   f" {user_stage.evaluation()}")
+
+        await self.log_event(
+            actor_id=current_user.id,
+            access_scope=UserRole.SUPERVISOR,
+            target_id=user_stage.id,
+            target_type=TargetType.USER_STAGE,
+            event_type=EventType.EVALUATE,
+            message=message,
+            payload=user_stage.model_dump()
+        )
 
     async def log_set_division_supervisor(
         self, division: DivisionDetail, current_user: UserInfo
@@ -238,9 +255,7 @@ class EventService(BaseService):
     async def log_remove_division_supervisor(
         self, division: DivisionDetail, current_user
     ):
-        message = (
-            f"Руководитель направления {division.division_name.__repr__()} был откреплён."
-        )
+        message = f"Руководитель направления {division.division_name.__repr__()} был откреплён."
         await self.log_event(
             actor_id=current_user.id,
             access_scope=UserRole.ADMIN,

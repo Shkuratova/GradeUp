@@ -25,6 +25,8 @@ class UserProfileRepository(BaseRepository):
 
     async def get_all_with_progress(self, filter_dict: dict):
 
+        departments_id = filter_dict.pop("departments_id", None)
+
         total_lvl_subq = (
             select(
                 ProfileLevel.profile_id, func.count(ProfileLevel.id).label("total_cnt")
@@ -74,6 +76,8 @@ class UserProfileRepository(BaseRepository):
                 completed_levels.c.user_id == User.id,
             )
         )
+        if departments_id:
+            stmt = stmt.where(Department.id.in_(departments_id))
 
         res = await self._session.execute(stmt)
         return res.all()
@@ -165,14 +169,10 @@ class UserProfileRepository(BaseRepository):
                             UserSkill,
                             UserSkill.id == UserStage.user_skill_id,
                         )
-                        .join(
-                            UserLevel,
-                            UserLevel.id == UserSkill.user_level_id,
-                        )
                         .where(
                             and_(
                                 StageVersion.stage_id == Stage.id,
-                                UserLevel.user_id == user_id,
+                                UserSkill.user_id == user_id,
                                 UserStage.is_accepted.is_(True),
                             )
                         )

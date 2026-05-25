@@ -9,7 +9,7 @@ from schemas.skills import StageList
 class EvaluationBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    is_accepted: bool
+    is_accepted: bool = False
     stage_version_id: int
 
 class EvaluationSchema(EvaluationBase):
@@ -37,3 +37,6 @@ class EvaluationSchema(EvaluationBase):
     @field_serializer("updated_at")
     def serialize_updated_at(self, value: datetime, _info):
         return value.strftime("%Y-%m-%d %H:%M:%S")
+
+    def evaluation(self) -> str:
+        return 'Зачтено' if self.is_accepted else 'Не зачтено'

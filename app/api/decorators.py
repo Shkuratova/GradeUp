@@ -9,6 +9,9 @@ from exceptions.user import (
 )
 from exceptions.common import AlreadyExistException, NotFoundException, DataValidationError, ConflictException
 from schemas.users import UserInfo
+import logging
+logger = logging.getLogger(__name__)
+
 
 def exception_handler(func):
     @wraps(func)
@@ -48,7 +51,7 @@ def check_role(required_roles: list[str]):
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, current_user: UserInfo = Depends(get_current_user), **kwargs):
-            if not set(current_user.roles).issubset(required_roles):
+            if not set(current_user.roles) & set(required_roles):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Отказано в доступе.")
             return await func(*args, current_user=current_user, **kwargs)
         return wrapper

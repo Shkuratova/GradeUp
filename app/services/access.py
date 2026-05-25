@@ -13,7 +13,8 @@ from exceptions.user import ForbiddenException
 from schemas.users import UserInfo
 from services.base import BaseService
 from utils.roles import UserRole
-
+import logging
+logger = logging.getLogger(__name__)
 
 class AccessService(BaseService):
     def __init__(self, session: AsyncSession):
@@ -31,7 +32,8 @@ class AccessService(BaseService):
         if current_user.role_name == UserRole.ADMIN:
             departments = await self.department_repository.get_departments_id()
         elif current_user.is_supervisor:
-            if current_user.division_id is not None:
+            if current_user.managed_division_id is not None:
+
                 departments = await self.department_repository.get_departments_id(
                     current_user.managed_division.id
                 )
@@ -39,12 +41,12 @@ class AccessService(BaseService):
                     raise ForbiddenException(
                         "Нет доступных отделов в вашем подразделении."
                     )
-                elif current_user.department_id is not None:
-                    departments = [current_user.department_id]
-                else:
-                    raise ForbiddenException(
-                        "Руководитель должен быть привязан к отделу или подразделению."
-                    )
+            elif current_user.department_id is not None:
+                departments = [current_user.department_id]
+            else:
+                raise ForbiddenException(
+                    "Руководитель должен быть привязан к отделу или подразделению."
+                )
         else:
             raise ForbiddenException("Отказано в доступе.")
         return departments

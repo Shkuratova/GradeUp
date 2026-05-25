@@ -35,8 +35,7 @@ async def get_all(
                 uow.session
             ).get_id_by_division(filters.division_id)
 
-        if filters.departments_id:
-            filters.departments_id = await auth_service.get_department_filter(
+        filters.departments_id = await auth_service.get_department_filter(
                 current_user, filters.departments_id
             )
         if filters.only_subordinates:
