@@ -15,14 +15,7 @@ class DepartmentRepository(BaseRepository):
             select(Department)
             .where(Department.id == department_id)
             .options(
-                joinedload(Department.supervisor).load_only(
-                    User.id,
-                    User.first_name,
-                    User.last_name,
-                    User.patronymic,
-                    User.email,
-                    User.department_id,
-                ),
+                joinedload(Department.supervisor),
                 selectinload(Department.profiles).load_only(Profile.id, Profile.title),
             )
         )

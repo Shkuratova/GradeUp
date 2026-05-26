@@ -86,13 +86,7 @@ class MeetingRepository(BaseRepository):
                 .joinedload(Stage.skill)
             ),
             selectinload(Meeting.participants).options(
-                joinedload(MeetingParticipant.user).load_only(
-                    User.first_name,
-                    User.last_name,
-                    User.patronymic,
-                    User.department_id,
-                    User.email,
-                )
+                joinedload(MeetingParticipant.user)
             ),
         )
 
@@ -130,13 +124,7 @@ class MeetingRepository(BaseRepository):
                     .joinedload(Stage.skill)
                 ),
                 selectinload(Meeting.participants).options(
-                    joinedload(MeetingParticipant.user).load_only(
-                        User.first_name,
-                        User.last_name,
-                        User.patronymic,
-                        User.department_id,
-                        User.email,
-                    )
+                    joinedload(MeetingParticipant.user)
                 ),
             )
             .order_by(Meeting.started_at)
