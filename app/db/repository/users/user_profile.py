@@ -297,9 +297,6 @@ class UserProfileRepository(BaseRepository):
             .options(
                 joinedload(UserProfile.current_level)
                 .selectinload(ProfileLevel.skills)
-                .load_only(LevelSkill.id),
-                joinedload(UserProfile.current_level)
-                .selectinload(ProfileLevel.skills)
                 .load_only(Skill.id, Skill.title),
                 joinedload(UserProfile.current_level)
                 .selectinload(ProfileLevel.skills)

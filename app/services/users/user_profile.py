@@ -127,7 +127,7 @@ class UserProfileService(BaseService):
                     "is_accepted": row["is_accepted"],
                     "comment": row["comment"],
                     "updated_at": row["updated_at"],
-                    "questions": [],
+                    "questions": [] if questions else None,
                 }
 
             stage = stages_map[stage_id]

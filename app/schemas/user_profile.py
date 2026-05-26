@@ -96,28 +96,13 @@ class Skill(BaseModel):
     stages: list[Stage]
 
 
-class LevelSkill(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    skill: Skill = Field(exclude=True)
-
-    @computed_field
-    def skill_id(self) -> int:
-        return self.skill.id
-
-    @computed_field
-    def title(self) -> str:
-        return self.skill.title
-
-    @computed_field
-    def stages(self) -> list[Stage]:
-        return self.skill.stages
 
 
 class CurrentLevel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     num: int
     level_name: str
-    skills: list[LevelSkill]
+    skills: list[Skill]
 
 
 class ProfileAvailableSkills(BaseModel):

@@ -104,4 +104,6 @@ class UserStageService(BaseService):
 
     async def get_evaluation(self, user_stage_id: int):
         evaluation =  await self.repository.get_evaluation(user_stage_id)
+        if evaluation is None:
+            raise NotFoundException(f"Оценка пользователя с id = {user_stage_id} не найдена.")
         return EvaluationSchema.model_validate(evaluation, from_attributes=True)
