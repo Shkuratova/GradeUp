@@ -83,7 +83,7 @@ class LevelProgress(BaseModel):
     num: int
     level_name: str
     is_closed: bool | None = None
-    skills: list[SkillProgress] | None
+    skills: list[SkillProgress] | None = None
 
     @computed_field
     def level_progress(self) -> float:
@@ -99,16 +99,19 @@ class ProfileProgress(BaseModel):
     profile_id: int
     title: str
     current_level_id: int
-    levels: list[LevelProgress]
+    levels: list[LevelProgress] | None = None
 
     @computed_field
-    def profile_progress(self) -> float:
-        accepted = sum(l.is_closed == True for l in self.levels)
-        return accepted / len(self.levels) * 100
+    def profile_progress(self) -> float | None:
+        if self.levels:
+            accepted = sum(l.is_closed == True for l in self.levels)
+            return accepted / len(self.levels) * 100
 
     @computed_field
-    def ready_gradeup(self) -> bool:
-        current_lvl = next(l for l in self.levels if l.id == self.current_level_id)
-        if current_lvl.level_progress == 100:
-            return True
-        return False
+    def ready_gradeup(self) -> bool | None:
+        if self.levels:
+            current_lvl = next(l for l in self.levels if l.id == self.current_level_id)
+            if current_lvl.level_progress == 100:
+                return True
+            else:
+                return False

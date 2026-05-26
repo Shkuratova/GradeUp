@@ -27,4 +27,3 @@ class User(Base):
 
     user_stages: Mapped[list["UserStage"]] = relationship(back_populates="supervisor")
     events: Mapped[list["Event"]] = relationship(back_populates="actor")
-    user_skills: Mapped[list["UserSkill"]] = relationship(back_populates="user")

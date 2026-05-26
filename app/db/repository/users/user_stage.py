@@ -23,18 +23,6 @@ class UserStageRepository(BaseRepository):
         return res.scalar_one_or_none()
 
     @db_exception_handler
-    async def get_by_stage_id(self, stage_id: int):
-        stmt = (
-            select(UserStage)
-            .join(UserStage.stage_version)
-            .join(StageVersion.stage)
-            .where(Stage.id == stage_id)
-        )
-
-        res = await self._session.execute(stmt)
-        return res.scalar_one_or_none()
-
-    @db_exception_handler
     async def accepted_count(self, skill_id: int, user_skill_id: int):
         stmt = (
             select(func.count(UserStage.id))

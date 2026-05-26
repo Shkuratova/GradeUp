@@ -31,8 +31,6 @@ class UserLevelRepository(BaseRepository):
                 .load_only(UserSkill.id, UserSkill.is_accepted)
                 .selectinload(UserSkill.stages)
                 .load_only(UserStage.stage_version_id, UserStage.is_accepted)
-                .joinedload(UserStage.stage_version)
-                .load_only(StageVersion.stage_id),
             )
         )
 

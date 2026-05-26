@@ -25,8 +25,10 @@ class UserProgressService:
         self.user_skill_repository = UserSkillRepository(session)
 
     async def get_profile_progress(self, user_id: int):
-        user_profile = await self.user_profile_service.get_profile(user_id)
+        user_profile = await self.user_profile_service.get_profile_title(user_id)
         rows = await self.user_profile_repository.get_progress_by_id(user_id=user_id, profile_id=user_profile.profile_id)
+        if not len(rows):
+            return ProfileProgress.model_validate(user_profile, from_attributes=True)
 
         levels = defaultdict(
             lambda: {
@@ -57,9 +59,9 @@ class UserProgressService:
             )
 
         profile_progress = {
-            "profile_id": rows[0]["profile_id"],
+            "profile_id": user_profile.profile_id,
             "user_id": user_id,
-            "title": rows[0]["profile_title"],
+            "title": user_profile.title,
             "current_level_id": user_profile.current_level_id,
             "levels": list(levels.values()),
         }

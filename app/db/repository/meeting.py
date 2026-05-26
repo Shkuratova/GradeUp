@@ -57,8 +57,7 @@ class MeetingRepository(BaseRepository):
         if confirmation_type or skill_id or stage_id:
             stmt = (
                 stmt.join(Meeting.user_stage)
-                .join(UserStage.stage_version)
-                .join(StageVersion.stage)
+                .join(UserStage.stage)
             )
 
             if stage_id:
@@ -81,9 +80,8 @@ class MeetingRepository(BaseRepository):
             joinedload(Meeting.user_stage)
             .load_only(UserStage.id)
             .options(
-                joinedload(UserStage.stage_version)
-                .joinedload(StageVersion.stage)
-                .joinedload(Stage.skill)
+                joinedload(UserStage.stage).load_only(Stage.id, Stage.confirmation_type)
+                 .joinedload(Stage.skill)
             ),
             selectinload(Meeting.participants).options(
                 joinedload(MeetingParticipant.user)
@@ -117,10 +115,9 @@ class MeetingRepository(BaseRepository):
             )
             .options(
                 joinedload(Meeting.user_stage)
-                .load_only(UserStage.id)
+                .load_only(UserStage.id, UserStage.stage_version_id)
                 .options(
-                    joinedload(UserStage.stage_version)
-                    .joinedload(StageVersion.stage)
+                    joinedload(UserStage.stage)
                     .joinedload(Stage.skill)
                 ),
                 selectinload(Meeting.participants).options(

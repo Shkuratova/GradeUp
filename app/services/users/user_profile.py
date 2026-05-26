@@ -43,6 +43,12 @@ class UserProfileService(BaseService):
             raise NotFoundException(f"Сотруднику с id = {user_id} не назначен профиль.")
         return profile
 
+    async def get_profile_title(self, user_id: int):
+        profile = await self.repository.get_profile_title(user_id)
+        if profile is None:
+            raise NotFoundException(f"Сотруднику с id = {user_id} не назначен профиль.")
+        return profile
+
     async def get_all_with_progress(self, filters: UserProfileFilter):
         user_profiles = await self.repository.get_all_with_progress(
             filters.model_dump(exclude_none=True)
@@ -187,6 +193,3 @@ class UserProfileService(BaseService):
         await self.user_level_repository.delete_by_user(user_id)
         await self.repository.delete_by_user_id(user_id)
 
-    async def progress(self, user_id):
-        res = await self.repository.get_profile_progress(user_id)
-        return UserProfileProgress.model_validate(res, from_attributes=True)

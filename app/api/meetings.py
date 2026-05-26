@@ -23,7 +23,7 @@ meeting_router = APIRouter(prefix="/meetings", tags=["Meetings"])
 
 
 @meeting_router.get(
-    "/", response_model=list[MeetingDetail], summary="Получить список встреч"
+    "/", #response_model=list[MeetingDetail], summary="Получить список встреч"
 )
 @exception_handler
 async def get_all(

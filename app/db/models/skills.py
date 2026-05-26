@@ -23,26 +23,24 @@ class Skill(Base):
 
     categories: Mapped[list[Category]] = relationship(back_populates="skills", secondary="skill_categories")
 
-    profile_levels: Mapped[list["LevelSkill"]] = relationship(back_populates="skill")
-    profile_level: Mapped["ProfileLevel"] = relationship(back_populates="skill_list", secondary="level_skills")
+    level_skills: Mapped[list["LevelSkill"]] = relationship(back_populates="skill")
+
 
 
 class SkillCategory(Base):
     __tablename__ = "skill_categories"
     __table_args__ = (UniqueConstraint("skill_id", "category_id"), )
 
-    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
-    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"))
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id", ondelete="CASCADE"))
+    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id", ondelete="CASCADE"))
 
 
 class LevelSkill(Base):
     __table_args__ = (UniqueConstraint("profile_level_id", "skill_id"),)
     profile_level_id: Mapped[int] = mapped_column(ForeignKey("profile_levels.id", ondelete="CASCADE"))
     skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id", ondelete="CASCADE"))
-
-
-    profile_level: Mapped["ProfileLevel"] = relationship(back_populates="skills")
-    skill: Mapped["Skill"] = relationship(back_populates="profile_levels")
+    profile_level: Mapped["ProfileLevel"] = relationship(back_populates="level_skills")
+    skill: Mapped["Skill"] = relationship(back_populates="level_skills")
 
 
 class Stage(Base):
@@ -63,7 +61,6 @@ class StageVersion(Base):
 
     stage: Mapped[Stage] = relationship(back_populates="stage_versions")
     questions: Mapped[list["StageQuestion"]] = relationship(back_populates="stage_version")
-    user_stages: Mapped[list["UserStage"]] = relationship(back_populates="stage_version")
 
 class StageQuestion(Base):
     stage_version_id: Mapped[int] = mapped_column(ForeignKey("stage_versions.id", ondelete="CASCADE"))

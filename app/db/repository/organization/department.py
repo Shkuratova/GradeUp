@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -20,6 +23,8 @@ class DepartmentRepository(BaseRepository):
             )
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение департамента по id (department_id=%s)")
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -28,6 +33,8 @@ class DepartmentRepository(BaseRepository):
         if division_id:
             stmt = stmt.where(Department.division_id == division_id)
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение списка id департаментов по id направления (division_id=%s)", division_id)
         return res.scalars().all()
 
     @db_exception_handler
@@ -41,6 +48,8 @@ class DepartmentRepository(BaseRepository):
         )
 
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение списка департаментов с доступными профилями")
         return res.scalars().all()
 
     @db_exception_handler
@@ -51,18 +60,24 @@ class DepartmentRepository(BaseRepository):
             .options(joinedload(Department.supervisor).load_only(User.id))
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение департамента (department_id=%s) с его руководителем", department_id)
         return res.scalar_one_or_none()
 
     @db_exception_handler
     async def get_id_by_division_id(self, division_id):
         stmt = select(Department.id).where(Department.division_id == division_id)
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение id департаментов, привязанных к направлению  (division_id=%s)", division_id)
         return res.scalars().all()
 
     @db_exception_handler
     async def get_user_count(self, department_id):
         stmt = select(func.count(User.id)).where(User.department_id == department_id)
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение количества сотрудников в отделе (department_id=%s)")
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -72,6 +87,8 @@ class DepartmentRepository(BaseRepository):
             stmt = stmt.where(Department.id.in_(departments_id))
 
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение депаратаментов по списку id")
         return res.scalars().all()
 
 

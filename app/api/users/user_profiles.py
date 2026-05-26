@@ -102,4 +102,3 @@ async def gradeup_user(
         res = await UserProfileService(uow.session).gradeup(user_id)
         await EventService(uow.session).log_gradeup(user_id, res, current_user)
         return res
-        # return {"detail": "Уровень пользователя повышен."}

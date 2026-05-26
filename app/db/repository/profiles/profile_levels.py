@@ -38,7 +38,7 @@ class LevelRepository(BaseRepository):
             select(ProfileLevel)
             .where(ProfileLevel.id == profile_level_id)
             .options(
-                selectinload(ProfileLevel.skill_list)
+                selectinload(ProfileLevel.skills)
                 .load_only(Skill.id, Skill.title)
                 .selectinload(Skill.stages)
                 .load_only(Stage.id, Stage.confirmation_type)

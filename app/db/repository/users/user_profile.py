@@ -272,29 +272,6 @@ class UserProfileRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
-    @db_exception_handler
-    async def get_profile_progress(self, user_id: int):
-        stmt = (
-            select(UserProfile)
-            .where(UserProfile.user_id == user_id)
-            .options(
-                joinedload(UserProfile.user)
-                .load_only(User.id)
-                .selectinload(User.user_skills)
-                .load_only(UserSkill.skill_id, UserSkill.is_accepted)
-                .selectinload(UserSkill.stages)
-                .load_only(
-                    UserStage.id,
-                    UserStage.updated_at,
-                    UserStage.is_accepted,
-                    UserStage.comment,
-                )
-                .joinedload(UserStage.stage_version)
-                .load_only(StageVersion.stage_id)
-            )
-        )
-        res = await self._session.execute(stmt)
-        return res.scalar_one_or_none()
 
     @db_exception_handler
     async def get_available_skills(self, user_id: int):
@@ -307,11 +284,9 @@ class UserProfileRepository(BaseRepository):
                 .load_only(LevelSkill.id),
                 joinedload(UserProfile.current_level)
                 .selectinload(ProfileLevel.skills)
-                .joinedload(LevelSkill.skill)
                 .load_only(Skill.id, Skill.title),
                 joinedload(UserProfile.current_level)
                 .selectinload(ProfileLevel.skills)
-                .joinedload(LevelSkill.skill)
                 .selectinload(Skill.stages)
                 .load_only(Stage.id, Stage.confirmation_type),
                 with_loader_criteria(
@@ -399,3 +374,19 @@ class UserProfileRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
+
+    async def get_profile_title(self, user_id: int):
+        stmt = (
+            select(
+                UserProfile.user_id,
+                UserProfile.profile_id,
+                UserProfile.current_level_id,
+                Profile.title
+            )
+            .where(UserProfile.user_id == user_id)
+            .join(Profile, Profile.id == UserProfile.profile_id)
+        )
+        res = await self._session.execute(stmt)
+        return  res.one_or_none()
+
+

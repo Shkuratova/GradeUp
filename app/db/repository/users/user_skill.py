@@ -116,51 +116,6 @@ class UserSkillRepository(BaseRepository):
         return res.scalar_one()
 
     @db_exception_handler
-    async def get_progress_by_level(self, user_id: int, profile_level_id: int):
-        stage_exists = (
-            select(1)
-            .select_from(UserSkill)
-            .join(UserStage, UserStage.user_skill_id == UserSkill.id)
-            .join(StageVersion, StageVersion.id == UserStage.stage_version_id)
-            .where(
-                UserSkill.user_id == user_id,
-                UserSkill.skill_id == Skill.id,
-                StageVersion.stage_id == Stage.id,
-            )
-        )
-
-        skill_exists = (
-            select(1)
-            .select_from(UserSkill)
-            .where(
-                UserSkill.user_id == user_id,
-                UserSkill.skill_id == Skill.id,
-                UserSkill.profile_level_id == ProfileLevel.id,
-                UserSkill.is_accepted.is_(True),
-            )
-        )
-        stmt = (
-            select(
-                ProfileLevel.id.label("profile_level_id"),
-                ProfileLevel.level_name,
-                Skill.id.label("skill_id"),
-                Skill.title,
-                Stage.id.label("stage_id"),
-                Stage.confirmation_type,
-            )
-            .join(LevelSkill, LevelSkill.profile_level_id == ProfileLevel.id)
-            .join(Skill, Skill.id == LevelSkill.skill_id)
-            .join(Stage, Stage.skill_id == Skill.id)
-            .where(
-                ProfileLevel.id == profile_level_id,
-                not_(exists(skill_exists)),
-                not_(exists(stage_exists)),
-            )
-        )
-        res = await self._session.execute(stmt)
-        return res.mappings().all()
-
-    @db_exception_handler
     async def get_count_by_skill(self, skill_id):
         stmt = select(func.count(UserSkill.user_id)).where(
             UserSkill.skill_id == skill_id

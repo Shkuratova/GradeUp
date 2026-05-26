@@ -78,12 +78,13 @@ class SProfileAdd(BaseModel):
 
         all_skills = []
         for lvl in self.levels:
-            for skill in lvl.skills:
-                if skill in all_skills:
-                    raise ValueError(
-                        f"Навык с id = {skill} встречается в нескольких уровнях."
-                    )
-            all_skills.extend(lvl.skills)
+            if lvl.skills:
+                for skill in lvl.skills:
+                    if skill in all_skills:
+                        raise ValueError(
+                            f"Навык с id = {skill} встречается в нескольких уровнях."
+                        )
+                all_skills.extend(lvl.skills)
         return self
 
 
@@ -96,24 +97,14 @@ class SkillList(BaseModel):
     id: int
     title: str
 
-class LevelSkill(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    skill: SkillList | None = None
-
 
 class LevelDetail(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     num: int
     level_name: str
-    skills: list[LevelSkill] | None = Field(None, exclude=True)
+    skills: list[SkillList] | None = None
 
-    @computed_field
-    @property
-    def level_skills(self) -> list[SkillList] | None:
-        if self.skills:
-            return [ls.skill for ls in self.skills if ls.skill]
-        return []
 
 
 class ProfileDetail(ProfileBase):
@@ -138,7 +129,7 @@ class LevelStructure(BaseModel):
     id: int
     num: int
     level_name: str
-    skill_list: list[SkillStructure] | None  = None
+    skills: list[SkillStructure] | None  = None
 
 class ProfileStructure(BaseModel):
     model_config = ConfigDict(from_attributes=True)

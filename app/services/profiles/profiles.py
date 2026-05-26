@@ -61,12 +61,12 @@ class ProfileService(BaseService):
     async def _validate_skills(self, levels: list[SLevelAdd]):
         skill_ids = set()
         for lvl in levels:
-            skill_ids.update(lvl.skills)
-        if skill_ids:
-            skill_exists = await self.skill_repository.check_list(list(skill_ids))
-            if len(skill_exists) != len(skill_ids):
-                missing = [str(s) for s in skill_ids if s not in skill_exists]
-                raise DataValidationError(f"Навыков с id = [{','.join(missing)}]")
+            if lvl.skills:
+                skill_ids.update(lvl.skills)
+                skill_exists = await self.skill_repository.check_list(list(skill_ids))
+                if len(skill_exists) != len(skill_ids):
+                    missing = [str(s) for s in skill_ids if s not in skill_exists]
+                    raise DataValidationError(f"Навыков с id = [{','.join(missing)}]")
 
     async def add_levels(self, profile_id: int, levels: list[SLevelAdd]):
         await self._validate_skills(levels)
@@ -130,7 +130,7 @@ class ProfileService(BaseService):
                         lvl.id, {"level_name": lvl.level_name, "num": lvl.num}
                     )
                 if lvl.skills:
-                    old_skills = set(s.id for s in old_level.level_skills)
+                    old_skills = set(s.id for s in old_level.skills)
                     new_skills = set(lvl.skills)
                     if add_skill := new_skills - old_skills:
                         level_skills += [

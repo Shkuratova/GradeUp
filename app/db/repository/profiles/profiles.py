@@ -65,11 +65,9 @@ class ProfileRepository(BaseRepository):
         stmt = (
             stmt.outerjoin(Profile.levels.and_(ProfileLevel.is_active.is_(True)))
             .outerjoin(ProfileLevel.skills)
-            .outerjoin(LevelSkill.skill)
             .options(
                 contains_eager(Profile.levels)
                 .contains_eager(ProfileLevel.skills)
-                .contains_eager(LevelSkill.skill)
                 .load_only(Skill.id, Skill.title),
             )
             .order_by(ProfileLevel.num)
@@ -92,7 +90,7 @@ class ProfileRepository(BaseRepository):
                     ProfileLevel.num,
                     ProfileLevel.level_name,
                 )
-                .selectinload(ProfileLevel.skill_list)
+                .selectinload(ProfileLevel.skills)
                 .load_only(
                     Skill.id,
                     Skill.title,

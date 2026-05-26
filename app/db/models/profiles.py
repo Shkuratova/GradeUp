@@ -26,8 +26,15 @@ class ProfileLevel(Base):
     is_active: Mapped[bool] = mapped_column(default=True, server_default=text('true'))
 
     profile: Mapped["Profile"] = relationship(back_populates="levels")
-    skills: Mapped[list["LevelSkill"]] = relationship(back_populates="profile_level")
-    skill_list: Mapped[list["Skill"]] = relationship(back_populates="profile_level", secondary="level_skills")
+    level_skills: Mapped[list["LevelSkill"]] = relationship(back_populates="profile_level")
     user_profiles: Mapped["UserProfile"] = relationship(back_populates="current_level")
     user_levels: Mapped["UserLevel"] = relationship(back_populates="profile_level")
     user_skills: Mapped[list["UserSkill"]] = relationship(back_populates="profile_level")
+
+    skills: Mapped[list["Skill"]] = relationship(
+        "Skill",
+        secondary="level_skills",
+        primaryjoin="LevelSkill.profile_level_id == ProfileLevel.id",
+        secondaryjoin="LevelSkill.skill_id == Skill.id",
+        viewonly=True,
+    )
