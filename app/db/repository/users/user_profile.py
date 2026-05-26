@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -55,7 +56,7 @@ class UserProfileRepository(BaseRepository):
                 UserProfile.profile_id,
                 UserProfile.current_level_id.label("profile_level_id"),
                 func.count(LevelSkill.skill_id).label("skill_cnt"),
-                func.count(UserSkill.skill_id).label("accepted_cnt"),
+                func.count(UserSkill.id).label("accepted_cnt"),
             )
             .join(
                 LevelSkill, LevelSkill.profile_level_id == UserProfile.current_level_id
@@ -64,6 +65,7 @@ class UserProfileRepository(BaseRepository):
                 UserSkill,
                 and_(
                     UserSkill.skill_id == LevelSkill.skill_id,
+                    UserSkill.user_id == UserProfile.user_id,
                     UserSkill.is_accepted.is_(True),
                 ),
             )
@@ -148,7 +150,9 @@ class UserProfileRepository(BaseRepository):
             user_profile_info.c.closed_levels_cnt,
             user_profile_info.c.skill_cnt,
             user_profile_info.c.accepted_cnt,
-        ).outerjoin(user_profile_info, user_profile_info.c.user_id == user_info.c.id)
+        ).outerjoin(
+            user_profile_info, and_(user_profile_info.c.user_id == user_info.c.id)
+        )
 
         res = await self._session.execute(stmt)
         return res.mappings().all()
@@ -187,12 +191,6 @@ class UserProfileRepository(BaseRepository):
         up, ul = aliased(UserProfile), aliased(UserLevel)
         us, ust = aliased(UserSkill), aliased(UserStage)
 
-        profile_level_ids = (
-            select(ProfileLevel.id)
-            .where(ProfileLevel.profile_id == up.profile_id)
-            .scalar_subquery()
-        )
-
         user_progress = (
             select(
                 up.user_id,
@@ -200,28 +198,47 @@ class UserProfileRepository(BaseRepository):
                 ul.profile_level_id,
                 ul.is_closed,
                 us.skill_id,
-                func.bool_or(us.is_accepted).label("skill_accepted"),
-                func.count(ust.id).label("accepted_stages"),
+                us.is_accepted.label("skill_accepted"),
+                func.count(func.distinct(ust.id)).label("accepted_stages"),
             )
             .select_from(up)
             .join(
                 ul,
                 and_(
                     ul.user_id == up.user_id,
-                    ul.profile_level_id.in_(
-                        profile_level_ids
-                    ),
                 ),
             )
-            .join(us, us.user_id == up.user_id)
-            .outerjoin(ust, and_(ust.user_skill_id == us.id, ust.is_accepted == True))
-            .where(up.user_id == user_id)
+            .join(
+                LevelSkill,
+                LevelSkill.profile_level_id == ul.profile_level_id,
+            )
+            .join(
+                us,
+                and_(
+                    us.user_id == up.user_id,
+                    us.skill_id == LevelSkill.skill_id,
+                ),
+            )
+            .outerjoin(
+                ust,
+                and_(
+                    ust.user_skill_id == us.id,
+                    ust.is_accepted.is_(True),
+                ),
+            )
+            .where(
+                and_(
+                    up.user_id == user_id,
+                    up.profile_id == profile_id,
+                )
+            )
             .group_by(
                 up.user_id,
                 up.profile_id,
                 ul.profile_level_id,
                 ul.is_closed,
                 us.skill_id,
+                us.is_accepted,
             )
             .cte("user_progress")
         )
@@ -271,7 +288,6 @@ class UserProfileRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
-
 
     @db_exception_handler
     async def get_available_skills(self, user_id: int):
@@ -382,12 +398,10 @@ class UserProfileRepository(BaseRepository):
                 UserProfile.profile_id,
                 UserProfile.current_level_id,
                 Profile.title,
-                Profile.description
+                Profile.description,
             )
             .where(UserProfile.user_id == user_id)
             .join(Profile, Profile.id == UserProfile.profile_id)
         )
         res = await self._session.execute(stmt)
-        return  res.one_or_none()
-
-
+        return res.one_or_none()

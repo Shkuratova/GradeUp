@@ -29,7 +29,7 @@ class UserRepository(BaseRepository):
 
 
     @db_exception_handler
-    async def get_user_info(self, user_id: int | None, email: str | None):
+    async def get_user_info(self, user_id: int | None, email: str | None = None):
         stmt = select(User)
 
         if user_id is not None:

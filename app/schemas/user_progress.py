@@ -73,7 +73,7 @@ class SkillProgress(BaseModel):
     @computed_field
     def skill_progress(self) -> float:
         if self.stage_cnt:
-            return self.accepted_staged / self.stage_cnt * 100
+            return self.accepted_stages / self.stage_cnt * 100
         return 0
 
 
@@ -88,8 +88,9 @@ class LevelProgress(BaseModel):
     @computed_field
     def level_progress(self) -> float:
         if self.skills:
-            accepted = sum(s.is_accepted == True for s in self.skills)
-            return accepted / len(self.skills) * 100
+            accepted = sum(s.accepted_stages  for s in self.skills)
+            total = sum(s.stage_cnt for s in self.skills)
+            return accepted / total * 100
         return 0
 
 
@@ -107,6 +108,7 @@ class ProfileProgress(BaseModel):
         if self.levels:
             accepted = sum(l.is_closed == True for l in self.levels)
             return accepted / len(self.levels) * 100
+        return 0
 
     @computed_field
     def ready_gradeup(self) -> bool | None:
@@ -114,5 +116,4 @@ class ProfileProgress(BaseModel):
             current_lvl = next(l for l in self.levels if l.id == self.current_level_id)
             if current_lvl.level_progress == 100:
                 return True
-            else:
-                return False
+        return False

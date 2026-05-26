@@ -26,11 +26,6 @@ class UserLevelRepository(BaseRepository):
                 joinedload(UserProfile.current_level).load_only(
                     ProfileLevel.id, ProfileLevel.num, ProfileLevel.level_name
                 ),
-                joinedload(UserProfile.user)
-                .selectinload(User.user_skills)
-                .load_only(UserSkill.id, UserSkill.is_accepted)
-                .selectinload(UserSkill.stages)
-                .load_only(UserStage.stage_version_id, UserStage.is_accepted)
             )
         )
 

@@ -58,3 +58,10 @@ class UserStage(Base):
         secondaryjoin="StageVersion.stage_id == Stage.id",
         viewonly=True,
     )
+    skill: Mapped["Skill"] = relationship(
+            "Skill",
+            secondary="user_skills",
+            primaryjoin="UserStage.user_skill_id == UserSkill.id",
+            secondaryjoin="UserSkill.skill_id == Skill.id",
+            viewonly=True,
+        )
