@@ -1,3 +1,7 @@
+import logging
+logger = logging.getLogger(__name__)
+
+
 from sqlalchemy import select, func, and_, exists, delete
 from sqlalchemy.orm import joinedload, with_loader_criteria, aliased
 
@@ -150,6 +154,113 @@ class UserProfileRepository(BaseRepository):
         return res.mappings().all()
 
     @db_exception_handler
+    async def get_progress_by_id(self, user_id: int, profile_id: int):
+        from sqlalchemy import and_, func, select
+        from sqlalchemy.orm import aliased
+
+        pl = aliased(ProfileLevel)
+        p = aliased(Profile)
+
+        profile_structure = (
+            select(
+                p.id.label("profile_id"),
+                p.title.label("profile_title"),
+                pl.id.label("level_id"),
+                pl.num,
+                pl.level_name,
+                Skill.id.label("skill_id"),
+                Skill.title.label("skill_title"),
+                func.count(Stage.id).label("stage_cnt"),
+            )
+            .select_from(p)
+            .join(pl, pl.profile_id == p.id)
+            .join(LevelSkill, LevelSkill.profile_level_id == pl.id)
+            .join(Skill, Skill.id == LevelSkill.skill_id)
+            .outerjoin(Stage, Stage.skill_id == Skill.id)
+            .where(p.id == profile_id)
+            .group_by(
+                p.id, p.title, pl.id, pl.num, pl.level_name, Skill.id, Skill.title
+            )
+            .cte("profile_structure")
+        )
+
+        up, ul = aliased(UserProfile), aliased(UserLevel)
+        us, ust = aliased(UserSkill), aliased(UserStage)
+
+        profile_level_ids = (
+            select(ProfileLevel.id)
+            .where(ProfileLevel.profile_id == up.profile_id)
+            .scalar_subquery()
+        )
+
+        user_progress = (
+            select(
+                up.user_id,
+                up.profile_id,
+                ul.profile_level_id,
+                ul.is_closed,
+                us.skill_id,
+                func.bool_or(us.is_accepted).label("skill_accepted"),
+                func.count(ust.id).label("accepted_stages"),
+            )
+            .select_from(up)
+            .join(
+                ul,
+                and_(
+                    ul.user_id == up.user_id,
+                    ul.profile_level_id.in_(
+                        profile_level_ids
+                    ),
+                ),
+            )
+            .join(us, us.user_id == up.user_id)
+            .outerjoin(ust, and_(ust.user_skill_id == us.id, ust.is_accepted == True))
+            .where(up.user_id == user_id)
+            .group_by(
+                up.user_id,
+                up.profile_id,
+                ul.profile_level_id,
+                ul.is_closed,
+                us.skill_id,
+            )
+            .cte("user_progress")
+        )
+
+        stmt = (
+            select(
+                user_progress.c.user_id,
+                profile_structure.c.profile_id,
+                profile_structure.c.profile_title,
+                profile_structure.c.level_id,
+                profile_structure.c.num,
+                profile_structure.c.level_name,
+                user_progress.c.is_closed,
+                profile_structure.c.skill_id,
+                profile_structure.c.skill_title,
+                user_progress.c.skill_accepted,
+                profile_structure.c.stage_cnt,
+                func.coalesce(user_progress.c.accepted_stages, 0).label(
+                    "accepted_stages"
+                ),
+            )
+            .select_from(profile_structure)
+            .outerjoin(
+                user_progress,
+                and_(
+                    user_progress.c.profile_id == profile_structure.c.profile_id,
+                    user_progress.c.profile_level_id == profile_structure.c.level_id,
+                    user_progress.c.skill_id == profile_structure.c.skill_id,
+                ),
+            )
+            .order_by(profile_structure.c.num)
+        )
+
+        result = await self._session.execute(stmt)
+        rows = result.mappings().all()
+        logger.warning(f"Number of rows returned: {len(rows)}")
+        return rows
+
+    @db_exception_handler
     async def get_profile(self, user_id: int):
         stmt = (
             select(UserProfile)
@@ -288,5 +399,3 @@ class UserProfileRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
-
-

@@ -119,7 +119,7 @@ class UserInfo(UserSchema):
     def roles(self) -> list[str]:
         roles = {self.role.role_name}
 
-        if self.is_supervisor:
+        if self.is_supervisor():
             roles.add(UserRole.SUPERVISOR)
 
         return list(roles)

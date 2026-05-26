@@ -1,6 +1,15 @@
+import logging
+logger = logging.getLogger(__name__)
+
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.repository import LevelRepository, UserLevelRepository, UserSkillRepository
+from db.repository import (
+    LevelRepository,
+    UserLevelRepository,
+    UserSkillRepository,
+    UserProfileRepository,
+)
 from schemas.profiles import ProfileStructure
 from schemas.user_progress import UserProfileProgress, ProfileProgress
 from services.users.user_profile import UserProfileService
@@ -11,6 +20,7 @@ class UserProgressService:
     def __init__(self, session: AsyncSession):
         self.profile_service = ProfileService(session)
         self.user_profile_service = UserProfileService(session)
+        self.user_profile_repository = UserProfileRepository(session)
         self.level_repository = LevelRepository(session)
         self.user_level_repository = UserLevelRepository(session)
         self.user_skill_repository = UserSkillRepository(session)
@@ -90,4 +100,7 @@ class UserProgressService:
             "title": profile.title,
             "levels": result_levels,
         }
-        return ProfileProgress.model_validate(res)
+        # return ProfileProgress.model_validate(res)
+        profile = await self.user_profile_repository.get_profile(user_id)
+        res= await self.user_profile_repository.get_progress_by_id(user_id=user_id, profile_id=profile.profile_id)
+        return res

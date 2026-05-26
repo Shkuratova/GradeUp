@@ -58,14 +58,14 @@ class UserProgressList(UserSchema):
     accepted_cnt: int | None = Field(None, exclude=True)
 
     def is_supervisor(self) -> bool:
-        if self.managed_division_id or self.managed_department_id:
+        if self.managed_division_id is not None or self.managed_department_id is not None:
             return True
         return False
 
     @computed_field
     def roles(self) -> list[str]:
         roles = {self.role_name}
-        if self.is_supervisor:
+        if self.is_supervisor():
             roles.add(UserRole.SUPERVISOR)
         return list(roles)
 
