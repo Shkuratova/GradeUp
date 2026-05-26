@@ -78,11 +78,11 @@ class UserProfileService(BaseService):
             {**data_dict, "current_level_id": current_lvl.id}
         )
         user_level = await self.user_level_repository.get_by_level_id(
-            model.user_id, current_lvl
+            model.user_id, current_lvl.id
         )
         if user_level is None:
             user_level = await self.user_level_repository.add(
-                {"user_id": model.user_id, "profile_level_id": current_lvl}
+                {"user_id": model.user_id, "profile_level_id": current_lvl.id}
             )
         return UserProfileSchema(
             id=user_profile.id,
