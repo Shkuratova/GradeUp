@@ -1,4 +1,6 @@
 import logging
+from collections import defaultdict
+
 logger = logging.getLogger(__name__)
 
 
@@ -10,15 +12,12 @@ from db.repository import (
     UserSkillRepository,
     UserProfileRepository,
 )
-from schemas.profiles import ProfileStructure
-from schemas.user_progress import UserProfileProgress, ProfileProgress
+from schemas.user_progress import ProfileProgress
 from services.users.user_profile import UserProfileService
-from services.profiles import ProfileService
 
 
 class UserProgressService:
     def __init__(self, session: AsyncSession):
-        self.profile_service = ProfileService(session)
         self.user_profile_service = UserProfileService(session)
         self.user_profile_repository = UserProfileRepository(session)
         self.level_repository = LevelRepository(session)
@@ -27,80 +26,42 @@ class UserProgressService:
 
     async def get_profile_progress(self, user_id: int):
         user_profile = await self.user_profile_service.get_profile(user_id)
-        profile: ProfileStructure = await self.profile_service.get_structure(
-            user_profile.profile_id
+        rows = await self.user_profile_repository.get_progress_by_id(user_id=user_id, profile_id=user_profile.profile_id)
+
+        levels = defaultdict(
+            lambda: {
+                "id": None,
+                "num": None,
+                "level_name": None,
+                "is_closed": None,
+                "skills": [],
+            }
         )
-        user_progress: UserProfileProgress = await self.user_profile_service.progress(
-            user_id
-        )
-        user_levels = await self.user_level_repository.get_all_by_user(user_id)
 
-        user_level_map = {l.profile_level_id: l for l in user_levels}
+        for row in rows:
+            level = levels[row["level_id"]]
+            if level["id"] is None:
+                level["id"] = row["level_id"]
+                level["num"] = row["num"]
+                level["level_name"] = row["level_name"]
+                level["is_closed"] = row["is_closed"]
 
-        user_skill_map = {us.skill_id: us for us in user_progress.skills}
-        stage_map = {}
-        for us in user_progress.skills:
-            for st in us.stages:
-                stage_map[st.stage_id] = st
-        result_levels = []
-        for level in profile.levels:
-            result_skills = []
-            user_level = user_level_map.get(level.id)
-            for skill in level.skill_list:
-                user_skill = user_skill_map.get(skill.id)
-
-                result_stages = []
-                for stage in skill.stages:
-                    user_stage = stage_map.get(stage.id)
-                    result_stages.append(
-                        {
-                            "id": (user_stage.id if user_stage is not None else None),
-                            "stage_id": stage.id,
-                            "stage_version_id": (
-                                user_stage.stage_version_id
-                                if user_stage is not None
-                                else None
-                            ),
-                            "confirmation_type": stage.confirmation_type,
-                            "is_accepted": (
-                                user_stage.is_accepted
-                                if user_stage is not None
-                                else False
-                            ),
-                            "comment": (
-                                user_stage.comment if user_stage is not None else None
-                            ),
-                            "updated_at": (
-                                user_stage.updated_at if user_stage is not None else None
-                            ),
-                        }
-                    )
-                result_skills.append(
-                    {
-                        "id": skill.id,
-                        "title": skill.title,
-                        "is_accepted": (
-                            user_skill.is_accepted if user_skill is not None else False
-                        ),
-                        "stages": result_stages,
-                    }
-                )
-            result_levels.append(
+            level["skills"].append(
                 {
-                    "id": level.id,
-                    "num": level.num,
-                    "level_name": level.level_name,
-                    "skills": result_skills,
+                    "id": row["skill_id"],
+                    "title": row["skill_title"],
+                    "is_accepted": row["skill_accepted"],
+                    "stage_cnt": row["stage_cnt"],
+                    "accepted_stages": row["accepted_stages"],
                 }
             )
-        res = {
-            "user_id": user_progress.user_id,
-            "profile_id": profile.id,
+
+        profile_progress = {
+            "profile_id": rows[0]["profile_id"],
+            "user_id": user_id,
+            "title": rows[0]["profile_title"],
             "current_level_id": user_profile.current_level_id,
-            "title": profile.title,
-            "levels": result_levels,
+            "levels": list(levels.values()),
         }
-        # return ProfileProgress.model_validate(res)
-        profile = await self.user_profile_repository.get_profile(user_id)
-        res= await self.user_profile_repository.get_progress_by_id(user_id=user_id, profile_id=profile.profile_id)
-        return res
+
+        return ProfileProgress.model_validate(profile_progress)

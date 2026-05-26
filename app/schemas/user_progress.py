@@ -68,12 +68,12 @@ class SkillProgress(BaseModel):
     id: int
     title: str
     is_accepted: bool | None = None
-    stages: list[StageProgress] | None = None
+    stage_cnt: int
+    accepted_staged: int = 0
     @computed_field
     def skill_progress(self) -> float:
-        if self.stages:
-            accepted = sum(s.is_accepted for s in self.stages)
-            return accepted / len(self.stages) * 100
+        if self.stage_cnt:
+            return self.accepted_staged / self.stage_cnt * 100
         return 0
 
 
@@ -82,13 +82,13 @@ class LevelProgress(BaseModel):
     id: int
     num: int
     level_name: str
-    is_closed: bool = False
+    is_closed: bool | None = None
     skills: list[SkillProgress] | None
 
     @computed_field
     def level_progress(self) -> float:
         if self.skills:
-            accepted = sum(s.is_accepted for s in self.skills)
+            accepted = sum(s.is_accepted == True for s in self.skills)
             return accepted / len(self.skills) * 100
         return 0
 
@@ -103,7 +103,7 @@ class ProfileProgress(BaseModel):
 
     @computed_field
     def profile_progress(self) -> float:
-        accepted = sum(l.is_closed for l in self.levels)
+        accepted = sum(l.is_closed == True for l in self.levels)
         return accepted / len(self.levels) * 100
 
     @computed_field

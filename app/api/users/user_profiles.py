@@ -11,6 +11,7 @@ from schemas.user_profile import (
     UserProfileSchema,
     UserProgressList,
 )
+from schemas.user_progress import ProfileProgress
 from schemas.users import UserInfo
 from services import (
     AccessService,
@@ -67,7 +68,9 @@ user_profile_detail_router = APIRouter(prefix="/profile", tags=["UserProfileProg
 
 
 @user_profile_detail_router.get(
-    "/", summary="Получить прогресс по профилю пользователя"
+    "/",
+    response_model=ProfileProgress,
+    summary="Получить прогресс по профилю пользователя",
 )
 @exception_handler
 async def get_by_id(user_id: int, current_user: UserInfo = Depends(get_current_user)):
