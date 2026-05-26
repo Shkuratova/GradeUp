@@ -99,6 +99,7 @@ class ProfileProgress(BaseModel):
     profile_id: int
     title: str
     current_level_id: int
+    description: str | None = None
     levels: list[LevelProgress] | None = None
 
     @computed_field

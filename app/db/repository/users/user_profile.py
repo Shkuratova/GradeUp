@@ -381,7 +381,8 @@ class UserProfileRepository(BaseRepository):
                 UserProfile.user_id,
                 UserProfile.profile_id,
                 UserProfile.current_level_id,
-                Profile.title
+                Profile.title,
+                Profile.description
             )
             .where(UserProfile.user_id == user_id)
             .join(Profile, Profile.id == UserProfile.profile_id)

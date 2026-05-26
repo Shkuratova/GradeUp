@@ -22,9 +22,7 @@ class EventRepository(BaseRepository):
         elif end_date:
             stmt = stmt.where(Event.created_at <= end_date)
         stmt = stmt.options(
-            joinedload(Event.actor).load_only(
-                User.first_name, User.last_name, User.patronymic, User.email, User.department_id
-            )
+            joinedload(Event.actor)
         ).order_by(Event.created_at.desc())
         res = await self._session.execute(stmt)
         return res.scalars().all()

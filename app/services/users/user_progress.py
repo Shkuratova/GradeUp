@@ -62,6 +62,7 @@ class UserProgressService:
             "profile_id": user_profile.profile_id,
             "user_id": user_id,
             "title": user_profile.title,
+            "description": user_profile.description,
             "current_level_id": user_profile.current_level_id,
             "levels": list(levels.values()),
         }

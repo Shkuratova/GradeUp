@@ -131,7 +131,7 @@ class EventService(BaseService):
     ):
         message = (
             f"Сотруднику {user_profile.user.name_with_email()} "
-            f"назначен профиль {user_profile.profile.title}."
+            f"назначен профиль {user_profile.profile.title.__repr__()}."
         )
 
         profile_payload = SetProfilePayload(
