@@ -78,7 +78,7 @@ class UserService(BaseService):
 
         old = await self.get_user_info(user_id=user_id)
         if (
-            old.is_supervisor
+            old.is_supervisor()
             and old.managed_division is None
             and old.department_id != user_data.department_id
         ):

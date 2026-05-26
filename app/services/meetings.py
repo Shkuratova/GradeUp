@@ -196,7 +196,7 @@ class MeetingService(BaseService):
             MeetingFilters(id=meeting_id)
         )
 
-        if current_user.is_supervisor:
+        if current_user.is_supervisor():
             await self._check_supervisor_access(meeting, current_user)
 
         elif current_user.role_name == UserRole.EMPLOYEE:
