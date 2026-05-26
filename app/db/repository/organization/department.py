@@ -43,14 +43,7 @@ class DepartmentRepository(BaseRepository):
         if departments_id:
             stmt = stmt.where(Department.id.in_(departments_id))
         stmt = stmt.options(
-            joinedload(Department.supervisor).load_only(
-                User.id,
-                User.first_name,
-                User.last_name,
-                User.patronymic,
-                User.email,
-                User.department_id,
-            ),
+            joinedload(Department.supervisor),
             selectinload(Department.profiles).load_only(Profile.id, Profile.title),
         )
 

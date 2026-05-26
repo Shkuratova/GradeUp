@@ -21,14 +21,7 @@ class DivisionRepository(BaseRepository):
                     Department.description,
                     Department.supervisor_id,
                 ),
-                joinedload(Division.supervisor).load_only(
-                    User.id,
-                    User.first_name,
-                    User.last_name,
-                    User.patronymic,
-                    User.email,
-                    User.department_id,
-                ),
+                joinedload(Division.supervisor)
             )
         )
         res = await self._session.execute(stmt)
@@ -51,14 +44,7 @@ class DivisionRepository(BaseRepository):
                 Department.description,
                 Department.supervisor_id,
             ),
-            joinedload(Division.supervisor).load_only(
-                User.id,
-                User.first_name,
-                User.last_name,
-                User.patronymic,
-                User.email,
-                User.department_id,
-            ),
+            joinedload(Division.supervisor),
         )
         res = await self._session.execute(stmt)
         return res.scalars().all()

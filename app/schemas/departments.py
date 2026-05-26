@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 from schemas.profiles import ProfileList
 from schemas.users import UserSchema
@@ -16,9 +16,25 @@ class DepartmentSchema(DepartmentBase):
 class DepartmentFilter(BaseModel):
     division_id: int
 
+class Supervisor(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    email: EmailStr
+    first_name: str
+    last_name: str
+    patronymic: str | None = None
+    position: str
+
+    def full_name(self) -> str:
+        patronymic = f"{self.patronymic[0] if self.patronymic else ''}"
+        return f"{self.last_name} {self.first_name[0]}. {patronymic}."
+
+    def name_with_email(self) -> str:
+        return f"{self.full_name()} ({self.email})"
+
+
 class DepartmentDetail(DepartmentBase):
     description: str | None = None
-    supervisor: UserSchema | None = None
+    supervisor: Supervisor | None = None
     profiles: list[ProfileList] | None = None
 
 class DepartmentAdd(BaseModel):
@@ -37,7 +53,6 @@ class DepartmentUpdate(BaseModel):
 
 class DepartmentUpdateForm(DepartmentUpdate):
     profiles: list[int] | None = None
-
 
 
 class DivisionBase(BaseModel):
@@ -69,5 +84,5 @@ class DivisionUpdateForm(DivisionUpdate):
     departments: list[int] | None = None
 
 class DivisionDetail(DivisionBase):
-    supervisor: UserSchema | None = None
+    supervisor: Supervisor | None = None
     departments: list[DepartmentSchema] | None = None
