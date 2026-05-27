@@ -7,11 +7,14 @@ from db.models.types import CertificationRole, CertificationStatus
 from db.repository import (
     MeetingRepository,
     ParticipantsRepository,
-    StageVersionRepository, UserProfileRepository,
+    StageVersionRepository,
+    UserProfileRepository,
+    SkillRepository,
 )
 from exceptions.common import (
     NotFoundException,
     AlreadyExistException,
+    ConflictException,
 )
 from exceptions.user import ForbiddenException
 from schemas.meetings import (
@@ -19,6 +22,7 @@ from schemas.meetings import (
     MeetingFilters,
     MeetingUpdateForm,
     MeetingDetail,
+    MeetingQuestions,
 )
 from schemas.users import UserInfo
 from services import AccessService
@@ -33,6 +37,7 @@ class MeetingService(BaseService):
     def __init__(self, session: AsyncSession):
         super().__init__(session)
         self.repository = MeetingRepository(session)
+        self.skill_repository = SkillRepository(session)
         self.participant_repository = ParticipantsRepository(session)
         self.stage_version_repository = StageVersionRepository(session)
         self.user_stage_service = UserStageService(session)
@@ -54,7 +59,8 @@ class MeetingService(BaseService):
 
     async def get_meetings(self, filters: MeetingFilters):
         filter_dict = filters.model_dump(exclude_none=True)
-        return await self.repository.get_meeting_list(filter_dict)
+        meetings =  await self.repository.get_meeting_list(filter_dict)
+        return [MeetingDetail.model_validate(m, from_attributes=True) for m in meetings]
 
     async def get_user_next_meeting(self, user_id: int):
         res = await self.repository.get_next_meeting(user_id)
@@ -68,27 +74,20 @@ class MeetingService(BaseService):
             raise NotFoundException(f'Не найдена встреча для аттестуемого с meeting_id={meeting_id}')
         return student_id
 
-    async def _validate_participants(
-        self, student_id: int, examiner_id: int, current_user: UserInfo
-    ):
+    async def _validate_participant(self, employee_id, current_user: UserInfo):
         user_service = UserService(self.session)
-        student = await user_service.get_user_info(user_id=student_id)
-        examiner = await user_service.get_user_info(user_id=examiner_id)
-        department_ids = await AccessService(
-            self.session
-        ).get_managed_departments(current_user)
-        logging.info('Доступных отделов: %s', len(department_ids) )
-        if department_ids is not None and current_user.role_name != UserRole.ADMIN:
-            if student.department_id not in department_ids or (
-                examiner.department_id not in department_ids
-                and examiner.id != current_user.id
-            ):
-                raise ForbiddenException(
-                    "Руководитель может выбирать Аттестуемого и Аттестующего только из своих подчиненных."
-                )
-        return student
+        employee = await user_service.get_user_info(employee_id)
+        try:
+            await AccessService(self.session).can_manage_user(employee_id, current_user)
+        except ForbiddenException:
+            raise ForbiddenException("Руководитель может выбирать Аттестуемого и Аттестующего только из своих подчиненных.")
+        return employee
+
 
     async def schedule_meeting(self, meeting: MeetingAddForm, current_user: UserInfo):
+        if meeting.examiner_id == meeting.student_id:
+            raise ConflictException("Невозможно назначить встречу: examiner_id и student_id совпадают.")
+
         filters = MeetingFilters(
             stage_id=meeting.stage_id,
             user_id=meeting.student_id,
@@ -101,9 +100,8 @@ class MeetingService(BaseService):
             raise AlreadyExistException(
                 f"Встреча с заданными параметрами уже назначена на {meetings.started_at}."
             )
-        student = await self._validate_participants(
-            meeting.student_id, meeting.examiner_id, current_user
-        )
+        student = await self._validate_participant(meeting.student_id, current_user)
+        examiner = await self._validate_participant(meeting.examiner_id, current_user)
         user_stage = await self.user_stage_service.ensure_user_stage(student.id, meeting.stage_id)
 
         new_meeting = {
@@ -132,34 +130,28 @@ class MeetingService(BaseService):
     async def update_meeting(
         self, meeting_id: int, meeting: MeetingUpdateForm, current_user: UserInfo
     ):
-        meeting_filters = MeetingFilters(id=meeting_id)
-        old_meeting = await self.get_meetings(meeting_filters)
-        if old_meeting is None:
-            raise NotFoundException(f"Встреча с id = {meeting.id} не найдена.")
-        if meeting.student_id and meeting.examiner_id:
-            await self._validate_participants(
-                meeting.student_id, meeting.examiner_id, current_user
-            )
+        old_meeting = await self.get_meeting_by_id(meeting_id)
 
         upd_meeting = meeting.model_dump(
             exclude={"id", "student_id", "examiner_id", "stage_id"}
         )
 
-        examiner_changed = (
-            old_meeting.examiner.user_id != meeting.examiner_id and meeting.examiner_id
-        )
-        stage_changed = old_meeting.stage_id != meeting.stage_id
+        if old_meeting.examiner.user_id != meeting.examiner_id and meeting.examiner_id:
+            if meeting.examiner_id == old_meeting.student.user_id:
+                raise ConflictException("Невозможно назначить встречу: examiner_id и student_id совпадают.")
 
-        if examiner_changed:
+            examiner = await self._validate_participant(meeting.examiner_id, current_user)
             await self.participant_repository.update_by_id(
                 old_meeting.examiner.id, {"user_id": meeting.examiner_id}
             )
-        if  stage_changed:
+
+        if old_meeting.stage_id != meeting.stage_id:
             user_stage = await self.user_stage_service.ensure_user_stage(meeting.student_id, meeting.stage_id)
             upd_meeting["user_stage_id"] = user_stage.id
 
         await self.repository.update_by_id(meeting_id, upd_meeting)
-        return await self.get_meetings(meeting_filters)
+
+        return await self.get_meeting_by_id(meeting_id)
 
     async def get_participant_role(self, meeting_id: int, user_id: int):
         res = await self.participant_repository.get_participant_role(
@@ -192,9 +184,7 @@ class MeetingService(BaseService):
             raise ForbiddenException("Отказано в доступе.")
 
     async def get_questions(self, meeting_id: int, current_user: UserInfo):
-        meeting: MeetingDetail = await self.get_meeting_by_filters(
-            MeetingFilters(id=meeting_id)
-        )
+        meeting: MeetingDetail = await self.get_meeting_by_id(meeting_id)
 
         if current_user.is_supervisor():
             await self._check_supervisor_access(meeting, current_user)
@@ -202,6 +192,14 @@ class MeetingService(BaseService):
         elif current_user.role_name == UserRole.EMPLOYEE:
             await self._check_examiner_access(meeting_id, current_user.id)
 
-        return await self.stage_version_repository.get_questions(
+        stage_version = await self.stage_version_repository.get_questions(
             meeting.stage_version_id
+        )
+        skill = await self.skill_repository.get_by_id(meeting.skill_id)
+        return MeetingQuestions(
+            skill_id=skill.id,
+            title=skill.title,
+            description=skill.description,
+            literature=skill.literature,
+            questions=stage_version.questions
         )

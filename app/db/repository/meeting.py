@@ -78,10 +78,10 @@ class MeetingRepository(BaseRepository):
 
         stmt = stmt.options(
             joinedload(Meeting.user_stage)
-            .load_only(UserStage.id)
+            .load_only(UserStage.id, UserStage.stage_version_id)
             .options(
-                joinedload(UserStage.stage).load_only(Stage.id, Stage.confirmation_type)
-                 .joinedload(Stage.skill)
+                joinedload(UserStage.stage).load_only(Stage.id, Stage.confirmation_type),
+                joinedload(UserStage.skill)
             ),
             selectinload(Meeting.participants).options(
                 joinedload(MeetingParticipant.user)
@@ -117,8 +117,8 @@ class MeetingRepository(BaseRepository):
                 joinedload(Meeting.user_stage)
                 .load_only(UserStage.id, UserStage.stage_version_id)
                 .options(
-                    joinedload(UserStage.stage)
-                    .joinedload(Stage.skill)
+                    joinedload(UserStage.stage),
+                    joinedload(UserStage.skill)
                 ),
                 selectinload(Meeting.participants).options(
                     joinedload(MeetingParticipant.user)

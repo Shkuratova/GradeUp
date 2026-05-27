@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
 from pydantic import (
     BaseModel,
@@ -9,10 +9,11 @@ from pydantic import (
     EmailStr,
     field_serializer,
 )
+
 from db.models.types import CertificationStatus, CertificationRole, ConfirmationTypes
-from exceptions.common import DataValidationError
 from schemas.profiles import SkillList
-from schemas.users import UserSchema, UserBase, UserInfo
+from schemas.skills import StageList, Question
+from schemas.users import UserSchema, UserInfo
 
 
 class MeetingBase(BaseModel):
@@ -52,17 +53,12 @@ class MeetingStage(BaseModel):
     skill: SkillList
 
 
-class MeetingStageVersion(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    stage_id: int
-    stage: MeetingStage
-
-
 class UserStage(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
-    stage_version: MeetingStageVersion
+    stage_version_id: int
+    skill: SkillList
+    stage: StageList
 
 
 class MeetingDetail(BaseModel):
@@ -76,24 +72,24 @@ class MeetingDetail(BaseModel):
     user_stage: UserStage = Field(exclude=True)
 
     @computed_field
-    def user_stage_id(self) -> int:
-        return self.user_stage.id
-
-    @computed_field
     def stage_id(self) -> int:
-        return self.user_stage.stage_version.stage_id
+        return self.user_stage.stage.id
 
     @computed_field
     def stage_version_id(self) -> int:
-        return self.user_stage.stage_version.id
+        return self.user_stage.stage_version_id
 
     @computed_field
     def confirmation_type(self) -> ConfirmationTypes:
-        return self.user_stage.stage_version.stage.confirmation_type
+        return self.user_stage.stage.confirmation_type
 
     @computed_field
-    def skill_title(self) -> str:
-        return self.user_stage.stage_version.stage.skill.title
+    def skill_id(self) -> int:
+        return self.user_stage.skill.id
+
+    @computed_field
+    def title(self) -> str:
+        return self.user_stage.skill.title
 
     @computed_field
     def student(self) -> Participant:
@@ -121,7 +117,6 @@ class MeetingAdd(BaseModel):
     started_at: datetime
     location: str
     duration: int
-    description: str | None = None
 
 
 class MeetingAddForm(BaseModel):
@@ -129,18 +124,15 @@ class MeetingAddForm(BaseModel):
     started_at: datetime
     location: str
     duration: int = Field(..., gt=0)
-    description: str | None = None
     student_id: int
     examiner_id: int
 
 
 class MeetingUpdateForm(BaseModel):
-    id: int
     stage_id: int
     started_at: datetime
     location: str
     duration: int = Field(..., gt=0)
-    description: str | None = None
     examiner_id: int | None = None
 
 
@@ -166,3 +158,13 @@ class MeetingFilters(BaseModel):
 class MeetingAddResult(BaseModel):
     meeting: MeetingDetail
     student: UserInfo
+
+class MeetingMaterial(BaseModel):
+    skill_id: int
+    title: str
+    literature: str | None = None
+    description: str | None = None
+
+class MeetingQuestions(MeetingMaterial):
+    questions: list[Question] | None = None
+

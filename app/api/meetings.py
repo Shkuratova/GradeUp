@@ -1,5 +1,6 @@
-from typing import Annotated
 import logging
+from typing import Annotated
+
 logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, Query
@@ -12,6 +13,7 @@ from schemas.meetings import (
     MeetingFilters,
     MeetingDetail,
     MeetingUpdateForm,
+    MeetingQuestions,
 )
 from schemas.users import (
     UserInfo,
@@ -23,7 +25,7 @@ meeting_router = APIRouter(prefix="/meetings", tags=["Meetings"])
 
 
 @meeting_router.get(
-    "/", #response_model=list[MeetingDetail], summary="Получить список встреч"
+    "/", response_model=list[MeetingDetail], summary="Получить список встреч"
 )
 @exception_handler
 async def get_all(
@@ -97,6 +99,7 @@ async def delete(meeting_id: int, current_user=Depends(get_current_user)):
 
 @meeting_router.get(
     "/{meeting_id}/questions",
+    response_model=MeetingQuestions,
     summary="Получить список вопросов встречи для Аттестующего",
 )
 @exception_handler

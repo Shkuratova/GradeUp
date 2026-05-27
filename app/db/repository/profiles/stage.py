@@ -120,7 +120,7 @@ class StageVersionRepository(BaseRepository):
             .options(selectinload(StageVersion.questions))
         )
         res = await self._session.execute(stmt)
-        return res.scalars().all()
+        return res.scalar_one_or_none()
 
 
 class QuestionRepository(BaseRepository):
