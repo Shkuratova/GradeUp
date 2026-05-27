@@ -1,4 +1,7 @@
-from sqlalchemy import select, func
+import logging
+
+logger = logging.getLogger(__name__)
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload, contains_eager
 
 from db.models import (
@@ -6,7 +9,6 @@ from db.models import (
     DepartmentProfile,
     Profile,
     ProfileLevel,
-    LevelSkill,
     Skill,
     Stage,
 )
@@ -30,6 +32,7 @@ class ProfileRepository(BaseRepository):
             )
 
         res = await self._session.execute(stmt)
+        logger.info("Выполнен запрос на получение списка профилей по фильтрам")
         return res.scalars().all()
 
     @db_exception_handler
@@ -46,8 +49,11 @@ class ProfileRepository(BaseRepository):
         )
 
         res = await self._session.execute(stmt)
+        logger.info(
+            "Выполнен запрос на проверку существования профиля по списку отделов (profile_id=%a)",
+            profile_id,
+        )
         return res.scalar_one_or_none()
-
 
     @db_exception_handler
     async def get_profiles_with_levels(
@@ -76,6 +82,9 @@ class ProfileRepository(BaseRepository):
         res = await self._session.execute(stmt)
         if profile_id:
             return res.unique().scalar_one_or_none()
+        logger.info(
+            "Выполнен запрос на получение списка профилей с уровнями и навыками"
+        )
         return res.unique().scalars().all()
 
     @db_exception_handler
@@ -104,7 +113,7 @@ class ProfileRepository(BaseRepository):
         )
 
         result = await self._session.execute(stmt)
-
+        logger.info(
+            "Выполнен запрос на получение структуры профиля (profile_id=%s)", profile_id
+        )
         return result.scalar_one_or_none()
-
-

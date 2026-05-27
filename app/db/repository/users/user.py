@@ -5,6 +5,10 @@ from db.models import User, Role, Department
 from db.repository import BaseRepository
 from db.repository.decorators import db_exception_handler
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class UserRepository(BaseRepository):
     model = User
@@ -25,8 +29,9 @@ class UserRepository(BaseRepository):
         if departments_id:
             stmt = stmt.where(User.department.has(Department.id.in_(departments_id)))
         res = await self._session.execute(stmt)
-        return res.scalars().all()
 
+        logger.info("Выполнен запрос на получение списка пользователей по фильтрам")
+        return res.scalars().all()
 
     @db_exception_handler
     async def get_user_info(self, user_id: int | None, email: str | None = None):
@@ -44,6 +49,12 @@ class UserRepository(BaseRepository):
             joinedload(User.managed_department),
         )
         res = await self._session.execute(stmt)
+
+        logger.info(
+            "Выполнен запрос на получение информации о пользователе по id или email (user_id=%s, email=%s)",
+            user_id,
+            email,
+        )
         return res.scalar_one_or_none()
 
 

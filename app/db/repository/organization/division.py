@@ -5,6 +5,9 @@ from db.models import Department, Division, User
 from db.repository.base import BaseRepository
 from db.repository.decorators import db_exception_handler
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class DivisionRepository(BaseRepository):
     model = Division
@@ -25,6 +28,8 @@ class DivisionRepository(BaseRepository):
             )
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение Направления по id (division_id=%s)", division_id)
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -33,6 +38,8 @@ class DivisionRepository(BaseRepository):
             Department.division_id == division_id
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение количества подчиненных отделов к Направлению (division_id=%s)", division_id)
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -47,5 +54,7 @@ class DivisionRepository(BaseRepository):
             joinedload(Division.supervisor),
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение Направлений с подчиненными отделами")
         return res.scalars().all()
 

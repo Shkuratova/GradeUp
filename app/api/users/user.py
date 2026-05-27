@@ -8,7 +8,7 @@ from dependencies import get_current_user
 from schemas.users import (
     UserFilter,
     UserInfo,
-    UserUpdateAdmin,
+    UserUpdateAdmin, ResetPassword,
 )
 from services import DepartmentService, EventService, AccessService, UserService
 from utils.roles import UserRole
@@ -44,11 +44,20 @@ async def get_all(
         return list(res)
 
 
+@user_router.patch("/reset-password", summary="Сбросить пароль", tags=["Auth"])
+@check_role([UserRole.ADMIN])
+@exception_handler
+async def reset_password(user_id: int, reset_form: ResetPassword, current_user: UserInfo = Depends(get_current_user)):
+    async with unit_of_work() as uow:
+        await UserService(uow.session).reset_password(user_id, reset_form)
+        return {"detail": "Пароль успешно обновлён"}
+
+
 user_detail_router = APIRouter(prefix="/{user_id}", tags=["Users", "UserDetail"])
 
 
 @user_detail_router.get(
-    "", response_model=UserInfo, summary="Получить пользователя по id"
+    "/", response_model=UserInfo, summary="Получить пользователя по id"
 )
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
@@ -61,7 +70,7 @@ async def get_by_id(
 
 
 @user_detail_router.patch(
-    "", response_model=UserInfo, summary="Обновить даннные пользователя по id"
+    "/", response_model=UserInfo, summary="Обновить даннные пользователя по id"
 )
 @check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
@@ -78,3 +87,4 @@ async def update_user(
                 old.role, upd, current_user
             )
         return upd
+

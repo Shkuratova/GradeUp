@@ -1,7 +1,10 @@
 from functools import wraps
-
 from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+
+import logging
+logger = logging.getLogger(__name__)
+
 
 def db_exception_handler(func):
     @wraps(func)
@@ -9,13 +12,13 @@ def db_exception_handler(func):
         try:
             return await func(*args, **kwargs)
         except IntegrityError as e:
-            print(f"Integrity error in {func.__name__}: {e}")
+            logger.error(f"Integrity error in {func.__name__}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Database constraint violation",
             ) from e
         except SQLAlchemyError as e:
-            print(f"Database error in {func.__name__}: {e}")
+            logger.error(f"Database error in {func.__name__}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal database error",

@@ -3,7 +3,7 @@ from pydantic import (
     Field,
     EmailStr,
     ConfigDict,
-    computed_field
+    computed_field, model_validator
 )
 
 from utils.roles import UserRole
@@ -23,6 +23,15 @@ class UserBase(BaseModel):
 class EmailModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     email: EmailStr
+
+class ResetPassword(BaseModel):
+    password: str
+    confirm_password: str
+
+class ChangePassword(BaseModel):
+    old_password: str
+    new_password: str
+    confirm_password: str
 
 
 class UserAuth(EmailModel):

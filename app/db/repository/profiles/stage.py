@@ -5,6 +5,8 @@ from db.models import Stage, StageVersion, StageQuestion
 from db.repository.base import BaseRepository
 from db.repository.decorators import db_exception_handler
 
+import logging
+logger = logging.getLogger(__name__)
 
 class StageRepository(BaseRepository):
     model = Stage
@@ -31,22 +33,6 @@ class StageRepository(BaseRepository):
         )
 
     @db_exception_handler
-    async def get_last_version_by_id(self, stage_id: int):
-        last_version = self.last_version_subquery()
-        stmt = stmt = (
-            select(StageVersion.id, last_version.c.id, last_version.c.version)
-            .where(StageVersion.stage_id == stage_id)
-            .join(
-                last_version,
-                (StageVersion.stage_id == last_version.c.stage_id)
-                & (StageVersion.version == last_version.c.version),
-            )
-        )
-
-        res = await self._session.execute(stmt)
-        return res.first()
-
-    @db_exception_handler
     async def get_last_version(self, stage_id: int):
         last_version = self.last_version_subquery()
         stmt = (
@@ -60,6 +46,8 @@ class StageRepository(BaseRepository):
             .where(StageVersion.stage_id == stage_id)
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение последней версии этапа")
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -83,34 +71,21 @@ class StageRepository(BaseRepository):
             )
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение списка вопрос последней версии этапа")
         return res.unique().scalar_one_or_none()
 
     @db_exception_handler
     async def stage_count(self, skill_id):
         stmt = select(func.count(Stage.id)).where(Stage.skill_id == skill_id)
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение количетсва этапов навыка")
         return res.scalar_one_or_none()
 
 
 class StageVersionRepository(BaseRepository):
     model = StageVersion
-
-    @db_exception_handler
-    async def add_new_version(self, stage_id: int):
-        stmt = (
-            insert(StageVersion)
-            .values(
-                stage_id=stage_id,
-                version=(
-                    select(func.coalesce(func.max(StageVersion.version), 0) + 1)
-                    .where(StageVersion.stage_id == stage_id)
-                    .scalar_subquery()
-                ),
-            )
-            .returning(StageVersion.id, StageVersion.version)
-        )
-        res = await self._session.execute(stmt)
-        return res.first()
 
     @db_exception_handler
     async def get_questions(self, stage_version_id):
@@ -120,6 +95,8 @@ class StageVersionRepository(BaseRepository):
             .options(selectinload(StageVersion.questions))
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение списка вопросов по номеру версии")
         return res.scalar_one_or_none()
 
 

@@ -38,11 +38,6 @@ class SkillService(BaseService):
         res = await self.repository.get_all_by_categories(filter_model.categories)
         return res
 
-    async def get_skills_stages(self, filters: BaseModel):
-        filter_dict = filters.model_dump(exclude_none=True)
-        res = await self.repository.get_stages(filter_dict)
-        return res
-
     async def get_skill_with_questions(self, skill_id: int):
         skill = await self.repository.get_last_skill_with_questions(skill_id)
         if skill is None:

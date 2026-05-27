@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 from sqlalchemy import select, func, delete
 from sqlalchemy.orm import selectinload
 
@@ -23,6 +26,12 @@ class LevelRepository(BaseRepository):
             ProfileLevel.num == level_num,
         )
         res = await self._session.execute(stmt)
+
+        logger.info(
+            "Выполнен запрос на получение уровня профиля по номеру (profile_id=%s, num=%s)",
+            profile_id,
+            level_num,
+        )
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -31,6 +40,11 @@ class LevelRepository(BaseRepository):
             LevelSkill.profile_level_id == profile_level_id
         )
         res = await self._session.execute(stmt)
+
+        logger.info(
+            "Выполнен запрос на получение количетсва навыков уровня (profile_level_id=%s)",
+            profile_level_id,
+        )
         return res.scalar_one_or_none()
 
     async def get_level_structure(self, profile_level_id: int):
@@ -45,6 +59,7 @@ class LevelRepository(BaseRepository):
             )
         )
         res = await self._session.execute(stmt)
+
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -59,7 +74,13 @@ class LevelRepository(BaseRepository):
             .where(LevelSkill.skill_id == skill_id)
         )
         res = await self._session.execute(stmt)
+
+        logger.info(
+            "Выполнен запрос на получение количетсва профилей, в которые входит навык (skill_id=%s)",
+            skill_id,
+        )
         return res.scalar_one_or_none()
+
 
 class LevelSkillRepository(BaseRepository):
     model = LevelSkill
@@ -68,5 +89,9 @@ class LevelSkillRepository(BaseRepository):
     async def delete_by_skill_ids(self, level_id: int, skills: list[int]):
         stmt = delete(LevelSkill).where(
             LevelSkill.profile_level_id == level_id, LevelSkill.skill_id.in_(skills)
+        )
+
+        logger.info(
+            "Выполнен запрос на удаление навыков уровня (profile_level_id=%s)", level_id
         )
         return await self._session.execute(stmt)

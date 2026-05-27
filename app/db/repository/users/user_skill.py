@@ -1,3 +1,8 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 from sqlalchemy import select, and_, func
 from sqlalchemy.orm import aliased
 
@@ -23,7 +28,12 @@ class UserSkillRepository(BaseRepository):
                 UserSkill.user_id == user_id,
             )
         )
+
         res = await self._session.execute(stmt)
+
+        logger.info(
+            "Получить навык пользователя (user_id=%s, skill_id=%s)", user_id, skill_id
+        )
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -78,6 +88,11 @@ class UserSkillRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
 
+        logger.info(
+            "Выполнен запрос на получение прогресса пользователя по навыку (user_id=%s, skill_is=%s)",
+            user_id,
+            skill_id,
+        )
         return res.mappings().all()
 
     @db_exception_handler
@@ -90,6 +105,11 @@ class UserSkillRepository(BaseRepository):
 
         res = await self._session.execute(stmt)
 
+        logger.info(
+            "Выполнен запрос на получение количетсва зачтенных навыков пользвателя (user_id=%s, profile_level_id=%s)",
+            user_id,
+            profile_level_id,
+        )
         return res.scalar_one()
 
     @db_exception_handler
@@ -98,4 +118,6 @@ class UserSkillRepository(BaseRepository):
             UserSkill.skill_id == skill_id
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнне запрос на получение навыков пользователй (skill_id=%s)", skill_id)
         return res.scalar_one_or_none()

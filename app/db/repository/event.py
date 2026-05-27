@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
@@ -25,4 +27,6 @@ class EventRepository(BaseRepository):
             joinedload(Event.actor)
         ).order_by(Event.created_at.desc())
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получения журнала событий")
         return res.scalars().all()

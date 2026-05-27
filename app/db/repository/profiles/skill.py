@@ -16,6 +16,10 @@ from db.models import (
 from db.repository.base import BaseRepository
 from db.repository.decorators import db_exception_handler
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class SkillRepository(BaseRepository):
     model = Skill
@@ -28,6 +32,8 @@ class SkillRepository(BaseRepository):
                 SkillCategory.category_id.in_(categories)
             )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение навыков по категориям")
         return res.unique().scalars().all()
 
     @db_exception_handler
@@ -47,6 +53,8 @@ class SkillRepository(BaseRepository):
         else:
             stmt = stmt.options(selectinload(Skill.categories))
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение навыков с этапами")
         return res.unique().scalars().all()
 
     @classmethod
@@ -71,38 +79,6 @@ class SkillRepository(BaseRepository):
         )
 
     @db_exception_handler
-    async def get_stages(self, filter_dict: dict, skill_id: int | None = None):
-        category_ids = filter_dict.pop("categories", None)
-
-        last_version = self.get_last_version()
-
-        stmt = select(Skill)
-
-        if skill_id is not None:
-            stmt = stmt.where(Skill.id == skill_id)
-
-        if category_ids:
-            stmt = stmt.join(Skill.categories).where(Category.id.in_(category_ids))
-
-        stmt = (
-            stmt.outerjoin(Skill.stages)
-            .where(func.coalesce(Stage.is_active, True) == True)
-            .outerjoin(last_version, last_version.c.stage_id == Stage.id)
-            .outerjoin(
-                StageVersion,
-                (StageVersion.stage_id == Stage.id)
-                & (StageVersion.version == last_version.c.version),
-            )
-            .options(contains_eager(Skill.stages).contains_eager(Stage.stage_versions))
-        )
-
-        res = await self._session.execute(stmt)
-
-        if skill_id is not None:
-            return res.unique().scalar_one_or_none()
-        return res.unique().scalars().all()
-
-    @db_exception_handler
     async def skill_exist(self, skill_id: int, departments_id: list[int]):
         stmt = (
             select(Skill.id)
@@ -120,6 +96,11 @@ class SkillRepository(BaseRepository):
         )
 
         res = await self._session.execute(stmt)
+
+        logger.info(
+            "Выполнен запрос на проверку существования навыка по списку департаментов (skill_id=%s)",
+            skill_id,
+        )
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -145,16 +126,14 @@ class SkillRepository(BaseRepository):
             .order_by(StageQuestion.num)
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получения навыка с последней версией списка вопросов этапа")
         return res.unique().scalar_one_or_none()
 
     @db_exception_handler
     async def check_list(self, skill_ids: list[int]) -> list[int]:
         stmt = select(Skill.id).where(Skill.id.in_(skill_ids))
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на проверку существования навыков по списку id")
         return list(res.scalars().all())
-
-
-
-
-
-

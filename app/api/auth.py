@@ -12,7 +12,7 @@ from schemas.users import (
     UserAuth,
     UserInfo,
     UserRegistration,
-    UserBase,
+    UserBase, ChangePassword,
 )
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -71,3 +71,10 @@ def logout(response: Response):
 @exception_handler
 async def get_current_user(user: UserInfo = Depends(get_current_user)):
     return user
+
+@auth_router.patch("/me/change-password", summary="Обновить пароля")
+@exception_handler
+async def change_password(change_form: ChangePassword, user: UserInfo = Depends(get_current_user)):
+    async with unit_of_work() as uow:
+        await UserService(uow.session).change_password(user, change_form)
+        return {"Пароль успешно обновлён"}

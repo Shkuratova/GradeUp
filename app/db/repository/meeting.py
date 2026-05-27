@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 from datetime import datetime
 
 from sqlalchemy import select, and_
@@ -8,7 +11,6 @@ from db.models import (
     MeetingParticipant,
     User,
     UserStage,
-    StageVersion,
     Stage,
 )
 from db.models.types import CertificationStatus, CertificationRole
@@ -94,6 +96,8 @@ class MeetingRepository(BaseRepository):
     async def get_meeting_list(self, filter_dict: dict):
         stmt = self._get_meeting_query(filter_dict)
         res = await self._session.execute(stmt)
+
+        logger.info(f"Выполнен запрос на получение списка встреч")
         return res.scalars().all()
 
     @db_exception_handler
@@ -128,6 +132,8 @@ class MeetingRepository(BaseRepository):
             .limit(1)
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение ближайшей встречи пользователя")
         return res.scalar_one_or_none()
 
 
@@ -143,6 +149,8 @@ class ParticipantsRepository(BaseRepository):
             )
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получения роли участника встречи (meeting_id=%s)", meeting_id)
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -152,4 +160,6 @@ class ParticipantsRepository(BaseRepository):
             MeetingParticipant.role == CertificationRole.student,
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение аттестуемого (meeting_id=%s)", meeting_id)
         return res.scalar_one_or_none()

@@ -353,6 +353,10 @@ class UserProfileRepository(BaseRepository):
 
         res = await self._session.execute(stmt)
 
+        logger.info(
+            "Выполнен запрос на получение доступных этапов для назначение этапа (user_id=%s)",
+            user_id,
+        )
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -372,12 +376,21 @@ class UserProfileRepository(BaseRepository):
 
         result = await self._session.execute(stmt)
 
+        logger.info(
+            "Выполнен запрос на проверку доступа к этапу для назначения (user_id=%s, stage_id=%s)",
+            user_id,
+            stage_id,
+        )
         return result.scalar_one_or_none() is not None
 
     @db_exception_handler
     async def delete_by_user_id(self, user_id: int):
         stmt = delete(UserProfile).where(UserProfile.user_id == user_id)
         res = await self._session.execute(stmt)
+
+        logger.info(
+            "Выполнен запрос на получение профиля пользователя (user_id=%s)", user_id
+        )
         return res.rowcount
 
     @db_exception_handler
@@ -386,6 +399,11 @@ class UserProfileRepository(BaseRepository):
             UserProfile.profile_id == profile_id
         )
         res = await self._session.execute(stmt)
+
+        logger.info(
+            "Выполнен запрос на получнеие количетсва  пользователей с назначенным профилем (profile_id=%s)",
+            profile_id,
+        )
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -402,4 +420,9 @@ class UserProfileRepository(BaseRepository):
             .join(Profile, Profile.id == UserProfile.profile_id)
         )
         res = await self._session.execute(stmt)
+
+        logger.info(
+            "Выполнен запрос на получение профиля пользователя с названием (user_id=%s)",
+            user_id,
+        )
         return res.one_or_none()

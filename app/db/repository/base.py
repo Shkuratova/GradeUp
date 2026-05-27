@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,7 +36,10 @@ class BaseRepository:
         stmt = select(self.model).filter_by(**filter_dict)
         res = await self._session.execute(stmt)
 
-        logger.info("Получен список объектов таблицы (%s)", self.model.__name__)
+        logger.info(
+            "Выполнен запрос на получение списка объектов таблицы (%s)",
+            self.model.__name__,
+        )
         return res.scalars().all()
 
     @db_exception_handler
@@ -43,7 +47,10 @@ class BaseRepository:
         new_instance = self.model(**value_dict)
         self._session.add(new_instance)
         await self._session.flush()
-        logger.info("Добавлен объект в таблицу (%s)", self.model.__name__)
+
+        logger.info(
+            "Выполнен запрос на добавление объекта в таблицу (%s)", self.model.__name__
+        )
         return new_instance
 
     @db_exception_handler
@@ -52,7 +59,11 @@ class BaseRepository:
             insert(self.model),
             values,
         )
-        logger.info("Добавлен список объекто в таблицу (%s)", self.model.__name__)
+
+        logger.info(
+            "Выполнен запрос на добавление списка объектов в таблицу (%s)",
+            self.model.__name__,
+        )
 
     @db_exception_handler
     async def get_one_by_filter(self, filter_dict: dict):
@@ -60,7 +71,8 @@ class BaseRepository:
         res = await self._session.execute(stmt)
 
         logger.info(
-            "Получен объект по фильтрам из таблицы (%s)", self.model.__name__
+            "Выполнен запрос на получение объекта по фильтрам из таблицы (%s)",
+            self.model.__name__,
         )
         return res.scalar_one_or_none()
 
@@ -70,7 +82,7 @@ class BaseRepository:
         res = await self._session.execute(stmt)
 
         logger.info(
-            "Проверка существования объекта по фильтрам из таблицы (%s)",
+            "Выполнен запрос на проверку существования объекта по фильтрам из таблицы (%s)",
             self.model.__name__,
         )
         return res.scalar_one_or_none() is not None
@@ -79,8 +91,11 @@ class BaseRepository:
     async def update_by_id(self, data_id: int, value_dict: dict) -> int:
         stmt = update(self.model).where(self.model.id == data_id).values(**value_dict)
         res = await self._session.execute(stmt)
+
         logger.info(
-            "Обновлен объект из таблицы (%s) по id (data_id=%s)",self.model.__name__,data_id,
+            "Обновлен объект из таблицы (%s) по id (data_id=%s)",
+            self.model.__name__,
+            data_id,
         )
         return res.rowcount
 
@@ -88,8 +103,10 @@ class BaseRepository:
     async def delete_by_id(self, data_id: int):
         stmt = delete(self.model).where(self.model.id == data_id)
         res = await self._session.execute(stmt)
+
         logger.info(
-            "Получен объект по фильтрам из таблицы (%s)", self.model.__name__
+            "Выполнен запрос на получение объекта по фильтрам из таблицы (%s)",
+            self.model.__name__,
         )
         return res.rowcount
 
@@ -101,23 +118,21 @@ class BaseRepository:
             .values({"is_active": False})
         )
         res = await self._session.execute(stmt)
+
+        logger.info(
+            "Выполнен запрос на удаление объекта из таблицы (%s) по id (data_id=%s)",
+            self.model.__name__,
+            data_id,
+        )
         return res.rowcount
 
     @db_exception_handler
     async def delete_list(self, data_ids: list[int]):
         stmt = delete(self.model).where(self.model.id.in_(data_ids))
         res = await self._session.execute(stmt)
-        logger.info(
-            "Удален список объектов с заданными ids из таблицы (%s)", self.model.__name__
-        )
-        return res.rowcount
 
-    @db_exception_handler
-    async def soft_delete_list(self, data_ids: list[int]):
-        stmt = (
-            update(self.model)
-            .where(self.model.id.in_(data_ids))
-            .values({"is_active": False})
+        logger.info(
+            "Выполнен запрос на удаление объектов с заданными ids из таблицы (%s)",
+            self.model.__name__,
         )
-        res = await self._session.execute(stmt)
         return res.rowcount

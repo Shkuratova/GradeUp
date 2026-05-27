@@ -3,15 +3,15 @@ from sqlalchemy.orm import joinedload
 
 from db.models import (
     UserProfile,
-    User,
     UserLevel,
     ProfileLevel,
-    UserStage,
-    StageVersion,
-    UserSkill,
 )
 from db.repository import BaseRepository
 from db.repository.decorators import db_exception_handler
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class UserLevelRepository(BaseRepository):
@@ -28,8 +28,11 @@ class UserLevelRepository(BaseRepository):
                 ),
             )
         )
-
         res = await self._session.execute(stmt)
+
+        logger.info(
+            "Выполнен запрос на получение текущего уровня профиля пользователяя"
+        )
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -38,6 +41,12 @@ class UserLevelRepository(BaseRepository):
             UserLevel.profile_level_id == level_id, UserLevel.user_id == user_id
         )
         res = await self._session.execute(stmt)
+
+        logger.info(
+            "Выполнен запрос на получение уровня пользователя по id (user_id=%s, level_id=%s)",
+            user_id,
+            level_id,
+        )
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -46,16 +55,22 @@ class UserLevelRepository(BaseRepository):
             UserLevel.profile_level_id.in_(levels_id)
         )
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение количества уровней пользователей по списку id уровней")
         return res.scalar_one_or_none()
 
     @db_exception_handler
     async def delete_by_user(self, user_id):
         stmt = delete(UserLevel).where(UserLevel.user_id == user_id)
         res = await self._session.execute(stmt)
+
+        logger.info("Удаление уровня пользователя по id (user_id=%s)", user_id)
         return res.rowcount
 
     @db_exception_handler
     async def get_all_by_user(self, user_id: int):
         stmt = select(UserLevel).where(UserLevel.user_id == user_id)
         res = await self._session.execute(stmt)
+
+        logger.info("Выполнен запрос на получение уровней пользователя (user_id=%s)", user_id)
         return res.scalars().all()

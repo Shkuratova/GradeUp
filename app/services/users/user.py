@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 
 import bcrypt
@@ -11,7 +12,7 @@ from exceptions.user import (
     InvalidLoginException,
     PasswordDontMatchException,
 )
-from schemas.users import UserAuth, UserFilter, UserUpdateBase
+from schemas.users import UserAuth, UserFilter, UserUpdateBase, ResetPassword, ChangePassword
 from schemas.users import UserInfo
 from services.base import BaseService
 from utils.roles import UserRole
@@ -95,3 +96,21 @@ class UserService(BaseService):
         await self.repository.update_by_id(user_id, user_dict)
 
         return await self.get_user_info(user_id=user_id), old
+
+    async def reset_password(self, user_id: int, reset_form: ResetPassword):
+        if reset_form.confirm_password != reset_form.password:
+            raise PasswordDontMatchException("Пароли не совпадают")
+
+        await self.get_by_id(user_id)
+        new_pass = self.hash_password(reset_form.password)
+        await self.repository.update_by_id(user_id, {"password": new_pass})
+
+    async def change_password(self, user: UserInfo, change_form: ChangePassword):
+            if not self.validate_password(change_form.old_password, user.password):
+                raise InvalidLoginException("Неверный пароль")
+            if change_form.new_password != change_form.confirm_password:
+                raise PasswordDontMatchException("Пароли не совпадают")
+            await self.repository.update_by_id(user.id, {"password": change_form.new_password})
+            
+
+

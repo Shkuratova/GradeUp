@@ -1,6 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from services import BaseService
-from db.repository import StageRepository, StageVersionRepository, QuestionRepository
+from db.repository import (
+    StageRepository,
+    StageVersionRepository,
+    QuestionRepository,
+    UserStageRepository,
+)
 from schemas.skills import (
     StageQuestionsSchema,
     StageAdd,
@@ -9,7 +14,7 @@ from schemas.skills import (
     QuestionAdd,
     Question,
 )
-from exceptions.common import DataValidationError, NotFoundException
+from exceptions.common import DataValidationError, NotFoundException, ConflictException
 
 
 class StageService(BaseService):
@@ -22,6 +27,7 @@ class StageService(BaseService):
         self.repository = StageRepository(session)
         self.stage_version_repository = StageVersionRepository(session)
         self.question_repository = QuestionRepository(session)
+        self.user_stage_repository = UserStageRepository(session)
 
     @staticmethod
     def _questions_lists_equal(
@@ -88,7 +94,13 @@ class StageService(BaseService):
         new_dict = {s.id: s for s in new_stages if s.id}
 
         if del_stages := set(old_dict.keys()) - set(new_dict.keys()):
-            await self.repository.soft_delete_list(list(del_stages))
+            for s in del_stages:
+                stage_count = await self.user_stage_repository.stages_cnt(s)
+                if stage_count != 0:
+                    raise ConflictException(
+                        f"Невозможно удалить этап {old_dict[s].confirmation_type.value} (stage_id={s}), так как есть пользователи, получившие оценку по этапу."
+                    )
+                await self.repository.delete_by_id(s)
 
         if add_stages := [s for s in new_stages if not s.id]:
             await self.add_stages(skill_id, add_stages)
