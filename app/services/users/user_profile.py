@@ -21,8 +21,7 @@ from schemas.user_profile import (
     GradeUpResult,
     Level,
 )
-from schemas.user_progress import UserProfileProgress
-from schemas.users import  UserSchema
+from schemas.users import UserSchema
 from services.base import BaseService
 from services.users.user import UserService
 from services.profiles import ProfileService
@@ -39,12 +38,6 @@ class UserProfileService(BaseService):
 
     async def get_profile(self, user_id: int):
         profile = await self.repository.get_one_by_filter({"user_id": user_id})
-        if profile is None:
-            raise NotFoundException(f"Сотруднику с id = {user_id} не назначен профиль.")
-        return profile
-
-    async def get_profile_title(self, user_id: int):
-        profile = await self.repository.get_profile_title(user_id)
         if profile is None:
             raise NotFoundException(f"Сотруднику с id = {user_id} не назначен профиль.")
         return profile
@@ -96,56 +89,6 @@ class UserProfileService(BaseService):
             profile=ProfileList.model_validate(profile, from_attributes=True),
         )
 
-    async def get_skill_questions(self, user_id: int, skill_id: int, questions: bool = False):
-        skill_detail = await self.user_skill_repository.get_skill_detail_questions(
-            user_id, skill_id
-        )
-
-        if not skill_detail:
-            return None
-
-        first = skill_detail[0]
-
-        skill_data = {
-            "id": first["skill_id"],
-            "title": first["title"],
-            "description": first["description"],
-            "literature": first["literature"],
-            "stages": [],
-        }
-
-        stages_map = {}
-
-        for row in skill_detail:
-            stage_id = row["stage_id"]
-
-            if stage_id not in stages_map:
-                stages_map[stage_id] = {
-                    "id": stage_id,
-                    "confirmation_type": row["confirmation_type"],
-                    "user_stage_id": row["user_stage_id"],
-                    "is_accepted": row["is_accepted"],
-                    "comment": row["comment"],
-                    "updated_at": row["updated_at"],
-                    "questions": [] if questions else None,
-                }
-
-            stage = stages_map[stage_id]
-
-            if row["num"] is not None and questions:
-                stage["questions"].append(
-                    {
-                        "num": row["num"],
-                        "question": row["question"],
-                        "answer": row["answer"],
-                    }
-                )
-
-        skill_data["stages"] = list(stages_map.values())
-
-        return skill_data
-
-
     async def get_available_skills(self, user_id):
         skills = await self.repository.get_available_skills(user_id)
         return ProfileAvailableSkills.model_validate(skills, from_attributes=True)
@@ -156,7 +99,9 @@ class UserProfileService(BaseService):
             {"profile_level_id": user_profile.current_level_id, "user_id": user_id}
         )
         if not user_profile or not user_level:
-            raise NotFoundException(f"Не найден профиль пользователя с user_id={user_id}")
+            raise NotFoundException(
+                f"Не найден профиль пользователя с user_id={user_id}"
+            )
 
         accepted_skills = await self.user_skill_repository.get_accepted_count(
             user_id, user_profile.current_level.id
@@ -192,4 +137,3 @@ class UserProfileService(BaseService):
     async def delete(self, user_id: int):
         await self.user_level_repository.delete_by_user(user_id)
         await self.repository.delete_by_user_id(user_id)
-

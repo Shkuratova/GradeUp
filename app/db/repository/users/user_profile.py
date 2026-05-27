@@ -388,6 +388,7 @@ class UserProfileRepository(BaseRepository):
         res = await self._session.execute(stmt)
         return res.scalar_one_or_none()
 
+    @db_exception_handler
     async def get_profile_title(self, user_id: int):
         stmt = (
             select(

@@ -54,7 +54,6 @@ class UserStageService(BaseService):
         if user_skill is None:
             user_skill = await self.user_skill_repository.add(
                 {
-                    # "user_level_id": current_level.id,
                     "user_id": user_id,
                     "profile_level_id": user_profile.current_level_id,
                     "skill_id": stage.skill_id,

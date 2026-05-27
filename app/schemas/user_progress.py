@@ -1,53 +1,44 @@
-from pydantic import BaseModel, Field, computed_field, ConfigDict, field_serializer
 from datetime import datetime
+
+from pydantic import BaseModel, computed_field, ConfigDict, field_serializer
 
 from db.models import ConfirmationTypes
 
 
-class StageVersion(BaseModel):
+class QuestionList(BaseModel):
+    num: int
+    question: str
+    answer: str
+
+
+class UserStage(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: int
     stage_id: int
-
-class UserStageProgress(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    is_accepted: bool
+    confirmation_type: ConfirmationTypes
+    stage_version_id: int | None
+    user_stage_id: int | None = None
+    is_accepted: bool | None = None
     comment: str | None = None
-    stage_version: StageVersion = Field(exclude=True)
-    updated_at: datetime
-
-    @computed_field
-    def stage_id(self) -> int:
-        return self.stage_version.stage_id
-    @computed_field
-    def stage_version_id(self) -> int:
-        return self.stage_version.id
+    updated_at: datetime | None = None
+    questions: list[QuestionList] | None = None
 
     @field_serializer("updated_at")
-    def serialize_updated_at(self, value: datetime, _info):
-        return value.strftime("%Y-%m-%d %H:%M:%S")
+    def serialize_updated_at(self, value: datetime | None):
+        if value:
+            return value.strftime("%Y-%m-%d %H:%M:%S")
+        return None
 
 
-class UserSkillProgress(BaseModel):
+class SkillProgresSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    skill_id: int
-    is_accepted: bool
-    stages: list[UserStageProgress]
-
-
-class ProfileUser(BaseModel):
-    user_skills: list[UserSkillProgress]
-
-class UserProfileProgress(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    profile_id: int
     user_id: int
-    current_level_id: int
-    user: ProfileUser = Field(exclude=True)
-    @computed_field
-    def skills(self) -> list[UserSkillProgress] | None:
-        return self.user.user_skills
+    skill_id: int
+    title: str
+    description: str | None = None
+    literature: str | None = None
+    is_accepted: bool | None = None
+    stages: list[UserStage]
+
 
 class StageProgress(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -58,6 +49,7 @@ class StageProgress(BaseModel):
     is_accepted: bool | None = None
     comment: str | None = None
     updated_at: datetime | None = None
+
     @field_serializer("updated_at")
     def serialize_updated_at(self, value: datetime | None):
         return value.strftime("%Y-%m-%d %H:%M:%S") if value else None
@@ -69,7 +61,8 @@ class SkillProgress(BaseModel):
     title: str
     is_accepted: bool | None = None
     stage_cnt: int
-    accepted_staged: int = 0
+    accepted_stages: int = 0
+
     @computed_field
     def skill_progress(self) -> float:
         if self.stage_cnt:
@@ -88,7 +81,7 @@ class LevelProgress(BaseModel):
     @computed_field
     def level_progress(self) -> float:
         if self.skills:
-            accepted = sum(s.accepted_stages  for s in self.skills)
+            accepted = sum(s.accepted_stages for s in self.skills)
             total = sum(s.stage_cnt for s in self.skills)
             return accepted / total * 100
         return 0
