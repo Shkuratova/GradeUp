@@ -29,7 +29,7 @@ class ProfileLevel(Base):
     level_skills: Mapped[list["LevelSkill"]] = relationship(back_populates="profile_level")
     user_profiles: Mapped["UserProfile"] = relationship(back_populates="current_level")
     user_levels: Mapped["UserLevel"] = relationship(back_populates="profile_level")
-    user_skills: Mapped[list["UserSkill"]] = relationship(back_populates="profile_level")
+
 
     skills: Mapped[list["Skill"]] = relationship(
         "Skill",

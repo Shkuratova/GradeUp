@@ -70,3 +70,13 @@ class UserStageRepository(BaseRepository):
             stage_id,
         )
         return res.scalar_one_or_none()
+
+    async def get_user_id(self, user_stage_id):
+        stmt = (
+            select(UserSkill.user_id)
+            .select_from(UserStage)
+            .join(UserSkill, UserSkill.id == UserStage.user_skill_id)
+            .where(UserStage.id == user_stage_id)
+        )
+        res = await self._session.execute(stmt)
+        return res.scalar_one_or_none()

@@ -11,7 +11,7 @@ from db.models import (
     Stage,
     StageVersion,
     UserSkill,
-    UserStage,
+    UserStage, LevelSkill,
 )
 from db.repository import BaseRepository
 from db.repository.decorators import db_exception_handler
@@ -97,10 +97,12 @@ class UserSkillRepository(BaseRepository):
 
     @db_exception_handler
     async def get_accepted_count(self, user_id: int, profile_level_id: int) -> int:
-        stmt = select(func.count(UserSkill.id)).where(
-            UserSkill.user_id == user_id,
-            UserSkill.profile_level_id == profile_level_id,
-            UserSkill.is_accepted.is_(True),
+        stmt = (
+            select(func.count(UserSkill.id))
+            .join(LevelSkill, LevelSkill.skill_id == UserSkill.skill_id, LevelSkill.profile_level_id == profile_level_id)
+            .where(UserSkill.user_id == user_id,
+                   UserSkill.is_accepted.is_(True)
+            )
         )
 
         res = await self._session.execute(stmt)

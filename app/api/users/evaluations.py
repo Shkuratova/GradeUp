@@ -35,4 +35,5 @@ async def evaluate(
 @exception_handler
 async def get(user_stage_id: int, current_user: UserInfo = Depends(get_current_user)):
     async with unit_of_work() as uow:
+        await AccessService(uow.session).can_get_evaluation(user_stage_id, current_user)
         return await UserStageService(uow.session).get_evaluation(user_stage_id)

@@ -72,7 +72,7 @@ def logout(response: Response):
 async def get_current_user(user: UserInfo = Depends(get_current_user)):
     return user
 
-@auth_router.patch("/me/change-password", summary="Обновить пароля")
+@auth_router.patch("/me/change-password", summary="Обновление пароля")
 @exception_handler
 async def change_password(change_form: ChangePassword, user: UserInfo = Depends(get_current_user)):
     async with unit_of_work() as uow:

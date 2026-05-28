@@ -44,7 +44,7 @@ class BaseService:
         if object_id is not None and object_exist.id == object_id:
             return
 
-        logger.warning(
+        logger.error(
             "Нарушение уникальности для %s: %s",
             self.entity_name,
             filters,
@@ -58,7 +58,9 @@ class BaseService:
     async def get_by_id(self, object_id: int):
         instance = await self.repository.get_by_id(object_id)
         if instance is None:
+            logger.error("%s c id=%s не найден.", self.entity_name, object_id)
             raise NotFoundException( f"{self.entity_name} с id={object_id} не найден.")
+
         return instance
 
     async def get_all(self, filter_model: BaseModel | None = None):

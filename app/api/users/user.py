@@ -44,7 +44,7 @@ async def get_all(
         return list(res)
 
 
-@user_router.patch("/reset-password", summary="Сбросить пароль", tags=["Auth"])
+@user_router.patch("/reset-password", summary="Сброс пароля", tags=["Auth"])
 @check_role([UserRole.ADMIN])
 @exception_handler
 async def reset_password(user_id: int, reset_form: ResetPassword, current_user: UserInfo = Depends(get_current_user)):
