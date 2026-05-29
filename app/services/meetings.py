@@ -179,28 +179,15 @@ class MeetingService(BaseService):
             )
         return res
 
-    async def _check_supervisor_access(
-        self, meeting: MeetingDetail, current_user: UserInfo
-    ):
-        if meeting.student.user_id == current_user.id:
-            return
 
-        student = await self.user_service.get_by_id(meeting.student.id)
-
-        department_ids = await AccessService(self.session).get_managed_departments(
-            current_user
-        )
-
-        if student.department_id not in department_ids:
-            raise ForbiddenException("Отказано в доступе.")
 
     async def get_questions(self, meeting_id: int, current_user: UserInfo):
         meeting: MeetingDetail = await self.get_meeting_by_id(meeting_id)
         role = CertificationRole.student
 
-        if current_user.is_supervisor():
-            await self._check_supervisor_access(meeting, current_user)
-            role = CertificationRole.examiner
+        if current_user.is_supervisor() and (current_user.managed_division_id is not None or current_user.id != meeting.student.id):
+                role = CertificationRole.examiner
+
         elif current_user.role_name == UserRole.EMPLOYEE:
             participant_role = await self.get_participant_role(
                 meeting_id, current_user.id
