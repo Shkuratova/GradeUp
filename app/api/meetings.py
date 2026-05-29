@@ -98,9 +98,10 @@ async def delete(meeting_id: int, current_user=Depends(get_current_user)):
 
 
 @meeting_router.get(
-    "/{meeting_id}/questions",
+    "/{meeting_id}/materials",
     response_model=MeetingQuestions,
-    summary="Получить список вопросов встречи для Аттестующего",
+    response_model_exclude_none=True,
+    summary="Получить список материалов встречи",
 )
 @exception_handler
 async def get_questions(
