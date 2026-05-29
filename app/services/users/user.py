@@ -1,5 +1,7 @@
 import logging
 
+from db.repository.organization import DepartmentUserRepository
+
 logger = logging.getLogger(__name__)
 
 import bcrypt
@@ -12,7 +14,13 @@ from exceptions.user import (
     InvalidLoginException,
     PasswordDontMatchException,
 )
-from schemas.users import UserAuth, UserFilter, UserUpdateBase, ResetPassword, ChangePassword
+from schemas.users import (
+    UserAuth,
+    UserFilter,
+    UserUpdateBase,
+    ResetPassword,
+    ChangePassword,
+)
 from schemas.users import UserInfo
 from services.base import BaseService
 from utils.roles import UserRole
@@ -27,6 +35,7 @@ class UserService(BaseService):
         self.repository = UserRepository(self.session)
         self.role_repository = RoleRepository(self.session)
         self.department_repository = DepartmentRepository(self.session)
+        self.department_user_repository = DepartmentUserRepository(self.session)
 
     @staticmethod
     def hash_password(password: str) -> str:
@@ -47,9 +56,15 @@ class UserService(BaseService):
         logger.info("Добавлен пользователь %s", user_model.email)
         return new_user
 
-    async def get_users(self, filters: UserFilter):
+    async def get_users(self, filters: UserFilter, current_user: UserInfo):
+
         filter_dict = filters.model_dump(exclude_none=True)
-        return await self.repository.get_all(filter_dict)
+        users = await self.repository.get_all(filter_dict)
+        users = [UserInfo.model_validate(u, from_attributes=True) for u in users]
+        if current_user.is_division_supervisor():
+            supervisor = await self.get_user_info(current_user.id)
+            users.append(UserInfo.model_validate(supervisor, from_attributes=True))
+        return users
 
     async def get_user_info(
         self, user_id: int | None = None, email: str | None = None
@@ -70,7 +85,7 @@ class UserService(BaseService):
         return UserInfo.model_validate(user)
 
     async def update(self, user_id: int, user_data: BaseModel, current_user: UserInfo):
-        if current_user.role_name != UserRole.ADMIN:
+        if not current_user.is_admin():
             user_data = UserUpdateBase.model_validate(user_data.model_dump())
         if user_data.role_id is not None:
             role = await self.role_repository.get_by_id(user_data.role_id)
@@ -79,19 +94,21 @@ class UserService(BaseService):
 
         old = await self.get_user_info(user_id=user_id)
         if (
-            old.is_supervisor()
-            and old.managed_division is None
+            old.is_department_supervisor()
             and old.department_id != user_data.department_id
         ):
             raise ConflictException(
                 "Нельзя изменить отдел руководителя, пока он назначен руководителем этого отдела."
             )
-        if old.managed_division and user_data.department_id:
+        if old.is_division_supervisor() and user_data.department_id:
             raise ConflictException(
                 "Руководитель направления не может быть привязан к отделу."
             )
-
-        user_dict = user_data.model_dump(exclude_none=True)
+        if user_data.department_id != old.department_id:
+            await self.department_user_repository.update_by_user_id(
+                user_id, {"department_id": user_data.department_id}
+            )
+        user_dict = user_data.model_dump(exclude_none=True, exclude={"department_id"})
         await self.check_unique_constraint(user_dict, user_id)
         await self.repository.update_by_id(user_id, user_dict)
 
@@ -106,11 +123,10 @@ class UserService(BaseService):
         await self.repository.update_by_id(user_id, {"password": new_pass})
 
     async def change_password(self, user: UserInfo, change_form: ChangePassword):
-            if not self.validate_password(change_form.old_password, user.password):
-                raise InvalidLoginException("Неверный пароль")
-            if change_form.new_password != change_form.confirm_password:
-                raise PasswordDontMatchException("Пароли не совпадают")
-            await self.repository.update_by_id(user.id, {"password": change_form.new_password})
-            
-
-
+        if not self.validate_password(change_form.old_password, user.password):
+            raise InvalidLoginException("Неверный пароль")
+        if change_form.new_password != change_form.confirm_password:
+            raise PasswordDontMatchException("Пароли не совпадают")
+        await self.repository.update_by_id(
+            user.id, {"password": change_form.new_password}
+        )

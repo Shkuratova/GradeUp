@@ -6,6 +6,7 @@ from pydantic import (
     computed_field, model_validator
 )
 
+from db.models.types import DepartmentRole
 from utils.roles import UserRole
 
 
@@ -101,55 +102,37 @@ class UserFilter(BaseModel):
     only_subordinates: bool | None = Field(None, exclude=True)
 
 
-class DepartmentSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    department_name: str
-
-class DivisionSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    division_name: str
-
 class UserInfo(UserSchema):
-    role: RoleSchema = Field(exclude=True)
-    department: DepartmentSchema | None = Field(None, exclude=True)
-    managed_division: DivisionSchema | None = Field(None, exclude=True)
-    managed_department: DepartmentSchema | None = Field(None, exclude=True)
     role_id: int
+    role_name: str
+    department_id: int | None = None
+    department_name: str | None = None
+    department_role: DepartmentRole | None = Field(None, exclude=True)
+    managed_division_id: int | None = None
+    managed_division_name: str | None = None
+
     position: str | None
     password: str = Field(None, exclude=True)
 
-    def is_supervisor(self) -> bool:
-        return self.managed_division is not None or self.managed_department is not None
+    def is_department_supervisor(self) -> bool:
+        return self.department_role and self.department_role == DepartmentRole.SUPERVISOR
+
+    def is_division_supervisor(self)->bool:
+        return self.managed_division_id is not None
+
+    def is_spo(self):
+        return self.role_name == UserRole.SPO
+
+    def is_admin(self):
+        return self.role_name == UserRole.ADMIN
 
     @computed_field
     @property
     def roles(self) -> list[str]:
-        roles = {self.role.role_name}
-
-        if self.is_supervisor():
-            roles.add(UserRole.SUPERVISOR)
+        roles = {self.role_name}
+        if self.department_role:
+            roles.add(self.department_role)
 
         return list(roles)
 
 
-    @computed_field
-    def role_name(self) -> str:
-        return self.role.role_name
-
-    @computed_field
-    def department_name(self) -> str | None:
-        return self.department.department_name if self.department else None
-
-    @computed_field
-    def division_id(self) -> int | None:
-        return self.managed_division.id if self.managed_division else None
-
-    @computed_field
-    def managed_division_id(self) -> str | None:
-        return self.managed_division.id if self.managed_division else None
-
-    @computed_field
-    def managed_division_name(self) -> str | None:
-        return self.managed_division.division_name if self.managed_division else None

@@ -11,6 +11,10 @@ class CertificationRole(str, Enum):
     examiner = "Аттестующий"
     supervisor = "Руководитель"
 
+class DepartmentRole(str, Enum):
+    EMPLOYEE = "Employee"
+    SUPERVISOR = "Supervisor"
+
 
 class CertificationStatus(str, Enum):
     planned = "planned"
@@ -20,7 +24,6 @@ class EventType(str, Enum):
     EVALUATE = "EVALUATE"  # Оценка этапа
     GRADEUP = "GRADEUP" # Повышение уровня
     SCHEDULE_MEETING = "SCHEDULE_MEETING" # Назначение встречи
-    MEETING_CHANGED = "MEETING_CHANGED" # Изменение встречи
     REGISTRATION = "REGISTRATION" # Регистрация
     SET_PROFILE = "SET_PROFILE" # Назначение профиля
     SET_DEPARTMENT_SUPERVISOR = "SET_DEPARTMENT_SUPERVISOR" # Назначение руководителя отдела

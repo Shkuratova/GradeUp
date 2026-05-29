@@ -7,7 +7,7 @@ from pydantic import (
 
 from db.models import ConfirmationTypes
 from schemas.profiles import ProfileList
-from schemas.users import  UserSchema
+from schemas.users import UserSchema, UserInfo
 from utils.roles import UserRole
 
 
@@ -31,24 +31,13 @@ class UserProfileAdd(BaseModel):
     profile_id: int
 
 
-
 class UserProfileSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     user: UserSchema
     profile: ProfileList
 
-class UserProgressList(UserSchema):
-    role_name: str
-
-    department_name: str | None = None
-
-    managed_department_id: int | None = Field(None, exclude=True)
-    managed_department_name: str | None = Field(None, exclude=True)
-
-    managed_division_id: int | None = None
-    managed_division_name: str | None = None
-
+class UserProgressList(UserInfo):
     profile_id: int | None = None
     title: str | None = None
     level_name: str | None = None
@@ -56,18 +45,6 @@ class UserProgressList(UserSchema):
     closed_levels_cnt: int | None = Field(None, exclude=True)
     skill_cnt: int | None = Field(None, exclude=True)
     accepted_cnt: int | None = Field(None, exclude=True)
-
-    def is_supervisor(self) -> bool:
-        if self.managed_division_id is not None or self.managed_department_id is not None:
-            return True
-        return False
-
-    @computed_field
-    def roles(self) -> list[str]:
-        roles = {self.role_name}
-        if self.is_supervisor():
-            roles.add(UserRole.SUPERVISOR)
-        return list(roles)
 
     @computed_field
     @property
@@ -82,7 +59,6 @@ class UserProgressList(UserSchema):
         return False
 
 
-
 class Stage(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
@@ -94,8 +70,6 @@ class Skill(BaseModel):
     id: int
     title: str
     stages: list[Stage]
-
-
 
 
 class CurrentLevel(BaseModel):

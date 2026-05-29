@@ -1,10 +1,17 @@
 import logging
+
 logger = logging.getLogger(__name__)
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from sqlalchemy.orm import joinedload, selectinload
 
-from db.models import Department, Division, DepartmentProfile, Profile, User
+from db.models import (
+    Department,
+    DepartmentProfile,
+    Profile,
+    User,
+    DepartmentUser,
+)
 from db.repository.base import BaseRepository
 from db.repository.decorators import db_exception_handler
 
@@ -24,7 +31,9 @@ class DepartmentRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
 
-        logger.info("Выполнен запрос на получение департамента по id (department_id=%s)")
+        logger.info(
+            "Выполнен запрос на получение департамента по id (department_id=%s)"
+        )
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -34,7 +43,10 @@ class DepartmentRepository(BaseRepository):
             stmt = stmt.where(Department.division_id == division_id)
         res = await self._session.execute(stmt)
 
-        logger.info("Выполнен запрос на получение списка id департаментов по id направления (division_id=%s)", division_id)
+        logger.info(
+            "Выполнен запрос на получение списка id департаментов по id направления (division_id=%s)",
+            division_id,
+        )
         return res.scalars().all()
 
     @db_exception_handler
@@ -49,7 +61,9 @@ class DepartmentRepository(BaseRepository):
 
         res = await self._session.execute(stmt)
 
-        logger.info("Выполнен запрос на получение списка департаментов с доступными профилями")
+        logger.info(
+            "Выполнен запрос на получение списка департаментов с доступными профилями"
+        )
         return res.scalars().all()
 
     @db_exception_handler
@@ -61,7 +75,10 @@ class DepartmentRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
 
-        logger.info("Выполнен запрос на получение департамента (department_id=%s) с его руководителем", department_id)
+        logger.info(
+            "Выполнен запрос на получение департамента (department_id=%s) с его руководителем",
+            department_id,
+        )
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -69,16 +86,12 @@ class DepartmentRepository(BaseRepository):
         stmt = select(Department.id).where(Department.division_id == division_id)
         res = await self._session.execute(stmt)
 
-        logger.info("Выполнен запрос на получение id департаментов, привязанных к направлению  (division_id=%s)", division_id)
+        logger.info(
+            "Выполнен запрос на получение id департаментов, привязанных к направлению  (division_id=%s)",
+            division_id,
+        )
         return res.scalars().all()
 
-    @db_exception_handler
-    async def get_user_count(self, department_id):
-        stmt = select(func.count(User.id)).where(User.department_id == department_id)
-        res = await self._session.execute(stmt)
-
-        logger.info("Выполнен запрос на получение количества сотрудников в отделе (department_id=%s)")
-        return res.scalar_one_or_none()
 
     @db_exception_handler
     async def get_by_ids(self, departments_id: list[int] | None):
@@ -94,3 +107,28 @@ class DepartmentRepository(BaseRepository):
 
 class DepartmentProfileRepository(BaseRepository):
     model = DepartmentProfile
+
+
+class DepartmentUserRepository(BaseRepository):
+    model = DepartmentUser
+
+    @db_exception_handler
+    async def update_by_user_id(self, user_id: int, data: dict):
+        stmt = (
+            update(DepartmentUser)
+            .where(DepartmentUser.user_id == user_id)
+            .values(**data)
+        )
+        res = await self._session.execute(stmt)
+        return res.rowcount
+
+    @db_exception_handler
+    async def get_user_count(self, department_id: int):
+        stmt = select(func.count(DepartmentUser.id)).where(
+            DepartmentUser.department_id == department_id
+        )
+        res = await self._session.execute(stmt)
+        logger.info(
+            "Выполнен запрос на получение количества сотрудников в отделе (department_id=%s)"
+        )
+        return res.scalar_one_or_none()

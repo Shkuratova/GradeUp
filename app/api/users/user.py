@@ -24,7 +24,7 @@ user_router = APIRouter(prefix="/users", tags=["Users"])
 async def get_all(
     filters: Annotated[UserFilter, Query()],
     current_user: UserInfo = Depends(get_current_user),
-) -> list[UserInfo]:
+):
     async with unit_of_work() as uow:
         auth_service = AccessService(uow.session)
         if filters.division_id:
@@ -40,7 +40,7 @@ async def get_all(
                 current_user
             )
 
-        res = await UserService(uow.session).get_users(filters)
+        res = await UserService(uow.session).get_users(filters, current_user)
         return list(res)
 
 

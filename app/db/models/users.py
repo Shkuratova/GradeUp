@@ -11,16 +11,13 @@ class User(Base):
     first_name: Mapped[str | None]
     last_name: Mapped[str | None]
     patronymic: Mapped[str | None]
-    department_id: Mapped[int] = mapped_column(ForeignKey("departments.id", ondelete='SET NULL'), nullable=True)
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), default=1, server_default=text("1"))
     position: Mapped[str] = mapped_column(nullable=True)
 
     role: Mapped["Role"] = relationship(back_populates="users")
-    department: Mapped["Department"] = relationship(back_populates="users", foreign_keys=[department_id])
-
-    managed_department: Mapped["Department"] = relationship(back_populates="supervisor", foreign_keys="[Department.supervisor_id]",uselist=False)
+    department: Mapped["Department"] = relationship(secondary="department_users", uselist=False)
     managed_division: Mapped["Division"] = relationship(back_populates="supervisor")
-
+    department_role: Mapped["DepartmentUser"] = relationship(back_populates="user", uselist=False)
     profile: Mapped["UserProfile"] = relationship(back_populates="user")
     levels: Mapped[list["UserLevel"]] = relationship(back_populates="user")
     meetings: Mapped["MeetingParticipant"] = relationship(back_populates="user")

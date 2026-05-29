@@ -1,23 +1,25 @@
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, computed_field
 
 from schemas.profiles import ProfileList
-from schemas.users import UserSchema
 
 
 class DepartmentBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     department_name: str
-    supervisor_id: int | None = None
+
 
 class DepartmentSchema(DepartmentBase):
     description: str | None = None
 
+
 class DepartmentFilter(BaseModel):
     division_id: int
 
+
 class Supervisor(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+    id: int
     email: EmailStr
     first_name: str
     last_name: str
@@ -37,22 +39,29 @@ class DepartmentDetail(DepartmentBase):
     supervisor: Supervisor | None = None
     profiles: list[ProfileList] | None = None
 
+    @computed_field
+    def supervisor_id(self) -> int | None:
+        return self.supervisor.id if self.supervisor else None
+
+
 class DepartmentAdd(BaseModel):
     department_name: str
     description: str | None = None
-    supervisor_id: int | None = None
+
 
 class DepartmentAddForm(DepartmentAdd):
     profiles: list[int] | None = None
+    supervisor_id: int | None = None
 
 
 class DepartmentUpdate(BaseModel):
-    department_name: str | None  = None
-    description : str | None = None
-    supervisor_id: int | None = None
+    department_name: str | None = None
+    description: str | None = None
+
 
 class DepartmentUpdateForm(DepartmentUpdate):
     profiles: list[int] | None = None
+    supervisor_id: int | None = None
 
 
 class DivisionBase(BaseModel):
@@ -70,18 +79,22 @@ class DivisionAdd(BaseModel):
     division_name: str
     description: str | None = None
 
+
 class DivisionAddForm(DivisionAdd):
-    departments: list[int]  | None = None
+    departments: list[int] | None = None
+
 
 class DivisionUpdate(BaseModel):
     division_name: str | None = None
     description: str | None = None
     supervisor_id: int | None = None
 
+
 class DivisionUpdateForm(DivisionUpdate):
     division_name: str | None = None
     supervisor_id: int | None = None
     departments: list[int] | None = None
+
 
 class DivisionDetail(DivisionBase):
     supervisor: Supervisor | None = None

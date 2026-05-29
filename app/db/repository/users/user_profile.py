@@ -1,5 +1,7 @@
 import logging
 
+from db.models.departments import DepartmentUser
+
 logger = logging.getLogger(__name__)
 
 
@@ -100,7 +102,6 @@ class UserProfileRepository(BaseRepository):
             )
         ).cte("user_profile_info")
 
-        managed_department = aliased(Department)
         user_info = (
             select(
                 User.id,
@@ -109,19 +110,18 @@ class UserProfileRepository(BaseRepository):
                 User.patronymic,
                 User.position,
                 User.email,
+                User.role_id,
+                Role.role_name,
                 Department.id.label("department_id"),
                 Department.department_name,
-                managed_department.id.label("managed_department_id"),
-                managed_department.department_name.label("managed_department_name"),
+                DepartmentUser.role.label("department_role"),
                 Division.id.label("managed_division_id"),
                 Division.division_name.label("managed_division_name"),
-                Role.id.label("role_id"),
-                Role.role_name,
             )
-            .outerjoin(Department, Department.id == User.department_id)
-            .outerjoin(managed_department, managed_department.supervisor_id == User.id)
-            .outerjoin(Division, Division.supervisor_id == User.id)
             .join(Role, Role.id == User.role_id)
+            .outerjoin(DepartmentUser, DepartmentUser.user_id == User.id)
+            .outerjoin(Department, Department.id == DepartmentUser.department_id)
+            .outerjoin(Division, Division.supervisor_id == User.id)
         )
         departments_id = filter_dict.pop("departments_id", None)
         if departments_id:
@@ -139,8 +139,7 @@ class UserProfileRepository(BaseRepository):
             user_info.c.role_name,
             user_info.c.department_id,
             user_info.c.department_name,
-            user_info.c.managed_department_id,
-            user_info.c.managed_department_name,
+            user_info.c.department_role,
             user_info.c.managed_division_id,
             user_info.c.managed_division_name,
             user_profile_info.c.profile_id,

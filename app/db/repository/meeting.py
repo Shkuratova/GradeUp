@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 
 from datetime import datetime
@@ -12,6 +13,7 @@ from db.models import (
     User,
     UserStage,
     Stage,
+    DepartmentUser,
 )
 from db.models.types import CertificationStatus, CertificationRole
 from db.repository import BaseRepository
@@ -57,10 +59,7 @@ class MeetingRepository(BaseRepository):
         stage_id = filter_dict.pop("stage_id", None)
 
         if confirmation_type or skill_id or stage_id:
-            stmt = (
-                stmt.join(Meeting.user_stage)
-                .join(UserStage.stage)
-            )
+            stmt = stmt.join(Meeting.user_stage).join(UserStage.stage)
 
             if stage_id:
                 stmt = stmt.where(Stage.id == stage_id)
@@ -72,18 +71,24 @@ class MeetingRepository(BaseRepository):
                 stmt = stmt.where(Stage.skill_id == skill_id)
 
         if department_ids := filter_dict.pop("departments_id", None):
-            stmt = stmt.where(
-                Meeting.participants.any(
-                    MeetingParticipant.user.has(User.department_id.in_(department_ids))
-                )
+            stmt = stmt.join(
+                MeetingParticipant, MeetingParticipant.meeting_id == Meeting.id
+            ).join(
+                DepartmentUser,
+                and_(
+                    DepartmentUser.user_id == MeetingParticipant.user_id,
+                    DepartmentUser.department_id.in_(department_ids),
+                ),
             )
 
         stmt = stmt.options(
             joinedload(Meeting.user_stage)
             .load_only(UserStage.id, UserStage.stage_version_id)
             .options(
-                joinedload(UserStage.stage).load_only(Stage.id, Stage.confirmation_type),
-                joinedload(UserStage.skill)
+                joinedload(UserStage.stage).load_only(
+                    Stage.id, Stage.confirmation_type
+                ),
+                joinedload(UserStage.skill),
             ),
             selectinload(Meeting.participants).options(
                 joinedload(MeetingParticipant.user)
@@ -120,10 +125,7 @@ class MeetingRepository(BaseRepository):
             .options(
                 joinedload(Meeting.user_stage)
                 .load_only(UserStage.id, UserStage.stage_version_id)
-                .options(
-                    joinedload(UserStage.stage),
-                    joinedload(UserStage.skill)
-                ),
+                .options(joinedload(UserStage.stage), joinedload(UserStage.skill)),
                 selectinload(Meeting.participants).options(
                     joinedload(MeetingParticipant.user)
                 ),
@@ -150,7 +152,10 @@ class ParticipantsRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
 
-        logger.info("Выполнен запрос на получения роли участника встречи (meeting_id=%s)", meeting_id)
+        logger.info(
+            "Выполнен запрос на получения роли участника встречи (meeting_id=%s)",
+            meeting_id,
+        )
         return res.scalar_one_or_none()
 
     @db_exception_handler
@@ -161,5 +166,7 @@ class ParticipantsRepository(BaseRepository):
         )
         res = await self._session.execute(stmt)
 
-        logger.info("Выполнен запрос на получение аттестуемого (meeting_id=%s)", meeting_id)
+        logger.info(
+            "Выполнен запрос на получение аттестуемого (meeting_id=%s)", meeting_id
+        )
         return res.scalar_one_or_none()

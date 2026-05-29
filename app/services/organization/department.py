@@ -1,10 +1,12 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.models.types import DepartmentRole
 from db.repository import (
     UserRepository,
     DepartmentRepository,
     DepartmentProfileRepository,
 )
+from db.repository.organization import DepartmentUserRepository
 from exceptions.common import NotFoundException, DataValidationError, ConflictException
 from schemas.departments import (
     DepartmentUpdate,
@@ -27,6 +29,7 @@ class DepartmentService(BaseService):
         self.repository = DepartmentRepository(session)
         self.user_repository = UserRepository(session)
         self.department_profile_repository = DepartmentProfileRepository(session)
+        self.department_user_repository = DepartmentUserRepository(session)
 
     async def get_detail(self, department_id):
         department = await self.repository.get_detail(department_id)
@@ -41,14 +44,47 @@ class DepartmentService(BaseService):
     async def get_id_by_division(self, division_id: int):
         return await self.repository.get_id_by_division_id(division_id)
 
+    async def set_supervisor(self, user_id: int, department_id: int):
+        user = await self.user_repository.get_user_info(
+            user_id=user_id
+        )
+        user = UserInfo.model_validate(user, from_attributes=True)
+        if user is None:
+            raise NotFoundException(f"Пользователь с id={user_id} не найден")
+        if (
+            user.is_department_supervisor()
+            and user.managed_department.id != department_id
+            or user.is_division_supervisor()
+        ):
+            raise DataValidationError(
+                "Сотрудник может быть руководителем только внутри одного направления или отдела"
+            )
+        if user.department_id != department_id:
+            raise DataValidationError(
+                "Руководителем может быть назначен только сотрудник из выбранного отдела."
+            )
+        if user.department_id is None:
+            await self.department_user_repository.add(
+                {
+                    "user_id": user_id,
+                    "department_id": department_id,
+                }
+            )
+        else:
+            await self.department_user_repository.update_by_user_id(
+                user_id, {"role": DepartmentRole.SUPERVISOR}
+            )
+
     async def add_with_relations(self, department: DepartmentAddForm):
 
         new_department = DepartmentAdd(
             department_name=department.department_name,
             description=department.description,
-            supervisor_id=department.supervisor_id,
         )
         new_department = await self.add(new_department)
+        if department.supervisor_id:
+            await self.set_supervisor(department.supervisor_id, new_department.id)
+
         if department.profiles:
             await self.department_profile_repository.add_list(
                 [
@@ -56,37 +92,23 @@ class DepartmentService(BaseService):
                     for p in department.profiles
                 ]
             )
+
         return await self.get_detail(new_department.id)
 
     async def update_with_relations(
         self, department_id: int, department: DepartmentUpdateForm
     ):
-        old = await self.get_by_id(department_id)
+        old = await self.get_detail(department_id)
         old = DepartmentBase.model_validate(old, from_attributes=True)
 
         if department.supervisor_id:
-            user: UserInfo = await self.user_repository.get_user_info(
-                user_id=department.supervisor_id
-            )
-            if (
-                user.managed_department is not None
-                and user.managed_department.id != department_id
-                or user.managed_division is not None
-            ):
-                raise DataValidationError(
-                    "Сотрудник может быть руководителем только внутри одного направления или отдела"
-                )
-            if user.department_id != department_id:
-                raise DataValidationError(
-                    "Руководителем может быть назначен только сотрудник из выбранного отдела."
-                )
+            await self.set_supervisor(department.supervisor_id, department_id)
 
         await self.update_by_id(
             department_id,
             DepartmentUpdate(
                 department_name=department.department_name,
                 description=department.description,
-                supervisor_id=department.supervisor_id,
             ),
         )
 
@@ -114,16 +136,16 @@ class DepartmentService(BaseService):
         department = await self.get_detail(department_id)
         if department.supervisor_id is None:
             raise ConflictException("У отдела нет руководителя.")
-        await self.repository.update_by_id(department_id, {"supervisor_id": None})
+        await self.department_user_repository.update_by_user_id(department.supervisor_id, {"role": DepartmentRole.EMPLOYEE})
         return DepartmentDetail.model_validate(department, from_attributes=True)
 
     async def delete(self, department_id):
-        department = await self.get_by_id(department_id)
+        department = await self.get_detail(department_id)
         if department.supervisor_id is not None:
             raise ConflictException(
                 "Нельзя удалить профиль с назначенным руководителем"
             )
-        res = await self.repository.get_user_count(department_id)
+        res = await self.department_user_repository.get_user_count(department_id)
         if res:
             raise ConflictException(
                 f"Нельзя удалить отдел с сотрудниками (Сотрудников в отделе: {res})"

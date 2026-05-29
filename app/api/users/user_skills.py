@@ -4,7 +4,7 @@ from api.decorators import check_role
 from api.decorators import exception_handler
 from db.uow import unit_of_work
 from dependencies import get_current_user
-from schemas.user_progress import SkillProgresSchema
+from schemas.user_progress import SkillProgressSchema
 from schemas.users import UserInfo
 from services import AccessService, UserProfileService, UserProgressService
 from utils.roles import UserRole
@@ -27,7 +27,7 @@ async def get_available_skills_by_user(
 
 @user_skill_router.get(
     "/{skill_id}",
-    response_model=SkillProgresSchema,
+    response_model=SkillProgressSchema,
     summary="Получить прогресс по навыку пользователя"
 )
 @exception_handler
@@ -42,7 +42,7 @@ async def get_user_skill_detail(
 
 @user_skill_router.get(
     "/{skill_id}/questions",
-    response_model=SkillProgresSchema,
+    response_model=SkillProgressSchema,
     summary="Получить прогресс по навыку пользователя со списками вопросов к этапам",
 )
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])

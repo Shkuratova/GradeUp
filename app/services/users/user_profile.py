@@ -15,7 +15,6 @@ from schemas.profiles import ProfileList
 from schemas.user_profile import (
     UserProfileAdd,
     ProfileAvailableSkills,
-    UserProfileProgress,
     UserProfileSchema,
     UserProfileFilter,
     GradeUpResult,

@@ -13,7 +13,7 @@ from db.repository import (
     StageRepository,
     StageVersionRepository,
 )
-from schemas.user_progress import ProfileProgress, SkillProgresSchema
+from schemas.user_progress import ProfileProgress, SkillProgressSchema
 
 
 class UserProgressService:
@@ -120,4 +120,4 @@ class UserProgressService:
                         else None
                     )
 
-        return SkillProgresSchema.model_validate(res, from_attributes=True)
+        return SkillProgressSchema.model_validate(res, from_attributes=True)

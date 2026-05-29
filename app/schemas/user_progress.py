@@ -29,7 +29,7 @@ class UserStage(BaseModel):
         return None
 
 
-class SkillProgresSchema(BaseModel):
+class SkillProgressSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     user_id: int
     skill_id: int

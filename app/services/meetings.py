@@ -185,7 +185,7 @@ class MeetingService(BaseService):
         meeting: MeetingDetail = await self.get_meeting_by_id(meeting_id)
         role = CertificationRole.student
 
-        if current_user.is_supervisor() and (current_user.managed_division_id is not None or current_user.id != meeting.student.id):
+        if current_user.is_division_supervisor() or (current_user.is_department_supervisor() and current_user.id != meeting.student.id):
                 role = CertificationRole.examiner
 
         elif current_user.role_name == UserRole.EMPLOYEE:

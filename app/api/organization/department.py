@@ -126,4 +126,4 @@ async def remove_supervisor(department_id: int, current_user=Depends(get_current
         await EventService(uow.session).log_department_supervisor_removed(
             department, current_user
         )
-    return {"detail": "Руководитель отдеда откреплён."}
+    return {"detail": "Руководитель отдела откреплён."}
