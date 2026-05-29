@@ -32,9 +32,7 @@ async def get_all(
     filters: Annotated[MeetingFilters, Query()], current_user=Depends(get_current_user)
 ):
     async with unit_of_work() as uow:
-        filters.departments_id = await AccessService(uow.session).get_department_filter(
-            current_user, filters.departments_id
-        )
+        filters = await AccessService(uow.session).get_meeting_filter(filters, current_user)
         return await MeetingService(uow.session).get_meetings(filters)
 
 

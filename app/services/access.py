@@ -11,6 +11,7 @@ from db.repository import (
 )
 from exceptions.common import NotFoundException
 from exceptions.user import ForbiddenException
+from schemas.meetings import MeetingFilters
 from schemas.users import UserInfo
 from services.base import BaseService
 from utils.roles import UserRole
@@ -224,3 +225,10 @@ class AccessService(BaseService):
         if user_id is None:
             raise NotFoundException(f"Оценка этапа с (user_stage_id={user_stage_id}) не найдена")
         await self.can_get_user(user_id, current_user)
+
+    async def get_meeting_filter(self, filters: MeetingFilters, current_user: UserInfo):
+        if current_user.role_name == UserRole.EMPLOYEE:
+            filters.user_id = current_user.id
+        elif current_user.is_supervisor():
+            filters.departments_id = await self.get_department_filter(current_user, filters.departments_id)
+        return filters
