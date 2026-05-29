@@ -91,6 +91,8 @@ class UserProfileService(BaseService):
 
     async def get_available_skills(self, user_id):
         skills = await self.repository.get_available_skills(user_id)
+        if skills is None:
+            raise NotFoundException(f"Нет доступных навыков для назначения встречи пользователю (user_id={user_id}).")
         return ProfileAvailableSkills.model_validate(skills, from_attributes=True)
 
     async def gradeup(self, user_id: int):
