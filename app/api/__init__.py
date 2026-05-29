@@ -11,7 +11,7 @@ from api.users import (
 from api.organization import department_router, division_router
 from api.profiles import profile_router, skill_router, category_router
 from api.meetings import meeting_router
-from api.files import document_router
+
 admin_router.include_router(department_router)
 admin_router.include_router(division_router)
 
@@ -28,6 +28,5 @@ routers = [
     skill_router,
     evaluation_router,
     meeting_router,
-    category_router,
-    document_router
+    category_router
 ]
