@@ -181,7 +181,7 @@ class EventService(BaseService):
     async def log_schedule(self, meeting: MeetingDetail, current_user: UserInfo):
         message = (
             f"Сотруднику {meeting.student.user.name_with_email()} назначена встреча "
-            f"по этапу навыка {meeting.skill_title.__repr__()} ({meeting.confirmation_type}), "
+            f"по этапу навыка {meeting.title.__repr__()} ({meeting.confirmation_type}), "
             f"на {meeting.started_at.strftime("%Y-%m-%d %H:%M:%S")}, "
             f"Аттестующий - {meeting.examiner.user.name_with_email()})"
         )
