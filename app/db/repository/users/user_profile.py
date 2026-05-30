@@ -46,6 +46,7 @@ class UserProfileRepository(BaseRepository):
                 UserLevel,
                 and_(
                     UserLevel.profile_level_id == ProfileLevel.id,
+                    UserLevel.user_id == UserProfile.user_id,
                     UserLevel.is_closed.is_(True),
                 ),
             )

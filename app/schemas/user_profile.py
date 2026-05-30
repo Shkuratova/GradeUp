@@ -8,7 +8,6 @@ from pydantic import (
 from db.models import ConfirmationTypes
 from schemas.profiles import ProfileList
 from schemas.users import UserSchema, UserInfo
-from utils.roles import UserRole
 
 
 class UserProfileFilter(BaseModel):
@@ -50,12 +49,12 @@ class UserProgressList(UserInfo):
     @computed_field
     @property
     def progress(self) -> float | None:
-        return self.closed_levels_cnt / self.level_cnt * 100 if self.level_cnt else 0
+        return round(self.closed_levels_cnt / self.level_cnt * 100) if self.level_cnt else 0
 
     @computed_field
     @property
     def current_level_progress(self) -> float:
-        return self.accepted_cnt / self.skill_cnt if self.skill_cnt else 0
+        return round(self.accepted_cnt / self.skill_cnt * 100)if self.skill_cnt else 0
 
     @computed_field
     @property

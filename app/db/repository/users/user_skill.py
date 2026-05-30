@@ -99,7 +99,7 @@ class UserSkillRepository(BaseRepository):
     async def get_accepted_count(self, user_id: int, profile_level_id: int) -> int:
         stmt = (
             select(func.count(UserSkill.id))
-            .join(LevelSkill, LevelSkill.skill_id == UserSkill.skill_id, LevelSkill.profile_level_id == profile_level_id)
+            .join(LevelSkill, and_(LevelSkill.skill_id == UserSkill.skill_id, LevelSkill.profile_level_id == profile_level_id))
             .where(UserSkill.user_id == user_id,
                    UserSkill.is_accepted.is_(True)
             )
