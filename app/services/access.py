@@ -38,7 +38,7 @@ class AccessService(BaseService):
             departments = await self.department_repository.get_departments_id()
         elif current_user.is_division_supervisor():
                 departments = await self.department_repository.get_departments_id(
-                    current_user.managed_division.id
+                    current_user.managed_division_id
                 )
                 logger.warning(
                     "Доступные департаменты для пользователя %s: %s",
