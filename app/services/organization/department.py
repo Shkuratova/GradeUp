@@ -53,7 +53,7 @@ class DepartmentService(BaseService):
             raise NotFoundException(f"Пользователь с id={user_id} не найден")
         if (
             user.is_department_supervisor()
-            and user.managed_department.id != department_id
+            and user.department_id != department_id
             or user.is_division_supervisor()
         ):
             raise DataValidationError(
@@ -99,7 +99,7 @@ class DepartmentService(BaseService):
         self, department_id: int, department: DepartmentUpdateForm
     ):
         old = await self.get_detail(department_id)
-        old = DepartmentBase.model_validate(old, from_attributes=True)
+        old = DepartmentDetail.model_validate(old, from_attributes=True)
 
         if department.supervisor_id:
             await self.set_supervisor(department.supervisor_id, department_id)
