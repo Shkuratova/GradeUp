@@ -1,5 +1,6 @@
 import logging
 
+from db.models.types import DepartmentRole
 from db.repository.organization import DepartmentUserRepository
 
 logger = logging.getLogger(__name__)
@@ -104,7 +105,17 @@ class UserService(BaseService):
             raise ConflictException(
                 "Руководитель направления не может быть привязан к отделу."
             )
-        if user_data.department_id != old.department_id:
+        if user_data.department_id is None:
+            await self.department_user_repository.delete_by_user_id(user_id)
+        elif old.department_id is None and user_data.department_id is not None:
+            await self.department_user_repository.add(
+                {
+                    "user_id": user_id,
+                    "department_id": user_data.department_id,
+                    "role": DepartmentRole.EMPLOYEE,
+                }
+            )
+        elif user_data.department_id != old.department_id:
             await self.department_user_repository.update_by_user_id(
                 user_id, {"department_id": user_data.department_id}
             )

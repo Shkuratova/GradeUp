@@ -84,7 +84,7 @@ async def update_user(
         upd, old = await user_service.update(user_id, user_data, current_user)
         if upd.role_id != old.role_id:
             await EventService(uow.session).log_set_user_role(
-                old.role, upd, current_user
+                old, upd, current_user
             )
         return upd
 

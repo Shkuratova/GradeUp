@@ -9,6 +9,7 @@ from schemas.departments import (
     DivisionUpdateForm,
     DivisionDetail,
     DivisionBase,
+    DivisionSchema,
 )
 from schemas.users import UserInfo
 from services.base import BaseService
@@ -26,7 +27,7 @@ class DivisionService(BaseService):
 
     async def get_division_detail(self, division_id: int):
         division = await self.repository.get_division_detail(division_id)
-        return DivisionDetail.model_validate(division)
+        return DivisionDetail.model_validate(division, from_attributes=True)
 
     async def _update_relations(
         self,
@@ -52,12 +53,15 @@ class DivisionService(BaseService):
         old = await self.repository.get_by_id(division_id)
         if old is None:
             raise NotFoundException(f"Направление с id = {division_id} не найдено.")
-        old = DivisionBase.model_validate(old)
+        old = DivisionSchema.model_validate(old)
         if division.supervisor_id and division.supervisor_id != old.supervisor_id:
 
-            user: UserInfo = await self.user_repository.get_user_info(
+            user =  await self.user_repository.get_user_info(
                 user_id=division.supervisor_id
             )
+            if user is None:
+                raise  NotFoundException(f"Пользователь с user_id ={division.supervisor_id} не найден")
+            user = UserInfo.model_validate(user, from_attributes=True)
             if (
                 user.is_division_supervisor()
                 and user.managed_division.id != division_id
@@ -66,7 +70,7 @@ class DivisionService(BaseService):
                 raise DataValidationError(
                     "Сотрудник может быть руководителем только внутри одного направления или отдела"
                 )
-            await self.user_repository.update_by_id(user.id, {"department_id": None})
+
 
         new_division = DivisionUpdate(
             division_name=division.division_name,
@@ -80,8 +84,8 @@ class DivisionService(BaseService):
         return upd, old
 
     async def remove_supervisor(self, division_id):
-        division = await self.get_division_detail(division_id)
-        if division.supervisor_id is None:
+        division: DivisionDetail = await self.get_division_detail(division_id)
+        if division.supervisor.id is None:
             raise ConflictException("У направления нет руководителя.")
         await self.repository.update_by_id(division_id, {"supervisor_id": None})
         return division

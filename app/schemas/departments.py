@@ -96,6 +96,6 @@ class DivisionUpdateForm(DivisionUpdate):
     departments: list[int] | None = None
 
 
-class DivisionDetail(DivisionBase):
+class DivisionDetail(DivisionSchema):
     supervisor: Supervisor | None = None
     departments: list[DepartmentSchema] | None = None

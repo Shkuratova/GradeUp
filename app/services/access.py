@@ -93,7 +93,8 @@ class AccessService(BaseService):
         if user is None:
             raise NotFoundException(f"Пользователь с user_id = {user_id} не найден.")
         departments_id = await self.get_managed_departments(current_user)
-        if user.department_id in departments_id:
+        if user.department_id not in departments_id:
+            logger.error("Пользователь: %s, Департаменты %s", user, departments_id)
             raise ForbiddenException("Отказано в доступе.")
 
 

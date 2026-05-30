@@ -62,11 +62,11 @@ class EventService(BaseService):
         await self.repository.add(event.model_dump())
 
     @staticmethod
-    def _division_payload(division):
+    def _division_payload(division: DivisionDetail):
         return {
             "division_id": division.id,
             "division_name": division.division_name,
-            "supervisor_id": division.supervisor_id,
+            "supervisor_id": division.supervisor.id,
             "full_name": division.supervisor.full_name(),
             "supervisor_email": division.supervisor.email,
         }
@@ -100,19 +100,19 @@ class EventService(BaseService):
         )
 
     async def log_set_user_role(
-        self, old_role: RoleSchema, user_update: UserInfo, current_user: UserInfo
+        self, old_user: UserInfo, user_update: UserInfo, current_user: UserInfo
     ):
         message = (
             f"Изменена роль сотрудника {user_update.name_with_email()} "
-            f"с {old_role.role_name.value} на {user_update.role_name.value}."
+            f"с {old_user.role_name} на {user_update.role_name}."
         )
         payload = {
             "user_id": user_update.id,
             "email": user_update.email,
             "department_id": user_update.department_id,
             "full_name": user_update.full_name(),
-            "old_role_id": old_role.id,
-            "old_role": old_role.role_name,
+            "old_role_id": old_user.role_id,
+            "old_role": old_user.role_name,
             "new_role_id": user_update.role_id,
             "new_role": user_update.role_name,
         }

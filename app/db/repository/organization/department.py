@@ -2,7 +2,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from sqlalchemy import select, func, update
+from sqlalchemy import select, func, update, delete
 from sqlalchemy.orm import joinedload, selectinload
 
 from db.models import (
@@ -92,7 +92,6 @@ class DepartmentRepository(BaseRepository):
         )
         return res.scalars().all()
 
-
     @db_exception_handler
     async def get_by_ids(self, departments_id: list[int] | None):
         stmt = select(Department)
@@ -132,3 +131,8 @@ class DepartmentUserRepository(BaseRepository):
             "Выполнен запрос на получение количества сотрудников в отделе (department_id=%s)"
         )
         return res.scalar_one_or_none()
+
+    async def delete_by_user_id(self, user_id: int):
+        stmt = delete(DepartmentUser).where(DepartmentUser.user_id == user_id)
+        res = await self._session.execute(stmt)
+        return res.rowcount
