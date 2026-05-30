@@ -38,9 +38,13 @@ async def get_all(
     current_user: UserInfo = Depends(get_current_user),
 ):
     async with unit_of_work() as uow:
-        filters.departments_id = await AccessService(uow.session).get_department_filter(
-            current_user, filters.departments_id
-        )
+        auth_service = AccessService(uow.session)
+        if filters.only_subordinates:
+            filters.departments_id = await auth_service.get_managed_departments(current_user)
+        else:
+            filters.departments_id = await AccessService(uow.session).get_department_filter(
+                current_user, filters.departments_id
+            )
         return await UserProfileService(uow.session).get_all_with_progress(filters)
 
 

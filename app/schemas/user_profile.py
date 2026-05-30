@@ -16,6 +16,7 @@ class UserProfileFilter(BaseModel):
     user_id: int | None = None
     departments_id: list[int] | None = None
     role_id: int | None = None
+    only_subordinates: bool = False
 
 class UserProfileBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)

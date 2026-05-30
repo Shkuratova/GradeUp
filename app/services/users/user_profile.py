@@ -43,7 +43,7 @@ class UserProfileService(BaseService):
 
     async def get_all_with_progress(self, filters: UserProfileFilter):
         user_profiles = await self.repository.get_all_with_progress(
-            filters.model_dump(exclude_none=True)
+            filters.model_dump(exclude_none=True, exclude={"only_subordinates"})
         )
         return user_profiles
 

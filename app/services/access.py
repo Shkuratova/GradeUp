@@ -9,6 +9,7 @@ from db.repository import (
     ParticipantsRepository,
     UserStageRepository,
 )
+from db.repository.organization import DepartmentUserRepository
 from exceptions.common import NotFoundException
 from exceptions.user import ForbiddenException
 from schemas.meetings import MeetingFilters
@@ -30,11 +31,12 @@ class AccessService(BaseService):
         self.skill_repository = SkillRepository(session)
         self.participant_repository = ParticipantsRepository(session)
         self.user_stage_repository = UserStageRepository(session)
+        self.department_user_repository = DepartmentUserRepository(session)
 
     async def get_managed_departments(self, current_user: UserInfo):
 
         departments = []
-        if current_user.is_admin() or current_user.is_spo():
+        if current_user.is_admin():
             departments = await self.department_repository.get_departments_id()
         elif current_user.is_division_supervisor():
                 departments = await self.department_repository.get_departments_id(
@@ -85,21 +87,21 @@ class AccessService(BaseService):
             return departments_id
 
     async def can_manage_user(self, user_id, current_user: UserInfo):
-        if current_user.role_name == UserRole.ADMIN:
-            return True
+        if current_user.is_admin():
+            return
         user = await self.user_repository.get_user_info(user_id)
         if user is None:
             raise NotFoundException(f"Пользователь с user_id = {user_id} не найден.")
         departments_id = await self.get_managed_departments(current_user)
-        if user.department_id not in departments_id:
+        if user.department_id in departments_id:
             raise ForbiddenException("Отказано в доступе.")
-        return user
+
 
     async def can_get_user(self, user_id: int, current_user: UserInfo):
         user = await self.user_repository.get_user_info(user_id)
         if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
             return
-        elif current_user.is_department_supervisor():
+        elif current_user.is_department_supervisor()  or current_user.is_division_supervisor():
             departments_id = await self.get_managed_departments(current_user)
             if user.department_id in departments_id:
                 return
