@@ -130,8 +130,8 @@ class UserInfo(UserSchema):
     @property
     def roles(self) -> list[str]:
         roles = {self.role_name}
-        if self.department_role:
-            roles.add(self.department_role)
+        if self.is_division_supervisor() or self.is_department_supervisor():
+            roles.add(UserRole.SUPERVISOR)
 
         return list(roles)
 
