@@ -123,8 +123,9 @@ class UserProfileRepository(BaseRepository):
             .outerjoin(Department, Department.id == DepartmentUser.department_id)
             .outerjoin(Division, Division.supervisor_id == User.id)
         )
-        departments_id = filter_dict.pop("departments_id", None)
-        if departments_id:
+        if user_id := filter_dict.pop("user_id", None):
+            user_info = user_info.where(User.id == user_id)
+        if departments_id := filter_dict.pop("departments_id", None):
             user_info = user_info.where(Department.id.in_(departments_id))
         user_info = user_info.cte("user_info")
 

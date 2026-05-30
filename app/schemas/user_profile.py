@@ -53,6 +53,11 @@ class UserProgressList(UserInfo):
 
     @computed_field
     @property
+    def current_level_progress(self) -> float:
+        return self.accepted_cnt / self.skill_cnt if self.skill_cnt else 0
+
+    @computed_field
+    @property
     def ready_gradeup(self) -> bool:
         if self.skill_cnt and self.skill_cnt == self.accepted_cnt:
            return True
