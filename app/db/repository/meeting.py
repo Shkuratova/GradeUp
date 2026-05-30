@@ -1,10 +1,9 @@
 import logging
-
 logger = logging.getLogger(__name__)
 
 from datetime import datetime
 
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, update
 from sqlalchemy.orm import joinedload, selectinload
 
 from db.models import (
@@ -137,6 +136,10 @@ class MeetingRepository(BaseRepository):
         logger.info("Выполнен запрос на получение ближайшей встречи пользователя")
         return res.scalar_one_or_none()
 
+    async def set_approved(self, stage_id: int):
+        stmt = update(Meeting).where(Meeting.user_stage_id == stage_id).values(is_approved=True)
+        res = await self._session.execute(stmt)
+        return res.rowcount
 
 class ParticipantsRepository(BaseRepository):
     model = MeetingParticipant

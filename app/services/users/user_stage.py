@@ -6,6 +6,7 @@ from db.repository import (
     StageRepository,
     UserSkillRepository,
     UserLevelRepository,
+    MeetingRepository,
 )
 from exceptions.common import NotFoundException, DataValidationError
 from schemas.evaluations import EvaluationSchema
@@ -24,6 +25,7 @@ class UserStageService(BaseService):
         self.user_skill_repository = UserSkillRepository(session)
         self.user_level_repository = UserLevelRepository(session)
         self.user_profile_repository = UserProfileRepository(session)
+        self.meeting_repository = MeetingRepository(session)
 
     async def ensure_user_stage(self, user_id: int, stage_id: int):
 
@@ -97,6 +99,8 @@ class UserStageService(BaseService):
             await self.user_skill_repository.update_by_id(
                 user_stage.user_skill_id, {"is_accepted": True}
             )
+
+        await self.meeting_repository.set_approved(user_stage.id)
 
         return await self.get_evaluation(user_stage.id)
 

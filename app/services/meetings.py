@@ -31,6 +31,7 @@ from services.base import BaseService
 from services.users.user import UserService
 from services.users.user_stage import UserStageService
 from utils.roles import UserRole
+from datetime import datetime, timezone
 
 
 class MeetingService(BaseService):
@@ -142,6 +143,9 @@ class MeetingService(BaseService):
     ):
         old_meeting = await self.get_meeting_by_id(meeting_id)
 
+        if old_meeting.status == CertificationStatus.completed:
+            raise ConflictException("Встреча уже завершена")
+
         upd_meeting = meeting.model_dump(
             exclude={"id", "student_id", "examiner_id", "stage_id"}
         )
@@ -229,4 +233,6 @@ class MeetingService(BaseService):
         if meeting.status == CertificationStatus.completed:
             raise ConflictException("Нельзя изменить статус завершненной встречи.")
 
-        await self.repository.update_by_id(meeting_id, {"status": status})
+        await self.repository.update_by_id(
+            meeting_id, {"status": status, "ended_at": datetime.now(tz=timezone.utc)}
+        )

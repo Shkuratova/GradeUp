@@ -46,8 +46,10 @@ class DepartmentService(BaseService):
 
     async def set_supervisor(self, user_id: int, department_id: int, old_supervisor: int | None = None):
 
-        if old_supervisor is not None:
+        if old_supervisor is not None and old_supervisor != user_id:
             raise ConflictException("Отделу уже назначен руководитель")
+        if old_supervisor == user_id:
+            return 
         user = await self.user_repository.get_user_info(user_id=user_id)
         user = UserInfo.model_validate(user, from_attributes=True)
 

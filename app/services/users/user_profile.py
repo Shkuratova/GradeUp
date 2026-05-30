@@ -1,15 +1,17 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db.models.types import DepartmentRole
 from db.repository import (
     UserProfileRepository,
     LevelRepository,
     UserLevelRepository,
-    UserSkillRepository,
+    UserSkillRepository, DepartmentProfileRepository,
 )
 from exceptions.common import (
     NotFoundException,
     DataValidationError,
     AlreadyExistException,
+    ConflictException,
 )
 from schemas.profiles import ProfileList
 from schemas.user_profile import (
@@ -20,7 +22,7 @@ from schemas.user_profile import (
     GradeUpResult,
     Level,
 )
-from schemas.users import UserSchema
+from schemas.users import UserSchema, UserInfo
 from services.base import BaseService
 from services.users.user import UserService
 from services.profiles import ProfileService
@@ -34,6 +36,8 @@ class UserProfileService(BaseService):
         self.level_repository = LevelRepository(self.session)
         self.user_level_repository = UserLevelRepository(self.session)
         self.user_skill_repository = UserSkillRepository(session)
+        self.department_profile_repository = DepartmentProfileRepository(session)
+
 
     async def get_profile(self, user_id: int):
         profile = await self.repository.get_one_by_filter({"user_id": user_id})
@@ -59,9 +63,16 @@ class UserProfileService(BaseService):
         )
         return current_lvl
 
-    async def create(self, model: UserProfileAdd):
+    async def create(self, model: UserProfileAdd, current_user: UserInfo):
         profile = await ProfileService(self.session).get_by_id(model.profile_id)
-        user = await UserService(self.session).get_by_id(model.user_id)
+        user = await UserService(self.session).get_user_info(model.user_id)
+        if current_user.is_division_supervisor() or current_user.is_admin():
+            in_user_department = await self.department_profile_repository.get_one_by_filter({"department_id": user.department_id, "profile_id": model.profile_id})
+            if user.is_department_supervisor() and in_user_department is not None:
+                raise ConflictException("Руководителю отдела нельзя назначить профиль, доступный в его отделе")
+            elif user.department_role == DepartmentRole.EMPLOYEE and in_user_department is None:
+                raise ConflictException("Нельзя назначить сотруднику профиль, недоступный в его отделе")
+
         if await self.repository.get_profile(model.user_id) is not None:
             raise AlreadyExistException("Пользователю уже назначен профиль.")
         current_lvl = await self.level_repository.get_last_level_by_num(

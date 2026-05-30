@@ -68,6 +68,8 @@ class MeetingDetail(BaseModel):
     duration: int
     description: str | None = None
     status: CertificationStatus
+    is_approved: bool
+    ended_at: datetime | None = None
     participants: list[Participant] = Field(exclude=True)
     user_stage: UserStage = Field(exclude=True)
 
@@ -110,6 +112,12 @@ class MeetingDetail(BaseModel):
     @field_serializer("started_at")
     def serialize_started_at(self, value: datetime, _info):
         return value.strftime("%Y-%m-%d %H:%M:%S")
+
+    @field_serializer("ended_at")
+    def serialize_ended_at(self, value: datetime, _info):
+        return value.strftime("%Y-%m-%d %H:%M:%S") if value else None
+
+
 
 
 class MeetingAdd(BaseModel):
@@ -167,4 +175,3 @@ class MeetingMaterial(BaseModel):
 
 class MeetingQuestions(MeetingMaterial):
     questions: list[Question] | None = None
-

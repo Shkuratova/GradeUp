@@ -61,7 +61,7 @@ async def add(
         await access_service.can_manage_user(user_profile.user_id, current_user)
         await access_service.can_get_profile(user_profile.profile_id, current_user)
 
-        new_user_profile = await UserProfileService(uow.session).create(user_profile)
+        new_user_profile = await UserProfileService(uow.session).create(user_profile, current_user)
         await EventService(uow.session).log_set_user_profile(
             new_user_profile, current_user
         )

@@ -11,10 +11,12 @@ class Meeting(Base):
     user_stage_id: Mapped[int] = mapped_column(ForeignKey('user_stages.id', ondelete="CASCADE"))
     status: Mapped[CertificationStatus] = mapped_column(server_default=(CertificationStatus.planned.value))
     started_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=text("TIMEZONE('utc', now())"))
+    ended_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     duration: Mapped[int]
     location: Mapped[str]
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"))
     description: Mapped[str] = mapped_column(Text, nullable=True)
+    is_approved: Mapped[bool] = mapped_column(server_default=text('false'))
     user_stage: Mapped["UserStage"] = relationship(back_populates="meetings")
     participants: Mapped[list["MeetingParticipant"]] = relationship(back_populates="meeting")
 
