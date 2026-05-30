@@ -91,7 +91,7 @@ class EventService(BaseService):
         )
         await self.log_event(
             actor_id=current_user.id,
-            access_scope=current_user.role.role_name,
+            access_scope=current_user.role_name,
             target_id=user.id,
             target_type=TargetType.USER,
             event_type=EventType.REGISTRATION,

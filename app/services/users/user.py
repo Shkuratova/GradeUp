@@ -21,10 +21,11 @@ from schemas.users import (
     UserUpdateBase,
     ResetPassword,
     ChangePassword,
+    UserRegistration,
+    UserAdd,
 )
 from schemas.users import UserInfo
 from services.base import BaseService
-from utils.roles import UserRole
 
 
 class UserService(BaseService):
@@ -48,12 +49,28 @@ class UserService(BaseService):
             plain_password.encode("utf-8"), hashed_password.encode("utf-8")
         )
 
-    async def add(self, user_model: BaseModel):
+    async def add(self, user_model: UserRegistration):
         if user_model.password != user_model.confirm_password:
             raise PasswordDontMatchException("Пароли не совпадают.")
-        user_model.password = self.hash_password(user_model.password)
 
-        new_user = await super().add(user_model)
+        user = UserAdd(
+            email=user_model.email,
+            first_name=user_model.first_name,
+            last_name=user_model.last_name,
+            patronymic=user_model.patronymic,
+            position=user_model.position,
+            password=self.hash_password(user_model.password)
+        )
+        new_user = await super().add(user)
+        if user_model.department_id is not None:
+            await self.department_user_repository.add(
+                {
+                    "user_id": new_user.id,
+                    "department_id": user_model.department_id,
+                    "role": DepartmentRole.EMPLOYEE,
+                }
+            )
+
         logger.info("Добавлен пользователь %s", user_model.email)
         return new_user
 

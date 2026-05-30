@@ -46,7 +46,6 @@ class UserAdd(BaseModel):
     last_name: str
     patronymic: str | None = None
     position: str | None = None
-    department_id: int | None = None
     role_id: int = Field(default=1)
 
 
