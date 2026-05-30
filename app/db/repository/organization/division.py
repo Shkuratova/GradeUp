@@ -22,7 +22,6 @@ class DivisionRepository(BaseRepository):
                     Department.id,
                     Department.department_name,
                     Department.description,
-                    Department.supervisor_id,
                 ),
                 joinedload(Division.supervisor)
             )

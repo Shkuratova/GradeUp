@@ -49,7 +49,7 @@ async def get_all(
     summary="Получить список отделов с доступными профилями",
 )
 @check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
-async def get_all_with_profiles(current_user=Depends(get_current_user)):
+async def get_all_with_profiles(current_user: UserInfo = Depends(get_current_user)):
     async with unit_of_work() as uow:
         departments_id = await AccessService(uow.session).get_department_filter(
             current_user
@@ -118,7 +118,9 @@ async def delete_by_id(
 )
 @check_role([UserRole.ADMIN])
 @exception_handler
-async def remove_supervisor(department_id: int, current_user=Depends(get_current_user)):
+async def remove_supervisor(
+    department_id: int, current_user: UserInfo = Depends(get_current_user)
+):
     async with unit_of_work() as uow:
         department = await DepartmentService(uow.session).remove_supervisor(
             department_id

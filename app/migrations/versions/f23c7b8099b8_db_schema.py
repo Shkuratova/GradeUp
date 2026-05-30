@@ -60,7 +60,6 @@ def upgrade() -> None:
         ),
         [
             {"role_name": "Employee"},
-            {"role_name": "Supervisor"},
             {"role_name": "Specialist"},
             {"role_name": "Admin"},
         ],
