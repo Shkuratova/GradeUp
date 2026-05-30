@@ -1,6 +1,8 @@
 import logging
 from typing import Annotated
 
+from db.models.types import CertificationStatus
+
 logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, Query
@@ -92,6 +94,14 @@ async def delete(meeting_id: int, current_user=Depends(get_current_user)):
         await MeetingService(uow.session).delete_by_id(meeting_id)
         return {"detail": f"Встреча с id = {meeting_id} была удалена."}
 
+
+@meeting_router.patch("/{meeting_id}/set-status", summary="Изменить статус встречи")
+@exception_handler
+async def set_status(meeting_id: int, status:CertificationStatus, current_user = Depends(get_current_user)):
+    async with unit_of_work() as uow:
+        await AccessService(uow.session).can_get_meeting_info(meeting_id, current_user)
+        await MeetingService(uow.session).set_status(meeting_id, status, current_user)
+    return {"Статус встерчи изменен."}
 
 @meeting_router.get(
     "/{meeting_id}/materials",

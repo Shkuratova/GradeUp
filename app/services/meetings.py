@@ -179,14 +179,19 @@ class MeetingService(BaseService):
             )
         return res
 
-
-
-    async def get_questions(self, meeting_id: int, current_user: UserInfo):
-        meeting: MeetingDetail = await self.get_meeting_by_id(meeting_id)
+    async def get_current_user_role(
+        self, meeting_id: int, student_id: int, current_user: UserInfo
+    ):
         role = CertificationRole.student
-
-        if current_user.is_division_supervisor() or (current_user.is_department_supervisor() and current_user.id != meeting.student.id):
-                role = CertificationRole.examiner
+        if (
+            current_user.is_admin()
+            or current_user.is_division_supervisor()
+            or (
+                current_user.is_department_supervisor()
+                and current_user.id != student_id
+            )
+        ):
+            role = CertificationRole.supervisor
 
         elif current_user.role_name == UserRole.EMPLOYEE:
             participant_role = await self.get_participant_role(
@@ -194,10 +199,15 @@ class MeetingService(BaseService):
             )
             if participant_role == CertificationRole.examiner:
                 role = CertificationRole.examiner
+        return role
+
+    async def get_questions(self, meeting_id: int, current_user: UserInfo):
+        meeting: MeetingDetail = await self.get_meeting_by_id(meeting_id)
+        role = self.get_current_user_role(meeting_id, meeting.student.id, current_user)
 
         skill = await self.skill_repository.get_by_id(meeting.skill_id)
         questions = None
-        if role == CertificationRole.examiner:
+        if role != CertificationRole.student:
             stage_version = await self.stage_version_repository.get_questions(
                 meeting.stage_version_id
             )
@@ -210,3 +220,13 @@ class MeetingService(BaseService):
             literature=skill.literature,
             questions=questions,
         )
+
+    async def set_status(
+        self, meeting_id: int, status: CertificationStatus, current_user: UserInfo
+    ):
+        meeting: MeetingDetail = await self.get_by_id(meeting_id)
+
+        if meeting.status == CertificationStatus.completed:
+            raise ConflictException("Нельзя изменить статус завершненной встречи.")
+
+        await self.repository.update_by_id(meeting_id, {"status": status})

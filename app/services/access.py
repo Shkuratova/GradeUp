@@ -14,7 +14,7 @@ from exceptions.user import ForbiddenException
 from schemas.meetings import MeetingFilters
 from schemas.users import UserInfo
 from services.base import BaseService
-from utils.roles import UserRole
+from utils.roles import UserRole, CertificationRole
 import logging
 
 logger = logging.getLogger(__name__)
@@ -34,11 +34,9 @@ class AccessService(BaseService):
     async def get_managed_departments(self, current_user: UserInfo):
 
         departments = []
-        if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
+        if current_user.is_admin() or current_user.is_spo():
             departments = await self.department_repository.get_departments_id()
-        elif current_user.is_department_supervisor():
-            if current_user.managed_division_id is not None:
-
+        elif current_user.is_division_supervisor():
                 departments = await self.department_repository.get_departments_id(
                     current_user.managed_division.id
                 )
@@ -51,14 +49,12 @@ class AccessService(BaseService):
                     raise ForbiddenException(
                         "Нет доступных отделов в вашем подразделении."
                     )
-            elif current_user.department_id is not None:
-                departments = [current_user.department_id]
-            else:
-                raise ForbiddenException(
+        elif current_user.is_department_supervisor() :
+            departments = [current_user.department_id]
+        else:
+            raise ForbiddenException(
                     "Руководитель должен быть привязан к отделу или подразделению."
                 )
-        else:
-            raise ForbiddenException("Отказано в доступе.")
         return departments
 
     async def can_access_department(self, department_id: int, current_user: UserInfo):
@@ -75,7 +71,7 @@ class AccessService(BaseService):
     async def get_department_filter(
         self, current_user: UserInfo, departments_id: list[int] | None = None
     ):
-        if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
+        if current_user.is_admin() or current_user.is_spo():
             return departments_id
         else:
             access_departments = await self.get_managed_departments(current_user)
@@ -181,12 +177,30 @@ class AccessService(BaseService):
 
         raise ForbiddenException("Отказано в доступе.")
 
+    async def can_get_meeting_info(self, meeting_id: int, current_user: UserInfo):
+        if current_user.is_admin():
+            return
+        student = await self.participant_repository.get_one_by_filter({'meeting_id': meeting_id, 'role': CertificationRole.STUDENT})
+        if student is None:
+            raise NotFoundException("Аттестуемый встречи не найден.")
+        examiner = await self.participant_repository.get_one_by_filter({'meeting_id': meeting_id, 'role': CertificationRole.EXAMINER})
+        if current_user.id == examiner.user_id:
+            return
+        elif current_user.is_department_supervisor() or current_user.is_division_supervisor():
+            await self.can_manage_user(student.user_id, current_user)
+
+        raise ForbiddenException(f"Нет доступа к выбранной встрече.")
+
     async def can_manage_meeting(self, meeting_id: int, current_user: UserInfo):
-        student_id = await self.participant_repository.get_student(meeting_id)
-        try:
-            await self.can_manage_user(student_id, current_user)
-        except ForbiddenException as error:
-            raise ForbiddenException(f"Нет доступа к выбранной встрече.")
+        if current_user.is_admin():
+            return
+        student = await self.participant_repository.get_one_by_filter({'meeting_id': meeting_id, 'role': CertificationRole.STUDENT})
+        if student is None:
+            raise NotFoundException("Аттестуемый встречи не найден.")
+        if current_user.is_department_supervisor() or current_user.is_division_supervisor():
+            await self.can_manage_user(student.user_id, current_user)
+
+        raise ForbiddenException(f"Нет доступа к выбранной встрече.")
 
     async def can_get_meeting(self, meeting_id: int, current_user: UserInfo):
         student_id = await self.participant_repository.get_student(meeting_id)
