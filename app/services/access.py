@@ -87,7 +87,7 @@ class AccessService(BaseService):
     async def can_manage_user(self, user_id, current_user: UserInfo):
         if current_user.role_name == UserRole.ADMIN:
             return True
-        user = await self.user_repository.get_by_id(user_id)
+        user = await self.user_repository.get_user_info(user_id)
         if user is None:
             raise NotFoundException(f"Пользователь с user_id = {user_id} не найден.")
         departments_id = await self.get_managed_departments(current_user)
@@ -96,7 +96,7 @@ class AccessService(BaseService):
         return user
 
     async def can_get_user(self, user_id: int, current_user: UserInfo):
-        user = await self.user_repository.get_by_id(user_id)
+        user = await self.user_repository.get_user_info(user_id)
         if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
             return
         elif current_user.is_department_supervisor():
