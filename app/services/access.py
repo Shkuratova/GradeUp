@@ -121,13 +121,13 @@ class AccessService(BaseService):
                 f"Профиль сотрудника с user_id = {user_id}  не найден"
             )
 
-        if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
+        if current_user.is_admin() or current_user.is_spo():
             return user_profile
 
         if current_user.id == user_profile.user_id:
             return user_profile
 
-        if current_user.is_department_supervisor():
+        if current_user.is_department_supervisor() or current_user.is_division_supervisor():
             await self.can_get_user(user_profile.user_id, current_user)
             return user_profile
 
@@ -135,10 +135,10 @@ class AccessService(BaseService):
 
     async def can_get_profile(self, profile_id: int, current_user: UserInfo):
 
-        if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
+        if current_user.is_admin() or current_user.is_spo():
             return profile_id
 
-        if current_user.is_department_supervisor():
+        if current_user.is_department_supervisor() or current_user.is_division_supervisor():
             departments_id = await self.get_managed_departments(current_user)
             exist = await self.profile_repository.profile_exist(
                 profile_id, departments_id
@@ -156,10 +156,10 @@ class AccessService(BaseService):
 
     async def can_get_skill(self, skill_id: int, current_user: UserInfo):
 
-        if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
+        if current_user.is_admin() or current_user.is_spo():
             return skill_id
 
-        if current_user.is_department_supervisor():
+        if current_user.is_department_supervisor() or current_user.is_division_supervisor():
             departments_id = await self.get_managed_departments(current_user)
             exist = await self.skill_repository.skill_exist(skill_id, departments_id)
             if exist is not None:
@@ -212,30 +212,24 @@ class AccessService(BaseService):
             raise ForbiddenException(f"Нет доступа к выбранной встрече.")
 
     @classmethod
-    async def can_get_division(cls, division_id, current_user):
-        if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
+    async def can_get_division(cls, division_id: int, current_user: UserInfo):
+        if current_user.is_admin() or current_user.is_spo():
             return
-        if (
-            current_user.managed_division_id
-            and current_user.managed_division_id == division_id
-        ):
+        if current_user.is_division_supervisor():
             return
         raise ForbiddenException("Нет доступа к выбранному направлению")
 
     @classmethod
     async def get_managed_division(cls, current_user: UserInfo) -> int | None:
-        if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
+        if current_user.is_admin():
             return None
-        if (
-            current_user.is_department_supervisor()
-            and current_user.managed_division_id is not None
-        ):
+        if current_user.is_division_supervisor():
             return current_user.managed_division_id
 
         raise ForbiddenException("Нет доступа к направлениям")
 
     async def can_get_evaluation(self, user_stage_id: int, current_user: UserInfo):
-        if current_user.role_name in [UserRole.ADMIN, UserRole.SPO]:
+        if current_user.is_admin() or current_user.is_spo():
             return
         user_id = await self.user_stage_repository.get_user_id(user_stage_id)
         if user_id is None:
