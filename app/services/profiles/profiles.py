@@ -153,6 +153,6 @@ class ProfileService(BaseService):
         user_profile_cnt = await self.user_profile_repository.get_count(profile_id)
         if user_profile_cnt:
             raise ConflictException(
-                f"Нельзя удалить профиль, который назначен пользователю (Пользователей с выбранным профилем: {profile_id})"
+                f"Нельзя удалить профиль, который назначен пользователю (Пользователей с выбранным профилем: {user_profile_cnt})"
             )
         return await self.repository.delete_by_id(profile_id)

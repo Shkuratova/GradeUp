@@ -15,16 +15,10 @@ class Department(Base):
     department_name: Mapped[str] = mapped_column(unique=True, nullable=False)
     division_id: Mapped[int | None] = mapped_column(ForeignKey("divisions.id", ondelete="SET NULL"), )
     description: Mapped[str | None]
-    # supervisor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), unique=True)
 
     division: Mapped["Division"] = relationship(back_populates="departments")
-    # users: Mapped[list["User"]] = relationship(
-    #     back_populates="department",
-    #     foreign_keys="[User.department_id]"
-    # )
     users: Mapped[list["User"]] = relationship(secondary="department_users")
     department_users: Mapped[list["DepartmentUser"]] = relationship(back_populates="department")
-    # supervisor: Mapped["User"] = relationship(back_populates="managed_department", foreign_keys=[supervisor_id])
     profiles: Mapped[list["Profile"]] = relationship(secondary="department_profiles", back_populates="departments")
     supervisor: Mapped["User"] = relationship(
         secondary="department_users",

@@ -14,6 +14,7 @@ from db.models import (
     UserStage,
     Stage,
     DepartmentUser,
+    Department,
 )
 from db.models.types import CertificationStatus, CertificationRole
 from db.repository import BaseRepository
@@ -71,14 +72,12 @@ class MeetingRepository(BaseRepository):
                 stmt = stmt.where(Stage.skill_id == skill_id)
 
         if department_ids := filter_dict.pop("departments_id", None):
-            stmt = stmt.join(
-                MeetingParticipant, MeetingParticipant.meeting_id == Meeting.id
-            ).join(
-                DepartmentUser,
-                and_(
-                    DepartmentUser.user_id == MeetingParticipant.user_id,
-                    DepartmentUser.department_id.in_(department_ids),
-                ),
+            stmt = stmt.where(
+                Meeting.participants.any(
+                    MeetingParticipant.user.has(
+                        User.department.has(Department.id.in_(department_ids))
+                    )
+                )
             )
 
         stmt = stmt.options(

@@ -103,10 +103,20 @@ class DepartmentRepository(BaseRepository):
         logger.info("Выполнен запрос на получение депаратаментов по списку id")
         return res.scalars().all()
 
+    async def update_division(self, division_id: int | None, departments_id: list[int]):
+        stmt = update(Department).where(Department.id.in_(departments_id)).values(division_id=division_id)
+        res = await self._session.execute(stmt)
+        return res.rowcount
+
 
 class DepartmentProfileRepository(BaseRepository):
     model = DepartmentProfile
 
+    @db_exception_handler
+    async def delete_by_profile_id(self, profiles_id: list[int]):
+        stmt = delete(DepartmentProfile).where(DepartmentProfile.profile_id.in_(profiles_id))
+        res = await self._session.execute(stmt)
+        return res.rowcount
 
 class DepartmentUserRepository(BaseRepository):
     model = DepartmentUser

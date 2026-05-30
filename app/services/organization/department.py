@@ -44,11 +44,13 @@ class DepartmentService(BaseService):
     async def get_id_by_division(self, division_id: int):
         return await self.repository.get_id_by_division_id(division_id)
 
-    async def set_supervisor(self, user_id: int, department_id: int):
-        user = await self.user_repository.get_user_info(
-            user_id=user_id
-        )
+    async def set_supervisor(self, user_id: int, department_id: int, old_supervisor: int | None = None):
+
+        if old_supervisor is not None:
+            raise ConflictException("Отделу уже назначен руководитель")
+        user = await self.user_repository.get_user_info(user_id=user_id)
         user = UserInfo.model_validate(user, from_attributes=True)
+
         if user is None:
             raise NotFoundException(f"Пользователь с id={user_id} не найден")
         if (
@@ -63,11 +65,13 @@ class DepartmentService(BaseService):
             raise DataValidationError(
                 "Руководителем может быть назначен только сотрудник из выбранного отдела."
             )
+
         if user.department_id is None:
             await self.department_user_repository.add(
                 {
                     "user_id": user_id,
                     "department_id": department_id,
+                    "role": DepartmentRole.SUPERVISOR
                 }
             )
         else:
@@ -102,7 +106,7 @@ class DepartmentService(BaseService):
         old = DepartmentDetail.model_validate(old, from_attributes=True)
 
         if department.supervisor_id:
-            await self.set_supervisor(department.supervisor_id, department_id)
+            await self.set_supervisor(department.supervisor_id, department_id, old.supervisor_id)
 
         await self.update_by_id(
             department_id,
@@ -112,22 +116,28 @@ class DepartmentService(BaseService):
             ),
         )
 
-        if department.profiles:
-            profiles = await self.department_profile_repository.get_all(
-                {"department_id": department_id}
-            )
+        if department.profiles is not None:
+            old_profiles = old.profiles if old.profiles is not None else []
+            old_profiles = set(p.id for p in old_profiles)
             new_profiles = set(department.profiles)
-            exist_profiles = {p.profile_id: p.id for p in profiles}
-            exist_ids = set(exist_profiles.keys())
-            if del_profiles := [exist_profiles[p] for p in exist_ids - new_profiles]:
-                await self.department_profile_repository.delete_list(del_profiles)
-            if add_profiles := new_profiles - exist_ids:
+            if del_id := old_profiles - new_profiles:
+                await self.department_profile_repository.delete_by_profile_id(list(del_id))
+            if add_id := new_profiles - old_profiles:
                 await self.department_profile_repository.add_list(
-                    [
-                        {"department_id": department_id, "profile_id": p}
-                        for p in add_profiles
-                    ]
+                    [{"department_id": department_id, "profile_id": p} for p in add_id]
                 )
+            # new_profiles = set(department.profiles)
+            # exist_profiles = {p.profile_id: p.id for p in profiles}
+            # exist_ids = set(exist_profiles.keys())
+            # if del_profiles := [exist_profiles[p] for p in exist_ids - new_profiles]:
+            #     await self.department_profile_repository.delete_list(del_profiles)
+            # if add_profiles := new_profiles - exist_ids:
+            #     await self.department_profile_repository.add_list(
+            #         [
+            #             {"department_id": department_id, "profile_id": p}
+            #             for p in add_profiles
+            #         ]
+            #     )
 
         upd = await self.get_detail(department_id)
         return upd, old
@@ -136,7 +146,9 @@ class DepartmentService(BaseService):
         department = await self.get_detail(department_id)
         if department.supervisor_id is None:
             raise ConflictException("У отдела нет руководителя.")
-        await self.department_user_repository.update_by_user_id(department.supervisor_id, {"role": DepartmentRole.EMPLOYEE})
+        await self.department_user_repository.update_by_user_id(
+            department.supervisor_id, {"role": DepartmentRole.EMPLOYEE}
+        )
         return DepartmentDetail.model_validate(department, from_attributes=True)
 
     async def delete(self, department_id):

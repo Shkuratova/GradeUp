@@ -10,9 +10,12 @@ from schemas.departments import (
     DivisionDetail,
     DivisionBase,
     DivisionSchema,
+    DepartmentSchema,
 )
 from schemas.users import UserInfo
 from services.base import BaseService
+import logging
+logger = logging.getLogger(__name__)
 
 
 class DivisionService(BaseService):
@@ -33,27 +36,32 @@ class DivisionService(BaseService):
         self,
         division_id: int,
         departments: list[int],
+        old_departments: list[DepartmentSchema]
     ):
-        for department_id in departments:
-            await self.department_repository.update_by_id(
-                department_id, {"division_id": division_id}
+        old_departments = set(d.id for d in old_departments)
+        new_departments = set(departments)
+        if del_id := old_departments - new_departments:
+            await self.department_repository.update_division(
+                None, list(del_id)
             )
+        if add_id := new_departments - old_departments:
+            await self.department_repository.update_division(
+                division_id, list(add_id)
+            )
+
 
     async def add_with_relations(self, division: DivisionAddForm):
         new_division = DivisionAdd.model_validate(division, from_attributes=True)
         new_division = await self.add(new_division)
         if division.departments:
-            await self._update_relations(new_division.id, division.departments)
+            await self._update_relations(new_division.id, division.departments, [])
         return await self.get_division_detail(new_division.id)
 
     async def update_with_relations(
         self, division_id: int, division: DivisionUpdateForm
     ):
 
-        old = await self.repository.get_by_id(division_id)
-        if old is None:
-            raise NotFoundException(f"Направление с id = {division_id} не найдено.")
-        old = DivisionSchema.model_validate(old)
+        old: DivisionDetail = await self.get_division_detail(division_id)
         if division.supervisor_id and division.supervisor_id != old.supervisor_id:
 
             user =  await self.user_repository.get_user_info(
@@ -71,15 +79,15 @@ class DivisionService(BaseService):
                     "Сотрудник может быть руководителем только внутри одного направления или отдела"
                 )
 
-
         new_division = DivisionUpdate(
             division_name=division.division_name,
             description=division.description,
             supervisor_id=division.supervisor_id,
         )
         await self.update_by_id(division_id, new_division)
-        if division.departments:
-            await self._update_relations(division_id, division.departments)
+        if division.departments is not None:
+            old_departments = old.departments if old.departments is not None else []
+            await self._update_relations(division_id, division.departments, old.departments)
         upd = await self.get_division_detail(division_id)
         return upd, old
 
