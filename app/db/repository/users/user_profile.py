@@ -61,7 +61,7 @@ class UserProfileRepository(BaseRepository):
                 func.count(LevelSkill.skill_id).label("skill_cnt"),
                 func.count(UserSkill.id).label("accepted_cnt"),
             )
-            .join(
+            .outerjoin(
                 LevelSkill, LevelSkill.profile_level_id == UserProfile.current_level_id
             )
             .outerjoin(
@@ -179,8 +179,8 @@ class UserProfileRepository(BaseRepository):
             )
             .select_from(p)
             .join(pl, pl.profile_id == p.id)
-            .join(LevelSkill, LevelSkill.profile_level_id == pl.id)
-            .join(Skill, Skill.id == LevelSkill.skill_id)
+            .outerjoin(LevelSkill, LevelSkill.profile_level_id == pl.id)
+            .outerjoin(Skill, Skill.id == LevelSkill.skill_id)
             .outerjoin(Stage, Stage.skill_id == Skill.id)
             .where(p.id == profile_id)
             .group_by(

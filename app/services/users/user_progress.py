@@ -51,16 +51,16 @@ class UserProgressService:
                 level["num"] = row["num"]
                 level["level_name"] = row["level_name"]
                 level["is_closed"] = row["is_closed"]
-
-            level["skills"].append(
-                {
-                    "id": row["skill_id"],
-                    "title": row["skill_title"],
-                    "is_accepted": row["skill_accepted"],
-                    "stage_cnt": row["stage_cnt"],
-                    "accepted_stages": row["accepted_stages"],
-                }
-            )
+            if row["skill_id"] is not None:
+                level["skills"].append(
+                    {
+                        "id": row["skill_id"],
+                        "title": row["skill_title"],
+                        "is_accepted": row["skill_accepted"],
+                        "stage_cnt": row["stage_cnt"],
+                        "accepted_stages": row["accepted_stages"],
+                    }
+                )
 
         profile_progress = {
             "profile_id": user_profile.profile_id,
