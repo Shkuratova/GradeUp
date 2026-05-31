@@ -50,9 +50,10 @@ class DepartmentAdd(BaseModel):
 
 
 class DepartmentAddForm(DepartmentAdd):
-    profiles: list[int] | None = None
     supervisor_id: int | None = None
 
+class DepartmentProfiles(BaseModel):
+    profiles: list[int]
 
 class DepartmentUpdate(BaseModel):
     department_name: str | None = None
@@ -60,12 +61,9 @@ class DepartmentUpdate(BaseModel):
 
 
 class DepartmentUpdateForm(DepartmentUpdate):
-    profiles: list[int] | None = None
     supervisor_id: int | None = None
 
-class DepartmentProfilesUpdate(BaseModel):
-    profiles: list[int]
-    model_config = ConfigDict(extra="forbid")
+
 
 class DivisionBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)

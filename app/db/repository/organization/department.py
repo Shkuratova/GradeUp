@@ -104,7 +104,11 @@ class DepartmentRepository(BaseRepository):
         return res.scalars().all()
 
     async def update_division(self, division_id: int | None, departments_id: list[int]):
-        stmt = update(Department).where(Department.id.in_(departments_id)).values(division_id=division_id)
+        stmt = (
+            update(Department)
+            .where(Department.id.in_(departments_id))
+            .values(division_id=division_id)
+        )
         res = await self._session.execute(stmt)
         return res.rowcount
 
@@ -114,9 +118,29 @@ class DepartmentProfileRepository(BaseRepository):
 
     @db_exception_handler
     async def delete_by_profile_id(self, profiles_id: list[int]):
-        stmt = delete(DepartmentProfile).where(DepartmentProfile.profile_id.in_(profiles_id))
+        stmt = delete(DepartmentProfile).where(
+            DepartmentProfile.profile_id.in_(profiles_id)
+        )
         res = await self._session.execute(stmt)
         return res.rowcount
+
+    async def get_department_profile_ids(self, department_id: int):
+        stmt = select(DepartmentProfile.profile_id).where(
+            DepartmentProfile.department_id == department_id
+        )
+        res = await self._session.execute(stmt)
+        return res.scalars().all()
+
+    async def get_profile_list_by_department(self, department_id: int):
+        stmt = (
+            select(DepartmentProfile.profile_id.label("id"), Profile.title)
+            .where(DepartmentProfile.department_id == department_id)
+            .join(Profile, Profile.id == DepartmentProfile.profile_id)
+        )
+        res = await self._session.execute(stmt)
+        return res.mappings().all()
+
+
 
 class DepartmentUserRepository(BaseRepository):
     model = DepartmentUser

@@ -9,7 +9,9 @@ from schemas.departments import (
     DepartmentSchema,
     DepartmentAddForm,
     DepartmentUpdateForm,
+    DepartmentProfiles,
 )
+from schemas.profiles import ProfileList
 from schemas.users import UserInfo
 from services import AccessService, EventService, DepartmentService
 from utils.roles import UserRole
@@ -129,3 +131,22 @@ async def remove_supervisor(
             department, current_user
         )
     return {"detail": "Руководитель отдела откреплён."}
+
+
+@department_router.put(
+    "/{department_id}/profiles",
+    response_model=list[ProfileList],
+    summary="Изменение списка доступных в департаменте профилей",
+)
+@check_role([UserRole.ADMIN, UserRole.SPO])
+@exception_handler
+async def update_profile_list(
+    department_id: int,
+    department: DepartmentProfiles,
+    current_user: UserInfo = Depends(get_current_user),
+):
+    async with unit_of_work() as uow:
+        res = await DepartmentService(uow.session).update_profiles(
+            department_id, department
+        )
+    return res

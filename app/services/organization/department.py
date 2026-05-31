@@ -14,8 +14,7 @@ from schemas.departments import (
     DepartmentDetail,
     DepartmentAddForm,
     DepartmentUpdateForm,
-    DepartmentBase,
-    DepartmentProfilesUpdate,
+    DepartmentProfiles,
 )
 from schemas.users import UserInfo
 from services.base import BaseService
@@ -94,14 +93,6 @@ class DepartmentService(BaseService):
         if department.supervisor_id:
             await self.set_supervisor(department.supervisor_id, new_department.id)
 
-        if department.profiles:
-            await self.department_profile_repository.add_list(
-                [
-                    {"department_id": new_department.id, "profile_id": p}
-                    for p in department.profiles
-                ]
-            )
-
         return await self.get_detail(new_department.id)
 
     async def update_with_relations(
@@ -126,18 +117,6 @@ class DepartmentService(BaseService):
             ),
         )
 
-        if department.profiles is not None:
-            old_profiles = old.profiles if old.profiles is not None else []
-            old_profiles = set(p.id for p in old_profiles)
-            new_profiles = set(department.profiles)
-            if del_id := old_profiles - new_profiles:
-                await self.department_profile_repository.delete_by_profile_id(
-                    list(del_id)
-                )
-            if add_id := new_profiles - old_profiles:
-                await self.department_profile_repository.add_list(
-                    [{"department_id": department_id, "profile_id": p} for p in add_id]
-                )
         upd = await self.get_detail(department_id)
         return upd, old
 
@@ -165,3 +144,17 @@ class DepartmentService(BaseService):
 
     async def get_list(self, departments_id: list[int] | None = None):
         return await self.repository.get_by_ids(departments_id)
+
+    async def update_profiles(self, department_id: int, department: DepartmentProfiles):
+        old_profiles = await self.department_profile_repository.get_department_profile_ids(department_id)
+        old_profiles = set(old_profiles)
+        new_profiles = set(department.profiles)
+        if del_id := old_profiles - new_profiles:
+            await self.department_profile_repository.delete_by_profile_id(
+                list(del_id)
+            )
+        if add_id := new_profiles - old_profiles:
+            await self.department_profile_repository.add_list(
+                [{"department_id": department_id, "profile_id": p} for p in add_id]
+            )
+        return await self.department_profile_repository.get_profile_list_by_department(department_id)
