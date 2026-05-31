@@ -207,8 +207,9 @@ class MeetingService(BaseService):
 
     async def get_questions(self, meeting_id: int, current_user: UserInfo):
         meeting: MeetingDetail = await self.get_meeting_by_id(meeting_id)
-        role = self.get_current_user_role(meeting_id, meeting.student.id, current_user)
-
+        role = await self.get_current_user_role(
+            meeting_id, meeting.student.id, current_user
+        )
         skill = await self.skill_repository.get_by_id(meeting.skill_id)
         questions = None
         if role != CertificationRole.student:
