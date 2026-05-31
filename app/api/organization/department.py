@@ -81,7 +81,7 @@ async def get_department_detail(
     response_model=DepartmentDetail,
     summary="Обновление отдела с руководителем и списком профилей",
 )
-@check_role([UserRole.ADMIN])
+@check_role([UserRole.ADMIN, UserRole.SPO])
 @exception_handler
 async def update_by_id(
     department_id: int,
@@ -90,7 +90,7 @@ async def update_by_id(
 ):
     async with unit_of_work() as uow:
         upd, old = await DepartmentService(uow.session).update_with_relations(
-            department_id, department
+            department_id, department, current_user
         )
 
         if department.supervisor_id and upd.supervisor_id != old.supervisor_id:

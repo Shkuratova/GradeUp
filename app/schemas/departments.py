@@ -63,6 +63,9 @@ class DepartmentUpdateForm(DepartmentUpdate):
     profiles: list[int] | None = None
     supervisor_id: int | None = None
 
+class DepartmentProfilesUpdate(BaseModel):
+    profiles: list[int]
+    model_config = ConfigDict(extra="forbid")
 
 class DivisionBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)

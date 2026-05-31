@@ -181,7 +181,7 @@ class EventService(BaseService):
     async def log_schedule(self, meeting: MeetingDetail, current_user: UserInfo):
         message = (
             f"Сотруднику {meeting.student.user.name_with_email()} назначена встреча "
-            f"по этапу навыка {meeting.title.__repr__()} ({meeting.confirmation_type}), "
+            f"по этапу навыка {meeting.title.__repr__()} ({meeting.confirmation_type.value}), "
             f"на {meeting.started_at.strftime("%Y-%m-%d %H:%M:%S")}, "
             f"Аттестующий - {meeting.examiner.user.name_with_email()})"
         )
@@ -203,7 +203,7 @@ class EventService(BaseService):
     ):
         employee = await self.get_employee(user_id)
         message = (f"Оценен этап пользователя {employee.name_with_email()} "
-                   f"{user_stage.skill.title} ({user_stage.confirmation_type}) c оценкой"
+                   f"{user_stage.skill.title.__repr__()} ({user_stage.confirmation_type.value}) c оценкой"
                    f" {user_stage.evaluation()}")
 
         await self.log_event(

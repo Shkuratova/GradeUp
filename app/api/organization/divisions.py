@@ -19,7 +19,7 @@ division_router = APIRouter(prefix="/divisions", tags=["Divisions"])
 @division_router.get(
     "/", response_model=list[DivisionSchema], summary="Получить список направлений"
 )
-@check_role([UserRole.ADMIN])
+@check_role([UserRole.ADMIN, UserRole.SPO, UserRole.SUPERVISOR])
 @exception_handler
 async def get_all(current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
@@ -34,8 +34,7 @@ async def get_all(current_user=Depends(get_current_user)):
 @exception_handler
 async def get_division_departments(current_user= Depends(get_current_user)):
     async with unit_of_work() as uow:
-        division_id = await AccessService.get_managed_division(current_user)
-        return await DivisionService(uow.session).get_with_departments(division_id)
+        return await DivisionService(uow.session).get_with_departments()
 
 @division_router.post("/", response_model=DivisionDetail, summary="Создать направление")
 @check_role([UserRole.ADMIN])
@@ -53,7 +52,6 @@ async def add(division: DivisionAddForm, current_user=Depends(get_current_user))
 @exception_handler
 async def get_division_detail(division_id: int, current_user=Depends(get_current_user)):
     async with unit_of_work() as uow:
-        await AccessService.can_get_division(division_id, current_user)
         return await DivisionService(uow.session).get_division_detail(division_id)
 
 

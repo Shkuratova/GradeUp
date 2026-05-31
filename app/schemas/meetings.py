@@ -74,6 +74,10 @@ class MeetingDetail(BaseModel):
     user_stage: UserStage = Field(exclude=True)
 
     @computed_field
+    def user_stage_id(self)-> int:
+        return self.user_stage.id
+
+    @computed_field
     def stage_id(self) -> int:
         return self.user_stage.stage.id
 

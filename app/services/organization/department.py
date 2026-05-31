@@ -15,6 +15,7 @@ from schemas.departments import (
     DepartmentAddForm,
     DepartmentUpdateForm,
     DepartmentBase,
+    DepartmentProfilesUpdate,
 )
 from schemas.users import UserInfo
 from services.base import BaseService
@@ -44,12 +45,14 @@ class DepartmentService(BaseService):
     async def get_id_by_division(self, division_id: int):
         return await self.repository.get_id_by_division_id(division_id)
 
-    async def set_supervisor(self, user_id: int, department_id: int, old_supervisor: int | None = None):
+    async def set_supervisor(
+        self, user_id: int, department_id: int, old_supervisor: int | None = None
+    ):
 
         if old_supervisor is not None and old_supervisor != user_id:
             raise ConflictException("Отделу уже назначен руководитель")
         if old_supervisor == user_id:
-            return 
+            return
         user = await self.user_repository.get_user_info(user_id=user_id)
         user = UserInfo.model_validate(user, from_attributes=True)
 
@@ -73,7 +76,7 @@ class DepartmentService(BaseService):
                 {
                     "user_id": user_id,
                     "department_id": department_id,
-                    "role": DepartmentRole.SUPERVISOR
+                    "role": DepartmentRole.SUPERVISOR,
                 }
             )
         else:
@@ -102,13 +105,18 @@ class DepartmentService(BaseService):
         return await self.get_detail(new_department.id)
 
     async def update_with_relations(
-        self, department_id: int, department: DepartmentUpdateForm
+        self,
+        department_id: int,
+        department: DepartmentUpdateForm,
+        current_user: UserInfo,
     ):
         old = await self.get_detail(department_id)
         old = DepartmentDetail.model_validate(old, from_attributes=True)
 
         if department.supervisor_id:
-            await self.set_supervisor(department.supervisor_id, department_id, old.supervisor_id)
+            await self.set_supervisor(
+                department.supervisor_id, department_id, old.supervisor_id
+            )
 
         await self.update_by_id(
             department_id,
@@ -123,24 +131,13 @@ class DepartmentService(BaseService):
             old_profiles = set(p.id for p in old_profiles)
             new_profiles = set(department.profiles)
             if del_id := old_profiles - new_profiles:
-                await self.department_profile_repository.delete_by_profile_id(list(del_id))
+                await self.department_profile_repository.delete_by_profile_id(
+                    list(del_id)
+                )
             if add_id := new_profiles - old_profiles:
                 await self.department_profile_repository.add_list(
                     [{"department_id": department_id, "profile_id": p} for p in add_id]
                 )
-            # new_profiles = set(department.profiles)
-            # exist_profiles = {p.profile_id: p.id for p in profiles}
-            # exist_ids = set(exist_profiles.keys())
-            # if del_profiles := [exist_profiles[p] for p in exist_ids - new_profiles]:
-            #     await self.department_profile_repository.delete_list(del_profiles)
-            # if add_profiles := new_profiles - exist_ids:
-            #     await self.department_profile_repository.add_list(
-            #         [
-            #             {"department_id": department_id, "profile_id": p}
-            #             for p in add_profiles
-            #         ]
-            #     )
-
         upd = await self.get_detail(department_id)
         return upd, old
 
