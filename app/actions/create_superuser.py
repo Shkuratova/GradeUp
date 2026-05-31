@@ -7,27 +7,28 @@ sys.path.insert(0, str(root_dir))
 
 import asyncio
 from os import getenv
-from schemas.users import UserAdd
-from services.users.user import UserService
 from db.uow import unit_of_work
+from db.repository import UserRepository
+from services import UserService
 
 default_email = getenv("DEFAULT_EMAIL", "admin@example.com")
 default_password = getenv("DEFAULT_PASSWORD", "admin")
 
+
 async def create_superuser():
-    admin = UserAdd(
-        email=default_email,
-        first_name="admin",
-        last_name="admin",
-        password=default_password,
-        role_id=4,
-        department_id=None,
-        position="Администратор",
-        patronymic=None
-    )
+    admin = {
+        "email": default_email,
+        "first_name": "admin",
+        "last_name": "admin",
+        "password": UserService.hash_password(default_password),
+        "role_id": 3,
+        "position": "Администратор",
+        "patronymic": None,
+    }
+
     async with unit_of_work() as uow:
 
-        await UserService(uow.session).add(admin)
+        await UserRepository(uow.session).add(admin)
 
 
 if __name__ == "__main__":

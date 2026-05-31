@@ -60,6 +60,7 @@ class UserRegistration(BaseModel):
     confirm_password: str = Field(exclude=True)
 
 
+
 class UserUpdateBase(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
@@ -133,5 +134,3 @@ class UserInfo(UserSchema):
             roles.add(UserRole.SUPERVISOR)
 
         return list(roles)
-
-

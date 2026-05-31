@@ -3,3 +3,4 @@ app/.env.local
 **__pycache__
 .idea
 pgdata
+.env.local

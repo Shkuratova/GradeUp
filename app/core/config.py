@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import BaseModel
 from pathlib import Path
 
-BASE_DIR = Path(__file__).parent
+BASE_DIR = Path(__file__).parents[2]
 
 class DBConfig(BaseModel):
     url: str 
@@ -18,6 +18,7 @@ class JWTConfig(BaseModel):
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         case_sensitive=False,
+        extra='ignore',
         env_nested_delimiter="__",
         env_file=BASE_DIR / ".env"
     )
