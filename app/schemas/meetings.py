@@ -159,6 +159,7 @@ class MeetingFilters(BaseModel):
     confirmation_type: ConfirmationTypes | None = None
     skill_id: int | None = None
     departments_id: list[int] | None = None
+    only_subordinates: bool = False
 
     @model_validator(mode="after")
     def check_filters(self):

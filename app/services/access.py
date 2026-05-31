@@ -238,8 +238,10 @@ class AccessService(BaseService):
         await self.can_get_user(user_id, current_user)
 
     async def get_meeting_filter(self, filters: MeetingFilters, current_user: UserInfo):
-        if current_user.is_admin() or current_user.is_spo():
+        if current_user.is_admin():
             return filters
+        if filters.only_subordinates:
+            filters.departments_id = await self.get_managed_departments(current_user)
         elif current_user.is_department_supervisor() or current_user.is_division_supervisor():
             filters.departments_id = await self.get_department_filter(current_user, filters.departments_id)
         elif filters.user_id != current_user.id:

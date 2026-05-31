@@ -35,6 +35,7 @@ async def get_all(
 ):
     async with unit_of_work() as uow:
         filters = await AccessService(uow.session).get_meeting_filter(filters, current_user)
+
         return await MeetingService(uow.session).get_meetings(filters)
 
 
